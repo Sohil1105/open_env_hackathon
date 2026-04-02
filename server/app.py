@@ -379,6 +379,9 @@ def main():
     logger.info(f"Starting Loan Underwriting OpenEnv server on 0.0.0.0:{port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
+def main():
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=7860)
 
 if __name__ == "__main__":
     main()
