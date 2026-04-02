@@ -30,9 +30,6 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Copy the entire application
 COPY . .
 
-# Install the project itself (makes server package importable + creates entry point)
-RUN pip install --no-cache-dir -e .
-
 # Remove any stale __pycache__ from the build context
 RUN find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 
