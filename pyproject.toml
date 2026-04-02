@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=78.1.0", "wheel>=0.45.1"]
+requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,16 +8,19 @@ version = "1.0.0"
 description = "Financial Loan Underwriting OpenEnv Environment"
 requires-python = ">=3.10"
 dependencies = [
-    "openenv-core>=0.2.0",
     "fastapi>=0.104.0,<1.0.0",
     "uvicorn[standard]>=0.24.0,<1.0.0",
     "pydantic>=2.0.0,<3.0.0",
     "openai>=2.7.2",
     "pyyaml>=6.0,<7.0",
+    "openenv-core>=0.2.0",
 ]
 
 [project.scripts]
-start-server = "server.app:main"
+server = "server.app:app"
+
+[tool.setuptools.packages.find]
+include = ["server*", "environment*"]
 
 [project.urls]
 Homepage = "https://huggingface.co/spaces/Sourav0511/open-env-hackathon"
