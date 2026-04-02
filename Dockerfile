@@ -20,13 +20,18 @@ RUN apt-get update && \
 
 # Copy requirements first for Docker layer caching
 COPY requirements.txt .
+COPY pyproject.toml .
 
 # Install Python dependencies
 RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+    pip install --no-cache-dir -r requirements.txt && \
+    pip install --no-cache-dir "openenv-core>=0.2.0"
 
 # Copy the entire application
 COPY . .
+
+# Install the project itself (makes server package importable + creates entry point)
+RUN pip install --no-cache-dir -e .
 
 # Remove any stale __pycache__ from the build context
 RUN find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
@@ -38,5 +43,5 @@ EXPOSE 7860
 HEALTHCHECK --interval=30s --timeout=10s --start-period=10s --retries=3 \
     CMD curl -f http://localhost:7860/ || exit 1
 
-# Run the FastAPI server using uvicorn
-CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "7860"]
+# Run the FastAPI server via server/app.py entry point
+CMD ["uvicorn", "server.app:app", "--host", "0.0.0.0", "--port", "7860"]
