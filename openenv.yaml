@@ -1,0 +1,152 @@
+# OpenEnv Specification for Financial Loan Underwriting & Risk Assessment
+# This environment simulates a bank's loan underwriting desk where an AI agent
+# evaluates applicant profiles and makes lending decisions.
+
+name: "loan-underwriting-risk-assessment"
+version: "1.0.0"
+description: >
+  A reinforcement learning environment that simulates a bank's loan underwriting desk.
+  The agent receives applicant profiles containing financial and employment data, then must
+  classify the applicant's risk level, make a loan approval decision, and recommend an
+  appropriate interest rate tier. Grading uses partial credit scoring across all three
+  decision components with logical consistency bonuses.
+
+# Environment metadata
+author: "OpenEnv Hackathon Team"
+license: "MIT"
+tags:
+  - finance
+  - loan-underwriting
+  - risk-assessment
+  - reinforcement-learning
+  - llm-agent
+
+# Observation space definition — what the agent sees each step
+observation_space:
+  type: "structured"
+  fields:
+    - name: "applicant_name"
+      type: "string"
+      description: "Full name of the loan applicant"
+    - name: "age"
+      type: "integer"
+      description: "Age of the applicant in years"
+    - name: "annual_income"
+      type: "float"
+      description: "Applicant's annual income in USD"
+    - name: "credit_score"
+      type: "integer"
+      description: "FICO credit score (300–850)"
+    - name: "existing_debt"
+      type: "float"
+      description: "Total existing debt obligations in USD"
+    - name: "employment_type"
+      type: "string"
+      enum: ["salaried", "self_employed", "freelancer", "contract", "unemployed"]
+      description: "Type of employment"
+    - name: "employment_years"
+      type: "float"
+      description: "Years of employment in current role"
+    - name: "loan_amount_requested"
+      type: "float"
+      description: "Loan amount the applicant is requesting in USD"
+    - name: "repayment_tenure_months"
+      type: "integer"
+      description: "Desired repayment period in months"
+    - name: "monthly_expenses"
+      type: "float"
+      description: "Average monthly expenses in USD"
+    - name: "has_collateral"
+      type: "boolean"
+      description: "Whether the applicant has collateral to offer"
+    - name: "previous_defaults"
+      type: "integer"
+      description: "Number of previous loan defaults"
+    - name: "task_description"
+      type: "string"
+      description: "Description of what the agent must decide for this task"
+
+# Action space definition — what the agent can output
+action_space:
+  type: "structured"
+  fields:
+    - name: "risk_level"
+      type: "string"
+      enum: ["Low", "Medium", "High"]
+      description: "Classified risk level of the applicant"
+    - name: "loan_decision"
+      type: "string"
+      enum: ["Approve", "Conditional Approve", "Reject"]
+      description: "Loan approval decision"
+    - name: "interest_rate_tier"
+      type: "string"
+      enum: ["7-9%", "10-13%", "14%+"]
+      description: "Recommended interest rate tier"
+    - name: "reasoning"
+      type: "string"
+      description: "Brief explanation for the underwriting decision"
+
+# Task definitions with progressive difficulty
+tasks:
+  - id: "easy_salaried_high_credit"
+    name: "Simple Salaried Profile Assessment"
+    difficulty: "easy"
+    description: >
+      Evaluate a straightforward applicant: salaried employee with a high credit score
+      (750+), low debt-to-income ratio, and stable employment history. The agent primarily
+      needs to classify the risk level correctly. Loan decision and interest rate are
+      simpler given the strong profile.
+    scoring:
+      risk_level_weight: 0.4
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.25
+
+  - id: "medium_self_employed_moderate"
+    name: "Self-Employed Moderate Profile"
+    difficulty: "medium"
+    description: >
+      Evaluate a moderately complex applicant: self-employed individual with an average
+      credit score (620–700), moderate existing debt, and variable income stability.
+      The agent must classify risk level AND make the correct loan approval decision.
+      Requires balancing multiple competing signals.
+    scoring:
+      risk_level_weight: 0.4
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.25
+
+  - id: "hard_freelancer_complex"
+    name: "Complex Freelancer High-Risk Profile"
+    difficulty: "hard"
+    description: >
+      Evaluate a complex applicant: freelancer with irregular income, low credit score
+      (550–600), high existing debt, and a large loan request. The agent must correctly
+      classify risk level, make the approval decision, AND recommend the right interest
+      rate tier. All three decisions must align logically with each other.
+    scoring:
+      risk_level_weight: 0.4
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.25
+
+# Reward structure
+reward:
+  type: "partial_credit"
+  range: [0.0, 1.0]
+  components:
+    - name: "risk_classification"
+      weight: 0.4
+      description: "Accuracy of risk level classification"
+    - name: "loan_decision"
+      weight: 0.35
+      description: "Correctness of loan approval decision"
+    - name: "interest_rate"
+      weight: 0.25
+      description: "Appropriateness of interest rate tier recommendation"
+    - name: "consistency_bonus"
+      weight: 0.0
+      description: "Bonus/penalty for logical consistency across all three decisions (applied as modifier)"
+
+# Runtime constraints
+runtime:
+  max_episode_steps: 1
+  max_episodes_per_task: 1
+  timeout_seconds: 1200  # 20 minutes total for all tasks

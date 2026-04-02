@@ -1,0 +1,168 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# GitHub Actions: Build & Validate OpenEnv
+# Builds Docker image, starts container, tests all endpoints
+# ─────────────────────────────────────────────────────────────────────────────
+name: Validate OpenEnv
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # Step 1: Checkout code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up Python 3.10
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # Step 3: Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run unit tests (graders, env)
+      - name: Run environment unit tests
+        run: |
+          python -c "
+          from environment import LoanUnderwritingEnv, Action, RiskLevel, LoanDecision, InterestRateTier, TASK_ORDER
+          from environment.graders import grade_risk_level, grade_loan_decision, grade_interest_rate, grade_action
+          from environment.models import GroundTruth
+
+          # Test all grader combinations return [0.0, 1.0]
+          for p in RiskLevel:
+              for e in RiskLevel:
+                  s = grade_risk_level(p, e)
+                  assert 0.0 <= s <= 1.0, f'risk({p},{e})={s}'
+          for p in LoanDecision:
+              for e in LoanDecision:
+                  s = grade_loan_decision(p, e)
+                  assert 0.0 <= s <= 1.0, f'decision({p},{e})={s}'
+          for p in InterestRateTier:
+              for e in InterestRateTier:
+                  s = grade_interest_rate(p, e)
+                  assert 0.0 <= s <= 1.0, f'rate({p},{e})={s}'
+
+          # Test env reset/step/state cycle
+          env = LoanUnderwritingEnv()
+          for tid in TASK_ORDER:
+              state = env.reset(tid)
+              assert state.observation is not None
+              action = Action(risk_level='Low', loan_decision='Approve', interest_rate_tier='7-9%')
+              s, r, d, i = env.step(action)
+              assert 0.0 <= r <= 1.0
+              assert d is True
+          print('All unit tests passed')
+          "
+
+      # Step 5: Build Docker image
+      - name: Build Docker image
+        run: docker build -t loan-underwriting-openenv .
+
+      # Step 6: Start Docker container
+      - name: Start container
+        run: |
+          docker run -d --name openenv-test -p 7860:7860 loan-underwriting-openenv
+          echo "Waiting for container to start..."
+          sleep 5
+
+      # Step 7: Test GET / returns HTTP 200
+      - name: Test GET /
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:7860/)
+          echo "GET / returned: $STATUS"
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: Expected 200, got $STATUS"
+            docker logs openenv-test
+            exit 1
+          fi
+          echo "PASS: GET / returns 200"
+
+      # Step 8: Test GET /health returns {"status": "ok"}
+      - name: Test GET /health
+        run: |
+          RESPONSE=$(curl -s http://localhost:7860/health)
+          echo "GET /health returned: $RESPONSE"
+          STATUS=$(echo "$RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          if [ "$STATUS" != "ok" ]; then
+            echo "FAIL: /health status is '$STATUS', expected 'ok'"
+            exit 1
+          fi
+          echo "PASS: GET /health returns status=ok"
+
+      # Step 9: Test POST /reset returns valid JSON
+      - name: Test POST /reset
+        run: |
+          RESPONSE=$(curl -s -X POST http://localhost:7860/reset \
+            -H "Content-Type: application/json" \
+            -d '{"task_id": "easy_salaried_high_credit"}')
+          echo "POST /reset returned: $RESPONSE" | head -c 500
+          STATUS=$(echo "$RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          if [ "$STATUS" != "reset_complete" ]; then
+            echo "FAIL: reset status is '$STATUS', expected 'reset_complete'"
+            exit 1
+          fi
+          echo "PASS: POST /reset returns valid state"
+
+      # Step 10: Test POST /reset with empty body
+      - name: Test POST /reset (empty body)
+        run: |
+          RESPONSE=$(curl -s -X POST http://localhost:7860/reset)
+          echo "POST /reset (empty) returned: $RESPONSE" | head -c 500
+          STATUS=$(echo "$RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['status'])")
+          if [ "$STATUS" != "reset_complete" ]; then
+            echo "FAIL: reset status is '$STATUS', expected 'reset_complete'"
+            exit 1
+          fi
+          echo "PASS: POST /reset (empty body) works"
+
+      # Step 11: Test POST /step returns reward
+      - name: Test POST /step
+        run: |
+          # First reset to get a fresh state
+          curl -s -X POST http://localhost:7860/reset \
+            -H "Content-Type: application/json" \
+            -d '{"task_id": "easy_salaried_high_credit"}' > /dev/null
+
+          RESPONSE=$(curl -s -X POST http://localhost:7860/step \
+            -H "Content-Type: application/json" \
+            -d '{"risk_level":"Low","loan_decision":"Approve","interest_rate_tier":"7-9%","reasoning":"test"}')
+          echo "POST /step returned: $RESPONSE" | head -c 500
+          REWARD=$(echo "$RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['reward'])")
+          DONE=$(echo "$RESPONSE" | python -c "import sys,json; print(json.load(sys.stdin)['done'])")
+          echo "Reward: $REWARD, Done: $DONE"
+          if [ "$DONE" != "True" ]; then
+            echo "FAIL: done should be True"
+            exit 1
+          fi
+          echo "PASS: POST /step returns reward=$REWARD, done=True"
+
+      # Step 12: Test GET /state
+      - name: Test GET /state
+        run: |
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:7860/state)
+          if [ "$STATUS" != "200" ]; then
+            echo "FAIL: GET /state returned $STATUS"
+            exit 1
+          fi
+          echo "PASS: GET /state returns 200"
+
+      # Step 13: Cleanup
+      - name: Stop container
+        if: always()
+        run: |
+          docker stop openenv-test || true
+          docker rm openenv-test || true

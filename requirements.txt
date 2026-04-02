@@ -1,0 +1,17 @@
+# Core dependencies for the Loan Underwriting OpenEnv
+# ─────────────────────────────────────────────────────
+
+# Pydantic for typed data models (Observation, Action, State)
+pydantic>=2.0.0,<3.0.0
+
+# FastAPI for the HTTP server (HF Space deployment)
+fastapi>=0.104.0,<1.0.0
+
+# Uvicorn as the ASGI server for FastAPI
+uvicorn[standard]>=0.24.0,<1.0.0
+
+# OpenAI client for the inference script (LLM agent)
+openai>=1.0.0,<2.0.0
+
+# PyYAML for loading openenv.yaml
+pyyaml>=6.0,<7.0
