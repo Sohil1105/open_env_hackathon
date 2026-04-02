@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "loan-underwriting-openenv"
+version = "1.0.0"
+description = "Financial Loan Underwriting OpenEnv Environment"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "pydantic",
+    "openai",
+    "pyyaml",
+]
+
+[project.urls]
+Homepage = "https://huggingface.co/spaces/Sourav0511/open-env-hackathon"
+Repository = "https://github.com/Sohil1105/open_env_hackathon"
