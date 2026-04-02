@@ -11,9 +11,11 @@ Endpoints:
 - POST /step          -> Submit an action, returns (state, reward, done, info)
 - GET  /state         -> Get current environment state
 - GET  /openenv.yaml  -> Serve the OpenEnv spec file
+- POST /grade       -> Grade a response for a given task_id
 """
 
 import os
+import re
 import logging
 from typing import Optional
 
@@ -25,7 +27,13 @@ from pydantic import BaseModel
 from environment import (
     LoanUnderwritingEnv,
     Action,
+    RiskLevel,
+    LoanDecision,
+    InterestRateTier,
+    TASK_ORDER,
+    grade_action,
 )
+from environment.tasks import get_task
 
 # ─── Logging Setup ───────────────────────────────────────────────────────────
 
@@ -228,6 +236,138 @@ async def get_state():
     return {
         "state": env.state().model_dump(),
     }
+
+
+# ─── Grade Endpoint (OpenEnv Spec) ───────────────────────────────────────────
+
+class GradeRequest(BaseModel):
+    """Request body for the /grade endpoint."""
+    task_id: str
+    response: str
+
+
+def parse_response_to_action(response_text: str) -> Action:
+    """
+    Parse a free-text response string into a structured Action.
+
+    Handles formats like:
+    - "Low risk, Approve, 7-9%"
+    - "High, Reject, 14%+"
+    - JSON strings
+    """
+    text = response_text.strip()
+
+    # Try JSON parsing first
+    try:
+        import json
+        data = json.loads(text)
+        if isinstance(data, dict):
+            return Action(
+                risk_level=data.get("risk_level", "Medium"),
+                loan_decision=data.get("loan_decision", "Conditional Approve"),
+                interest_rate_tier=data.get("interest_rate_tier", "10-13%"),
+                reasoning=data.get("reasoning"),
+            )
+    except (Exception,):
+        pass
+
+    # Parse free-text: detect risk level
+    risk_level = "Medium"  # default
+    text_lower = text.lower()
+    if "low" in text_lower and "high" not in text_lower:
+        risk_level = "Low"
+    elif "high" in text_lower:
+        risk_level = "High"
+    elif "medium" in text_lower or "moderate" in text_lower:
+        risk_level = "Medium"
+
+    # Parse loan decision
+    loan_decision = "Conditional Approve"  # default
+    if "reject" in text_lower:
+        loan_decision = "Reject"
+    elif "conditional" in text_lower:
+        loan_decision = "Conditional Approve"
+    elif "approve" in text_lower:
+        loan_decision = "Approve"
+
+    # Parse interest rate tier
+    interest_rate_tier = "10-13%"  # default
+    if "7-9%" in text or "7-9" in text:
+        interest_rate_tier = "7-9%"
+    elif "14%+" in text or "14%" in text or "14+" in text:
+        interest_rate_tier = "14%+"
+    elif "10-13%" in text or "10-13" in text:
+        interest_rate_tier = "10-13%"
+
+    return Action(
+        risk_level=risk_level,
+        loan_decision=loan_decision,
+        interest_rate_tier=interest_rate_tier,
+        reasoning=f"Parsed from: {text[:200]}",
+    )
+
+
+@app.post("/grade")
+async def grade_response(request: GradeRequest):
+    """
+    Grade a response for a given task.
+
+    Accepts a task_id and a free-text response string.
+    Parses the response, grades it against ground truth, and returns a score in [0.0, 1.0].
+
+    This endpoint is required by the OpenEnv spec for automated evaluation.
+    """
+    try:
+        # Validate task_id exists
+        task_def = get_task(request.task_id)
+    except KeyError as e:
+        # Try mapping short names to full task IDs
+        task_id_map = {
+            "easy": "easy_salaried_high_credit",
+            "medium": "medium_self_employed_moderate",
+            "hard": "hard_freelancer_complex",
+        }
+        mapped_id = task_id_map.get(request.task_id.lower())
+        if mapped_id:
+            task_def = get_task(mapped_id)
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown task_id: '{request.task_id}'. "
+                       f"Available: {TASK_ORDER} or shortcuts: {list(task_id_map.keys())}"
+            )
+
+    try:
+        # Parse the response into an Action
+        action = parse_response_to_action(request.response)
+
+        # Grade the action against ground truth
+        grading_result = grade_action(action, task_def.ground_truth)
+
+        logger.info(
+            f"Grade request: task={request.task_id}, score={grading_result.total_score:.3f}"
+        )
+
+        return {
+            "task_id": task_def.task_id,
+            "score": grading_result.total_score,
+            "feedback": grading_result.feedback,
+            "grading": {
+                "risk_level_score": grading_result.risk_level_score,
+                "loan_decision_score": grading_result.loan_decision_score,
+                "interest_rate_score": grading_result.interest_rate_score,
+                "consistency_bonus": grading_result.consistency_bonus,
+                "total_score": grading_result.total_score,
+            },
+            "parsed_action": {
+                "risk_level": action.risk_level.value if hasattr(action.risk_level, 'value') else str(action.risk_level),
+                "loan_decision": action.loan_decision.value if hasattr(action.loan_decision, 'value') else str(action.loan_decision),
+                "interest_rate_tier": action.interest_rate_tier.value if hasattr(action.interest_rate_tier, 'value') else str(action.interest_rate_tier),
+            },
+        }
+    except Exception as e:
+        logger.error(f"Grade failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Grading failed: {str(e)}")
 
 
 # ─── OpenEnv Spec Endpoint ───────────────────────────────────────────────────
