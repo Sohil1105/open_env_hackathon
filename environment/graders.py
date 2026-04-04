@@ -22,6 +22,51 @@ from .models import (
     InterestRateTier,
 )
 
+# Semantic similarity scoring maps
+RISK_SIMILARITY = {
+    ("low", "low"): 1.0,
+    ("low", "medium"): 0.3,
+    ("low", "high"): 0.0,
+    ("medium", "medium"): 1.0,
+    ("medium", "low"): 0.3,
+    ("medium", "high"): 0.3,
+    ("high", "high"): 1.0,
+    ("high", "medium"): 0.3,
+    ("high", "low"): 0.0,
+}
+
+DECISION_SIMILARITY = {
+    ("approve", "approve"): 1.0,
+    ("approve", "conditional approve"): 0.4,
+    ("approve", "reject"): 0.0,
+    ("conditional approve", "conditional approve"): 1.0,
+    ("conditional approve", "approve"): 0.4,
+    ("conditional approve", "reject"): 0.4,
+    ("reject", "reject"): 1.0,
+    ("reject", "conditional approve"): 0.4,
+    ("reject", "approve"): 0.0,
+}
+
+RATE_SIMILARITY = {
+    ("7-9%", "7-9%"): 1.0,
+    ("7-9%", "10-13%"): 0.3,
+    ("7-9%", "14%+"): 0.0,
+    ("10-13%", "10-13%"): 1.0,
+    ("10-13%", "7-9%"): 0.3,
+    ("10-13%", "14%+"): 0.3,
+    ("14%+", "14%+"): 1.0,
+    ("14%+", "10-13%"): 0.3,
+    ("14%+", "7-9%"): 0.0,
+}
+
+def get_similarity_score(actual: str, expected: str, similarity_map: dict) -> float:
+    """Get semantic similarity score between actual and expected values."""
+    try:
+        actual_clean = actual.lower().strip()
+        expected_clean = expected.lower().strip()
+        return similarity_map.get((actual_clean, expected_clean), 0.0)
+    except Exception:
+        return 0.0
 
 # ─── Ordinal mappings for computing distance between categories ──────────────
 
@@ -310,20 +355,55 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
     )
 
 
-# ─── Tasks 4 and 5 Graders ───────────────────────────────────────────────────
+# ─── Tasks 1 to 5 Graders ───────────────────────────────────────────────────
 
-def grade_task_4_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
-    """
-    Grade a complete agent action against the ground truth for Task 4.
-    Follows exact same format and partial credit pattern as existing graders.
-    """
-    return grade_action(action, ground_truth)
+def grade_task_1_action(action: Action, ground_truth: GroundTruth = None) -> float:
+    score = 0.0
+    try:
+        score += 0.4 * get_similarity_score(action.risk_level, "low", RISK_SIMILARITY)
+        score += 0.35 * get_similarity_score(action.loan_decision, "approve", DECISION_SIMILARITY)
+        score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
+    except Exception:
+        pass
+    return max(0.0, min(1.0, score))
 
+def grade_task_2_action(action: Action, ground_truth: GroundTruth = None) -> float:
+    score = 0.0
+    try:
+        score += 0.4 * get_similarity_score(action.risk_level, "medium", RISK_SIMILARITY)
+        score += 0.35 * get_similarity_score(action.loan_decision, "conditional approve", DECISION_SIMILARITY)
+        score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
+    except Exception:
+        pass
+    return max(0.0, min(1.0, score))
 
-def grade_task_5_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
-    """
-    Grade a complete agent action against the ground truth for Task 5.
-    Follows exact same format and partial credit pattern as existing graders.
-    """
-    return grade_action(action, ground_truth)
+def grade_task_3_action(action: Action, ground_truth: GroundTruth = None) -> float:
+    score = 0.0
+    try:
+        score += 0.4 * get_similarity_score(action.risk_level, "high", RISK_SIMILARITY)
+        score += 0.35 * get_similarity_score(action.loan_decision, "reject", DECISION_SIMILARITY)
+        score += 0.25 * get_similarity_score(action.interest_rate_tier, "14%+", RATE_SIMILARITY)
+    except Exception:
+        pass
+    return max(0.0, min(1.0, score))
+
+def grade_task_4_action(action: Action, ground_truth: GroundTruth = None) -> float:
+    score = 0.0
+    try:
+        score += 0.4 * get_similarity_score(action.risk_level, "medium", RISK_SIMILARITY)
+        score += 0.35 * get_similarity_score(action.loan_decision, "conditional approve", DECISION_SIMILARITY)
+        score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
+    except Exception:
+        pass
+    return max(0.0, min(1.0, score))
+
+def grade_task_5_action(action: Action, ground_truth: GroundTruth = None) -> float:
+    score = 0.0
+    try:
+        score += 0.4 * get_similarity_score(action.risk_level, "low", RISK_SIMILARITY)
+        score += 0.35 * get_similarity_score(action.loan_decision, "approve", DECISION_SIMILARITY)
+        score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
+    except Exception:
+        pass
+    return max(0.0, min(1.0, score))
 

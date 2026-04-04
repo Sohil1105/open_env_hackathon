@@ -12,7 +12,11 @@ description: >
   decision components with logical consistency bonuses.
 
 # Environment metadata
-author: "OpenEnv Hackathon Team"
+author:
+  name: "Sohil1105"
+  github: "https://github.com/Sohil1105/open_env_hackathon"
+  hf_space: "https://huggingface.co/spaces/Sourav0511/open-env-hackathon"
+
 license: "MIT"
 tags:
   - finance
@@ -20,6 +24,8 @@ tags:
   - risk-assessment
   - reinforcement-learning
   - llm-agent
+  - real-world
+  - openenv
 
 # Observation space definition — what the agent sees each step
 observation_space:
@@ -96,10 +102,21 @@ tasks:
       (750+), low debt-to-income ratio, and stable employment history. The agent primarily
       needs to classify the risk level correctly. Loan decision and interest rate are
       simpler given the strong profile.
+    example_input:
+      income: 75000
+      credit_score: 780
+      debt: 10000
+      loan_amount: 150000
+      employment: "salaried"
+    example_output:
+      risk_level: "Low"
+      loan_decision: "Approve"
+      interest_rate_tier: "7-9%"
     scoring:
       risk_level_weight: 0.4
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
+      consistency_bonus: 0.1
 
   - id: "medium_self_employed_moderate"
     name: "Self-Employed Moderate Profile"
@@ -109,10 +126,21 @@ tasks:
       credit score (620–700), moderate existing debt, and variable income stability.
       The agent must classify risk level AND make the correct loan approval decision.
       Requires balancing multiple competing signals.
+    example_input:
+      income: 45000
+      credit_score: 650
+      debt: 20000
+      loan_amount: 200000
+      employment: "self-employed"
+    example_output:
+      risk_level: "Medium"
+      loan_decision: "Conditional Approve"
+      interest_rate_tier: "10-13%"
     scoring:
       risk_level_weight: 0.4
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
+      consistency_bonus: 0.1
 
   - id: "hard_freelancer_complex"
     name: "Complex Freelancer High-Risk Profile"
@@ -122,31 +150,68 @@ tasks:
       (550–600), high existing debt, and a large loan request. The agent must correctly
       classify risk level, make the approval decision, AND recommend the right interest
       rate tier. All three decisions must align logically with each other.
+    example_input:
+      income: 30000
+      credit_score: 570
+      debt: 35000
+      loan_amount: 250000
+      employment: "freelancer"
+    example_output:
+      risk_level: "High"
+      loan_decision: "Reject"
+      interest_rate_tier: "14%+"
     scoring:
       risk_level_weight: 0.4
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
+      consistency_bonus: 0.1
 
   - id: "bankruptcy_recovery_edge1"
     name: "Bankruptcy Recovery Edge Case"
     difficulty: "medium"
     description: >
       Evaluate a loan application from an individual who declared bankruptcy 7 years ago.
-      They have since rebuilt their credit.
+      They have since rebuilt their credit score to 680 with stable income and low debt.
+      Tests the agent's ability to handle nuanced historical financial events and weigh
+      recovery signals appropriately.
+    example_input:
+      income: 65000
+      credit_score: 680
+      debt: 8000
+      loan_amount: 120000
+      history: "bankruptcy_7_years_ago"
+    example_output:
+      risk_level: "Medium"
+      loan_decision: "Conditional Approve"
+      interest_rate_tier: "10-13%"
     scoring:
       risk_level_weight: 0.4
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
+      consistency_bonus: 0.1
 
   - id: "joint_applicants_edge2"
     name: "Joint Applicants Edge Case"
     difficulty: "easy"
     description: >
-      Evaluate a loan application from joint applicants with combined income.
+      Evaluate a joint loan application from two applicants with combined strong
+      financials. Tests the agent's ability to handle multi-applicant scenarios,
+      combining income and credit profiles to make a unified underwriting decision.
+    example_input:
+      combined_income: 120000
+      primary_credit_score: 720
+      secondary_credit_score: 690
+      combined_debt: 25000
+      loan_amount: 300000
+    example_output:
+      risk_level: "Low"
+      loan_decision: "Approve"
+      interest_rate_tier: "7-9%"
     scoring:
       risk_level_weight: 0.4
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
+      consistency_bonus: 0.1
 
 # Reward structure
 reward:
@@ -163,11 +228,11 @@ reward:
       weight: 0.25
       description: "Appropriateness of interest rate tier recommendation"
     - name: "consistency_bonus"
-      weight: 0.0
-      description: "Bonus/penalty for logical consistency across all three decisions (applied as modifier)"
+      weight: 0.1
+      description: "Bonus for logical consistency across all three decisions"
 
 # Runtime constraints
 runtime:
   max_episode_steps: 1
   max_episodes_per_task: 1
-  timeout_seconds: 1200  # 20 minutes total for all tasks
+  timeout_seconds: 1200
