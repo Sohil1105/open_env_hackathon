@@ -233,3 +233,27 @@ GitHub: [https://github.com/Sohil1105/open_env_hackathon](https://github.com/Soh
 ## License
 
 MIT License
+
+---
+
+### Task 4: Bankruptcy Recovery (Edge Case)
+- **Profile**: Credit rebuilt to 680, bankrupt 7 years ago, low debt
+- **Focus**: Evaluates ability to handle historical negative marks
+- **Expected**: Medium risk -> Conditional Approve -> 10-13%
+
+### Task 5: Joint Applicants (Edge Case)
+- **Profile**: Combined income $120k, primary credit 720
+- **Focus**: Evaluates handling of combined application metrics
+- **Expected**: Low risk -> Approve -> 7-9%
+
+### Example curl commands for Tasks 4 & 5
+```bash
+curl -X POST https://Sourav0511-open-env-hackathon.hf.space/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": "bankruptcy_recovery_edge1"}'
+
+curl -X POST https://Sourav0511-open-env-hackathon.hf.space/reset \
+  -H "Content-Type: application/json" \
+  -d '{"task_id": "joint_applicants_edge2"}'
+```
+

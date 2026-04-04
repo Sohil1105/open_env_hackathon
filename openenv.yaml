@@ -127,6 +127,27 @@ tasks:
       loan_decision_weight: 0.35
       interest_rate_weight: 0.25
 
+  - id: "bankruptcy_recovery_edge1"
+    name: "Bankruptcy Recovery Edge Case"
+    difficulty: "medium"
+    description: >
+      Evaluate a loan application from an individual who declared bankruptcy 7 years ago.
+      They have since rebuilt their credit.
+    scoring:
+      risk_level_weight: 0.4
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.25
+
+  - id: "joint_applicants_edge2"
+    name: "Joint Applicants Edge Case"
+    difficulty: "easy"
+    description: >
+      Evaluate a loan application from joint applicants with combined income.
+    scoring:
+      risk_level_weight: 0.4
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.25
+
 # Reward structure
 reward:
   type: "partial_credit"

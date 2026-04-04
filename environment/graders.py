@@ -308,3 +308,22 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         total_score=total_score,
         feedback=feedback,
     )
+
+
+# ─── Tasks 4 and 5 Graders ───────────────────────────────────────────────────
+
+def grade_task_4_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
+    """
+    Grade a complete agent action against the ground truth for Task 4.
+    Follows exact same format and partial credit pattern as existing graders.
+    """
+    return grade_action(action, ground_truth)
+
+
+def grade_task_5_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
+    """
+    Grade a complete agent action against the ground truth for Task 5.
+    Follows exact same format and partial credit pattern as existing graders.
+    """
+    return grade_action(action, ground_truth)
+

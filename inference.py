@@ -305,38 +305,38 @@ def main():
 
     total_duration = time.time() - total_start_time
 
-    print("=" * 70)
-    print("📊 FINAL RESULTS SUMMARY")
-    print("=" * 70)
+    print("============================================")
+    print(" LOAN UNDERWRITING OPENENV - INFERENCE RUN")
+    print("============================================")
 
-    for task_id, result in task_scores.items():
-        grading = result["grading"]
-        print(f"\n  {task_id}:")
-        print(f"    Total Score:       {result['score']:.3f}")
-        print(f"    Risk Level:        {grading['risk_level_score']:.2f} (× 0.40 = {grading['risk_level_score'] * 0.40:.3f})")
-        print(f"    Loan Decision:     {grading['loan_decision_score']:.2f} (× 0.35 = {grading['loan_decision_score'] * 0.35:.3f})")
-        print(f"    Interest Rate:     {grading['interest_rate_score']:.2f} (× 0.25 = {grading['interest_rate_score'] * 0.25:.3f})")
-        print(f"    Consistency:       {grading['consistency_bonus']:+.2f}")
-        print(f"    Duration:          {result['duration']:.1f}s")
+    display_names = {
+        "easy_salaried_high_credit": "Easy",
+        "medium_self_employed_moderate": "Medium",
+        "hard_freelancer_complex": "Hard",
+        "bankruptcy_recovery_edge1": "Edge 1",
+        "joint_applicants_edge2": "Edge 2",
+    }
+
+    for i, (task_id, result) in enumerate(task_scores.items(), 1):
+        score = result["score"]
+        name = display_names.get(task_id, "Unknown")
+        task_str = f"Task {i}/{len(TASK_ORDER)} ({name})"
+        print(f"{task_str:<18}| Score: {score:.2f} ✅")
 
     average_score = total_score / len(TASK_ORDER)
 
-    print(f"\n{'─' * 70}")
-    print(f"  AVERAGE SCORE: {average_score:.3f} / 1.000")
-    print(f"  TOTAL TIME:    {total_duration:.1f}s")
-    print(f"{'─' * 70}")
-    print()
+    print("─────────────────────────────────────────")
+    print(f"Average Score: {average_score:.2f}/1.0")
+    print(f"Total Time:    {total_duration:.1f} seconds")
+    print("============================================")
 
     # Validate all scores are in [0.0, 1.0]
     all_valid = all(
         0.0 <= result["score"] <= 1.0 for result in task_scores.values()
     )
-    if all_valid:
-        print("  ✅ All scores are within valid range [0.0, 1.0]")
-    else:
+    if not all_valid:
         print("  ❌ WARNING: Some scores are outside valid range!")
 
-    print("\n🏁 Inference complete.")
     return task_scores
 
 

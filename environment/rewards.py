@@ -22,26 +22,44 @@ RATE_WEIGHT = 0.25
 def compute_reward(action: Action, ground_truth: GroundTruth) -> tuple[float, GradingResult]:
     """
     Compute the reward for an agent's action given the ground truth.
-
-    The reward function provides partial progress signals:
-    - Each correct sub-component adds its weighted portion to the reward
-    - Partial credit is awarded for "close" answers (adjacent categories)
-    - Logical consistency between the three decisions adds a small bonus/penalty
-    - The final reward is guaranteed to be in [0.0, 1.0]
-
-    Args:
-        action: The agent's underwriting decision
-        ground_truth: The correct answers for this applicant
-
-    Returns:
-        Tuple of (reward_float, grading_result) where reward is in [0.0, 1.0]
     """
     # Use the grading system to get detailed scoring
     grading_result = grade_action(action, ground_truth)
 
-    # The total_score from the grader IS the reward — it already includes
-    # weighted components and consistency bonuses, clamped to [0.0, 1.0]
-    reward = grading_result.total_score
+    # Calculate base score from components
+    base_score = (
+        grading_result.risk_level_score * RISK_WEIGHT +
+        grading_result.loan_decision_score * DECISION_WEIGHT +
+        grading_result.interest_rate_score * RATE_WEIGHT
+    )
+
+    # Consistency modifier
+    consistency_bonus = 0.0
+    if action is not None:
+        risk = action.risk_level
+        decision = action.loan_decision
+        rate = action.interest_rate_tier
+
+        # Consistent combinations
+        if risk == "Low" and decision == "Approve" and rate == "7-9%":
+            consistency_bonus = 0.1
+        elif risk == "Medium" and decision == "Conditional Approve" and rate == "10-13%":
+            consistency_bonus = 0.1
+        elif risk == "High" and decision == "Reject" and rate == "14%+":
+            consistency_bonus = 0.1
+        
+        # Contradictory combinations
+        if (risk == "Low" and decision == "Reject") or \
+           (risk == "High" and decision == "Approve") or \
+           (risk == "High" and rate == "7-9%"):
+            consistency_bonus = -0.1
+
+    # Clamp final score
+    reward = max(0.0, min(1.0, base_score + consistency_bonus))
+
+    # Update grading result
+    grading_result.consistency_bonus = consistency_bonus
+    grading_result.total_score = reward
 
     return reward, grading_result
 

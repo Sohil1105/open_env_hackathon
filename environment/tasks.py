@@ -191,12 +191,98 @@ HARD_TASK = TaskDefinition(
 )
 
 
+# ─── Task 4: Bankruptcy Recovery ───────────────────────────────────────────────
+
+BANKRUPTCY_TASK = TaskDefinition(
+    task_id="bankruptcy_recovery_edge1",
+    name="Bankruptcy Recovery Edge Case",
+    difficulty=TaskDifficulty.MEDIUM,
+    description=(
+        "You are evaluating a loan application from an individual who declared bankruptcy "
+        "7 years ago. They have since rebuilt their credit.\n\n"
+        "Based on the applicant's profile, you must:\n"
+        "1. Classify the applicant's risk level (Low / Medium / High)\n"
+        "2. Make a loan decision (Approve / Conditional Approve / Reject)\n"
+        "3. Recommend an interest rate tier (7-9% / 10-13% / 14%+)\n"
+    ),
+    profile=ApplicantProfile(
+        applicant_name="John Doe",
+        age=45,
+        annual_income=65_000.0,
+        credit_score=680,
+        existing_debt=8_000.0,
+        employment_type=EmploymentType.SALARIED,
+        employment_years=4.0,
+        loan_amount_requested=120_000.0,
+        repayment_tenure_months=120,
+        monthly_expenses=2_500.0,
+        has_collateral=False,
+        previous_defaults=1,
+    ),
+    ground_truth=GroundTruth(
+        risk_level=RiskLevel.MEDIUM,
+        loan_decision=LoanDecision.CONDITIONAL_APPROVE,
+        interest_rate_tier=InterestRateTier.MEDIUM,
+        explanation=(
+            "This applicant has rebuilt their credit (680) after a bankruptcy 7 years ago. "
+            "Their current debt is manageable ($8,000) against an income of $65,000, but the "
+            "loan amount is relatively high ($120,000) with no collateral. A medium risk "
+            "classification with a conditional approval and a 10-13% interest rate is appropriate."
+        ),
+    ),
+)
+
+
+# ─── Task 5: Joint Applicants ────────────────────────────────────────────────
+
+JOINT_APP_TASK = TaskDefinition(
+    task_id="joint_applicants_edge2",
+    name="Joint Applicants Edge Case",
+    difficulty=TaskDifficulty.EASY,
+    description=(
+        "You are evaluating a loan application from joint applicants with combined income.\n\n"
+        "Based on the applicant's profile, you must:\n"
+        "1. Classify the applicant's risk level (Low / Medium / High)\n"
+        "2. Make a loan decision (Approve / Conditional Approve / Reject)\n"
+        "3. Recommend an interest rate tier (7-9% / 10-13% / 14%+)\n"
+    ),
+    profile=ApplicantProfile(
+        applicant_name="The Smiths",
+        age=38,
+        annual_income=120_000.0,
+        credit_score=720,
+        existing_debt=25_000.0,
+        employment_type=EmploymentType.SALARIED,
+        employment_years=6.0,
+        loan_amount_requested=300_000.0,
+        repayment_tenure_months=360,
+        monthly_expenses=4_000.0,
+        has_collateral=True,
+        previous_defaults=0,
+    ),
+    ground_truth=GroundTruth(
+        risk_level=RiskLevel.LOW,
+        loan_decision=LoanDecision.APPROVE,
+        interest_rate_tier=InterestRateTier.LOW,
+        explanation=(
+            "The joint applicants have a strong combined income of $120,000. "
+            "The primary applicant has a good credit score (720). The existing "
+            "debt of $25,000 is manageable, and they provide collateral for "
+            "the $300,000 loan. This results in a low risk classification, "
+            "an approval, and a 7-9% interest rate."
+        ),
+    ),
+)
+
+
 # ─── Registry of all tasks ───────────────────────────────────────────────────
 
 ALL_TASKS = {
     "easy_salaried_high_credit": EASY_TASK,
     "medium_self_employed_moderate": MEDIUM_TASK,
     "hard_freelancer_complex": HARD_TASK,
+    "bankruptcy_recovery_edge1": BANKRUPTCY_TASK,
+    "joint_applicants_edge2": JOINT_APP_TASK,
 }
 
 # Ordered list for sequential execution
@@ -204,8 +290,9 @@ TASK_ORDER = [
     "easy_salaried_high_credit",
     "medium_self_employed_moderate",
     "hard_freelancer_complex",
+    "bankruptcy_recovery_edge1",
+    "joint_applicants_edge2",
 ]
-
 
 def get_task(task_id: str) -> TaskDefinition:
     """Retrieve a task by its ID. Raises KeyError if not found."""
