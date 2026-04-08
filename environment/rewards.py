@@ -54,8 +54,8 @@ def compute_reward(action: Action, ground_truth: GroundTruth) -> tuple[float, Gr
            (risk == "High" and rate == "7-9%"):
             consistency_bonus = -0.1
 
-    # Clamp final score
-    reward = max(0.0, min(1.0, base_score + consistency_bonus))
+    # Clamp final score strictly between 0 and 1
+    reward = max(0.01, min(0.99, base_score + consistency_bonus))
 
     # Update grading result
     grading_result.consistency_bonus = consistency_bonus
