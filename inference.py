@@ -257,6 +257,7 @@ def main():
         task_start_time = time.time()
 
         # Reset environment for this task
+        print(f"[START] task={task_id}", flush=True)
         state = env.reset(task_id)
         observation = state.observation
 
@@ -283,6 +284,7 @@ def main():
 
         # Step the environment
         state, reward, done, info = env.step(action)
+        print(f"[STEP] step=1 reward={reward}", flush=True)
 
         # Display results
         print(f"  📊 GRADING RESULTS:")
@@ -290,6 +292,7 @@ def main():
         print(f"\n  {info['feedback']}")
 
         task_duration = time.time() - task_start_time
+        print(f"[END] task={task_id} score={reward} steps=1", flush=True)
         print(f"\n  ⏱️ Task completed in {task_duration:.1f}s")
 
         # Store scores
