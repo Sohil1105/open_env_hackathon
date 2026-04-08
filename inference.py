@@ -38,10 +38,10 @@ from environment.rewards import format_reward_breakdown
 # ─── Client Setup (exact spec from requirements) ─────────────────────────────
 
 client = OpenAI(
-    base_url=os.environ["API_BASE_URL"],
-    api_key=os.environ["HF_TOKEN"],
+    base_url=os.environ.get("API_BASE_URL", "https://api.openai.com/v1"),
+    api_key=os.environ.get("HF_TOKEN", "dummy_token"),
 )
-MODEL_NAME = os.environ["MODEL_NAME"]
+MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
 
 
 # ─── Prompt Construction ─────────────────────────────────────────────────────
