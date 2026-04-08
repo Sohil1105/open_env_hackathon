@@ -38,10 +38,10 @@ from environment.rewards import format_reward_breakdown
 # ─── Client Setup (exact spec from requirements) ─────────────────────────────
 
 client = OpenAI(
-    base_url=os.environ.get("API_BASE_URL", "https://api.openai.com/v1"),
-    api_key=os.environ.get("HF_TOKEN", "dummy_token"),
+    base_url=os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1"),
+    api_key=os.environ.get("HF_TOKEN", ""),
 )
-MODEL_NAME = os.environ.get("MODEL_NAME", "gpt-3.5-turbo")
+MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
 
 
 # ─── Prompt Construction ─────────────────────────────────────────────────────
@@ -344,4 +344,8 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        print(f"Error during inference: {e}")
+        raise

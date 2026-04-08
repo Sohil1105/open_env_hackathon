@@ -24,39 +24,39 @@ from .models import (
 
 # Semantic similarity scoring maps
 RISK_SIMILARITY = {
-    ("low", "low"): 1.0,
+    ("low", "low"): 0.99,
     ("low", "medium"): 0.3,
-    ("low", "high"): 0.0,
-    ("medium", "medium"): 1.0,
+    ("low", "high"): 0.01,
+    ("medium", "medium"): 0.99,
     ("medium", "low"): 0.3,
     ("medium", "high"): 0.3,
-    ("high", "high"): 1.0,
+    ("high", "high"): 0.99,
     ("high", "medium"): 0.3,
-    ("high", "low"): 0.0,
+    ("high", "low"): 0.01,
 }
 
 DECISION_SIMILARITY = {
-    ("approve", "approve"): 1.0,
+    ("approve", "approve"): 0.99,
     ("approve", "conditional approve"): 0.4,
-    ("approve", "reject"): 0.0,
-    ("conditional approve", "conditional approve"): 1.0,
+    ("approve", "reject"): 0.01,
+    ("conditional approve", "conditional approve"): 0.99,
     ("conditional approve", "approve"): 0.4,
     ("conditional approve", "reject"): 0.4,
-    ("reject", "reject"): 1.0,
+    ("reject", "reject"): 0.99,
     ("reject", "conditional approve"): 0.4,
-    ("reject", "approve"): 0.0,
+    ("reject", "approve"): 0.01,
 }
 
 RATE_SIMILARITY = {
-    ("7-9%", "7-9%"): 1.0,
+    ("7-9%", "7-9%"): 0.99,
     ("7-9%", "10-13%"): 0.3,
-    ("7-9%", "14%+"): 0.0,
-    ("10-13%", "10-13%"): 1.0,
+    ("7-9%", "14%+"): 0.01,
+    ("10-13%", "10-13%"): 0.99,
     ("10-13%", "7-9%"): 0.3,
     ("10-13%", "14%+"): 0.3,
-    ("14%+", "14%+"): 1.0,
+    ("14%+", "14%+"): 0.99,
     ("14%+", "10-13%"): 0.3,
-    ("14%+", "7-9%"): 0.0,
+    ("14%+", "7-9%"): 0.01,
 }
 
 def get_similarity_score(actual: str, expected: str, similarity_map: dict) -> float:
@@ -64,9 +64,10 @@ def get_similarity_score(actual: str, expected: str, similarity_map: dict) -> fl
     try:
         actual_clean = actual.lower().strip()
         expected_clean = expected.lower().strip()
-        return similarity_map.get((actual_clean, expected_clean), 0.0)
+        score = similarity_map.get((actual_clean, expected_clean), 0.01)
+        return max(0.01, min(0.99, score))
     except Exception:
-        return 0.0
+        return 0.01
 
 # ─── Ordinal mappings for computing distance between categories ──────────────
 
@@ -105,20 +106,20 @@ def grade_risk_level(predicted: RiskLevel, expected: RiskLevel) -> float:
     """
     # Edge-case: handle None or invalid enum values
     if predicted is None or expected is None:
-        return 0.0
+        return 0.01
     if predicted not in RISK_LEVEL_ORDER or expected not in RISK_LEVEL_ORDER:
-        return 0.0
+        return 0.01
 
     pred_ord = RISK_LEVEL_ORDER[predicted]
     exp_ord = RISK_LEVEL_ORDER[expected]
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 1.0
+        return 0.99
     elif distance == 1:
         return 0.3  # Partial credit for adjacent classification
     else:
-        return 0.0  # Completely wrong
+        return 0.01  # Completely wrong
 
 
 def grade_loan_decision(predicted: LoanDecision, expected: LoanDecision) -> float:
@@ -135,20 +136,20 @@ def grade_loan_decision(predicted: LoanDecision, expected: LoanDecision) -> floa
     """
     # Edge-case: handle None or invalid enum values
     if predicted is None or expected is None:
-        return 0.0
+        return 0.01
     if predicted not in LOAN_DECISION_ORDER or expected not in LOAN_DECISION_ORDER:
-        return 0.0
+        return 0.01
 
     pred_ord = LOAN_DECISION_ORDER[predicted]
     exp_ord = LOAN_DECISION_ORDER[expected]
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 1.0
+        return 0.99
     elif distance == 1:
         return 0.35  # Partial credit — at least in the right direction
     else:
-        return 0.0  # Completely wrong (approve when should reject, or vice versa)
+        return 0.01  # Completely wrong (approve when should reject, or vice versa)
 
 
 def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier) -> float:
@@ -165,20 +166,20 @@ def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier)
     """
     # Edge-case: handle None or invalid enum values
     if predicted is None or expected is None:
-        return 0.0
+        return 0.01
     if predicted not in INTEREST_RATE_ORDER or expected not in INTEREST_RATE_ORDER:
-        return 0.0
+        return 0.01
 
     pred_ord = INTEREST_RATE_ORDER[predicted]
     exp_ord = INTEREST_RATE_ORDER[expected]
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 1.0
+        return 0.99
     elif distance == 1:
         return 0.3  # Partial credit for adjacent tier
     else:
-        return 0.0  # Completely wrong
+        return 0.01  # Completely wrong
 
 
 def grade_consistency(action: Action) -> float:
@@ -196,14 +197,14 @@ def grade_consistency(action: Action) -> float:
     """
     # Edge-case: handle None fields
     if action is None:
-        return 0.0
+        return 0.01
 
     risk = action.risk_level
     decision = action.loan_decision
     rate = action.interest_rate_tier
 
     if risk is None or decision is None or rate is None:
-        return 0.0
+        return 0.01
 
     # Define what's logically consistent for each risk level
     consistency_score = 0.0
@@ -265,11 +266,11 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
     # Edge-case: if action or ground_truth is None, return zero score
     if action is None or ground_truth is None:
         return GradingResult(
-            risk_level_score=0.0,
-            loan_decision_score=0.0,
-            interest_rate_score=0.0,
+            risk_level_score=0.01,
+            loan_decision_score=0.01,
+            interest_rate_score=0.01,
             consistency_bonus=0.0,
-            total_score=0.0,
+            total_score=0.01,
             feedback="❌ No valid action or ground truth provided.",
         )
 
