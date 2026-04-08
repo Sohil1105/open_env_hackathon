@@ -287,8 +287,8 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         consistency
     )
 
-    # Clamp final score to [0.0, 1.0] — guarantees output is always valid
-    total_score = max(0.0, min(1.0, weighted_total))
+    # Clamp final score to [0.01, 0.99] — guarantees output is strictly between 0 and 1
+    total_score = max(0.01, min(0.99, weighted_total))
 
     # Generate human-readable feedback
     feedback_parts = []
@@ -365,7 +365,7 @@ def grade_task_1_action(action: Action, ground_truth: GroundTruth = None) -> flo
         score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
     except Exception:
         pass
-    return max(0.0, min(1.0, score))
+    return max(0.01, min(0.99, score))
 
 def grade_task_2_action(action: Action, ground_truth: GroundTruth = None) -> float:
     score = 0.0
@@ -375,7 +375,7 @@ def grade_task_2_action(action: Action, ground_truth: GroundTruth = None) -> flo
         score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
     except Exception:
         pass
-    return max(0.0, min(1.0, score))
+    return max(0.01, min(0.99, score))
 
 def grade_task_3_action(action: Action, ground_truth: GroundTruth = None) -> float:
     score = 0.0
@@ -385,7 +385,7 @@ def grade_task_3_action(action: Action, ground_truth: GroundTruth = None) -> flo
         score += 0.25 * get_similarity_score(action.interest_rate_tier, "14%+", RATE_SIMILARITY)
     except Exception:
         pass
-    return max(0.0, min(1.0, score))
+    return max(0.01, min(0.99, score))
 
 def grade_task_4_action(action: Action, ground_truth: GroundTruth = None) -> float:
     score = 0.0
@@ -395,7 +395,7 @@ def grade_task_4_action(action: Action, ground_truth: GroundTruth = None) -> flo
         score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
     except Exception:
         pass
-    return max(0.0, min(1.0, score))
+    return max(0.01, min(0.99, score))
 
 def grade_task_5_action(action: Action, ground_truth: GroundTruth = None) -> float:
     score = 0.0
@@ -405,5 +405,5 @@ def grade_task_5_action(action: Action, ground_truth: GroundTruth = None) -> flo
         score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
     except Exception:
         pass
-    return max(0.0, min(1.0, score))
+    return max(0.01, min(0.99, score))
 
