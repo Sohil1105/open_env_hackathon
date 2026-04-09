@@ -200,6 +200,3 @@ Configure as **Secrets** in your HF Space settings (Settings → Variables and S
 - **HF Space:** [https://huggingface.co/spaces/Sourav0511/open-env-hackathon](https://huggingface.co/spaces/Sourav0511/open-env-hackathon)
 - **GitHub:** [https://github.com/Sohil1105/open_env_hackathon](https://github.com/Sohil1105/open_env_hackathon)
 
-## License
-
-MIT License
