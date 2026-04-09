@@ -744,7 +744,8 @@
 
     <script>
         // --- State Management ---
-        const API_URL = "http://localhost:7860"; // Update this with your actual server URL
+        // --- State Management ---
+        const API_URL = window.location.origin.includes('localhost') ? "http://localhost:7860" : window.location.origin;
         let currentTask = null;
         let creditChart = null;
         let debtChart = null;
