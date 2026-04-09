@@ -14,8 +14,6 @@ Endpoints:
 - POST /grade       -> Grade a response for a given task_id
 """
 
-from __future__ import annotations
-
 import os
 import re
 import logging
@@ -205,23 +203,10 @@ async def reset_environment(request: Request):
 
         state = env.reset(task_id=task_id, custom_profile=custom_profile)
         logger.info(f"Environment reset with task_id={task_id or 'default'} (custom={custom_profile is not None})")
-        
-        response_data = {
+        return {
             "status": "reset_complete",
             "state": state.model_dump(),
         }
-        
-        # Give the model result if it's a custom profile
-        if custom_profile and env.current_task_id == "custom_user_profile":
-            gt = env._current_task.ground_truth
-            response_data["model_result"] = {
-                "risk_level": gt.risk_level.value if hasattr(gt.risk_level, 'value') else str(gt.risk_level),
-                "loan_decision": gt.loan_decision.value if hasattr(gt.loan_decision, 'value') else str(gt.loan_decision),
-                "interest_rate_tier": gt.interest_rate_tier.value if hasattr(gt.interest_rate_tier, 'value') else str(gt.interest_rate_tier),
-                "explanation": gt.explanation
-            }
-            
-        return response_data
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

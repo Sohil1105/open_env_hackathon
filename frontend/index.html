@@ -502,7 +502,13 @@
 
     <!-- Sidebar -->
     <aside id="sidebar">
-
+        <div class="logo-container">
+            <div class="logo">
+                <i data-lucide="shield-check"></i>
+                <span>Underwriter.AI</span>
+            </div>
+            <p style="font-size: 0.65rem; color: var(--text-secondary); margin-top: -0.5rem; letter-spacing: 0.05em; font-weight: 500;">POWERED BY OPENENV</p>
+        </div>
 
         <div>
             <p class="section-label">Evaluation Tasks</p>
@@ -744,8 +750,7 @@
 
     <script>
         // --- State Management ---
-        // --- State Management ---
-        const API_URL = window.location.origin.includes('localhost') ? "http://localhost:7860" : window.location.origin;
+        const API_URL = "http://localhost:7860"; // Update this with your actual server URL
         let currentTask = null;
         let creditChart = null;
         let debtChart = null;
@@ -818,18 +823,6 @@
                 });
                 const data = await res.json();
                 updateDashboard(data.state);
-                
-                if (data.model_result) {
-                    const form = document.getElementById('decision-form');
-                    form.elements['risk_level'].value = data.model_result.risk_level;
-                    form.elements['loan_decision'].value = data.model_result.loan_decision;
-                    form.elements['interest_rate_tier'].value = data.model_result.interest_rate_tier;
-                    form.elements['reasoning'].value = data.model_result.explanation;
-                    
-                    setTimeout(() => {
-                        document.getElementById('submit-btn').click();
-                    }, 500);
-                }
             } catch (e) {
                 alert("Environment reset failed. Check if API is running at " + API_URL);
             }
