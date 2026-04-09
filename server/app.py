@@ -40,6 +40,7 @@ from environment import (
     RiskLevel,
     LoanDecision,
     InterestRateTier,
+    ApplicantProfile,
     TASK_ORDER,
     grade_action,
 )
@@ -98,19 +99,19 @@ app.add_middleware(
 
 # ─── Static Files & UI Route ────────────────────────────────────────────────
 
-STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
-if os.path.exists(STATIC_DIR):
-    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    logger.info(f"Static files mounted from: {STATIC_DIR}")
+FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
+if os.path.exists(FRONTEND_DIR):
+    app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
+    logger.info(f"Frontend files mounted from: {FRONTEND_DIR}")
 
 
 @app.get("/ui")
 async def serve_ui():
     """Serve the frontend UI webpage."""
-    index_path = os.path.join(STATIC_DIR, "index.html")
+    index_path = os.path.join(FRONTEND_DIR, "index.html")
     if os.path.exists(index_path):
         return FileResponse(index_path, media_type="text/html")
-    raise HTTPException(status_code=404, detail="UI not found. Ensure static/index.html exists.")
+    raise HTTPException(status_code=404, detail="UI not found. Ensure frontend/index.html exists.")
 
 
 # ─── Global Environment Instance ─────────────────────────────────────────────
@@ -124,6 +125,7 @@ logger.info("LoanUnderwritingEnv initialized successfully.")
 class ResetRequest(BaseModel):
     """Request body for the /reset endpoint."""
     task_id: Optional[str] = None
+    custom_profile: Optional[ApplicantProfile] = None
 
 
 class StepRequest(BaseModel):
@@ -194,20 +196,36 @@ async def reset_environment(request: Request):
     """
     try:
         task_id = None
+        custom_profile = None
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
             try:
                 body = await request.json()
                 if isinstance(body, dict):
                     task_id = body.get("task_id", None)
+                    custom_profile_data = body.get("custom_profile", None)
+                    if custom_profile_data:
+                        custom_profile = ApplicantProfile(**custom_profile_data)
             except Exception:
                 pass
-        state = env.reset(task_id=task_id)
-        logger.info(f"Environment reset with task_id={task_id or 'default (easy)'}")
-        return {
+        state = env.reset(task_id=task_id, custom_profile=custom_profile)
+        logger.info(f"Environment reset with task_id={task_id or 'default'} (custom={custom_profile is not None})")
+        
+        response_data = {
             "status": "reset_complete",
             "state": state.model_dump(),
         }
+        
+        if custom_profile and env.current_task_id == "custom_user_profile":
+            gt = env._current_task.ground_truth
+            response_data["model_result"] = {
+                "risk_level": gt.risk_level.value if hasattr(gt.risk_level, 'value') else str(gt.risk_level),
+                "loan_decision": gt.loan_decision.value if hasattr(gt.loan_decision, 'value') else str(gt.loan_decision),
+                "interest_rate_tier": gt.interest_rate_tier.value if hasattr(gt.interest_rate_tier, 'value') else str(gt.interest_rate_tier),
+                "explanation": gt.explanation
+            }
+            
+        return response_data
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

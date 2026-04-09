@@ -17,8 +17,9 @@ from .models import (
     Action,
     State,
     GradingResult,
+    TaskDifficulty,
 )
-from .tasks import TaskDefinition, get_task, get_all_tasks, TASK_ORDER
+from .tasks import TaskDefinition, get_task, get_all_tasks, TASK_ORDER, generate_heuristic_ground_truth
 from .rewards import compute_reward, format_reward_breakdown
 
 
@@ -43,22 +44,38 @@ class LoanUnderwritingEnv:
         self._done: bool = True
         self._episode_reward: float = 0.0
 
-    def reset(self, task_id: Optional[str] = None) -> State:
+    def reset(
+        self,
+        task_id: Optional[str] = None,
+        custom_profile: Optional[ApplicantProfile] = None
+    ) -> State:
         """
         Reset the environment and load a new applicant profile.
 
         Args:
             task_id: ID of the task to load. If None, loads the first task.
+            custom_profile: Optional ApplicantProfile to use instead of a predefined task.
 
         Returns:
             Initial State containing the observation (applicant profile + task description)
         """
-        # Default to the first task if none specified
-        if task_id is None:
-            task_id = TASK_ORDER[0]
+        if custom_profile:
+            # Handle custom profile
+            self._current_task = TaskDefinition(
+                task_id="custom_user_profile",
+                name="Custom Applicant Profile",
+                difficulty=TaskDifficulty.MEDIUM,
+                description="Evaluate the manually entered applicant profile.",
+                profile=custom_profile,
+                ground_truth=generate_heuristic_ground_truth(custom_profile)
+            )
+        else:
+            # Default to the first task if none specified
+            if task_id is None:
+                task_id = TASK_ORDER[0]
 
-        # Load the task definition
-        self._current_task = get_task(task_id)
+            # Load the task definition
+            self._current_task = get_task(task_id)
 
         # Create the observation from the task's applicant profile
         self._observation = Observation.from_profile(

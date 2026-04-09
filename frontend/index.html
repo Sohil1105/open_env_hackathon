@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LoanUnderwriter AI — Risk Assessment Dashboard</title>
+    <!-- SEO Meta Tags -->
+    <meta name="description" content="AI-driven loan underwriting and risk assessment dashboard. Evaluate applicants with precision using advanced financial heuristics.">
+    
+    <!-- Google Fonts: Inter & Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        :root {
+            --bg-color: #05060f;
+            --card-bg: rgba(255, 255, 255, 0.03);
+            --card-border: rgba(255, 255, 255, 0.1);
+            --accent-primary: #3b82f6; /* Blue */
+            --accent-secondary: #10b981; /* Emerald */
+            --accent-danger: #ef4444; /* Red */
+            --accent-warning: #f59e0b; /* Amber */
+            --text-primary: #ffffff;
+            --text-secondary: #94a3b8;
+            --glass-blur: blur(12px);
+            --sidebar-width: 300px;
+            --transition-speed: 0.3s;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            min-height: 100vh;
+            display: flex;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(59, 130, 246, 0.05) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(16, 185, 129, 0.05) 0%, transparent 40%);
+        }
+
+        /* --- Sidebar --- */
+        #sidebar {
+            width: var(--sidebar-width);
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: var(--glass-blur);
+            border-right: 1px solid var(--card-border);
+            padding: 2rem 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            position: fixed;
+            left: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(to right, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: var(--text-secondary);
+            margin-bottom: 1rem;
+        }
+
+        .task-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .task-btn {
+            padding: 1rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all var(--transition-speed);
+            text-align: left;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .task-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            border-color: var(--accent-primary);
+        }
+
+        .task-btn.active {
+            background: rgba(59, 130, 246, 0.15);
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 20px rgba(59, 130, 246, 0.2);
+        }
+
+        .task-name {
+            font-size: 0.9rem;
+            font-weight: 600;
+        }
+
+        .task-difficulty {
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+        }
+
+        .custom-btn {
+            background: linear-gradient(45deg, var(--accent-primary), #6366f1);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            transition: transform 0.2s, opacity 0.2s;
+        }
+
+        .custom-btn:hover {
+            transform: translateY(-2px);
+            opacity: 0.9;
+        }
+
+        /* --- Main Content --- */
+        #main-content {
+            margin-left: var(--sidebar-width);
+            flex: 1;
+            padding: 3rem 4rem; /* Balanced horizontal padding */
+            max-width: 1600px;
+            width: calc(100% - var(--sidebar-width));
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center; /* Vertical alignment fix */
+            margin-bottom: 3rem;
+            border-bottom: 1px solid var(--card-border);
+            padding-bottom: 2rem;
+        }
+
+        .header-info h1 {
+            font-family: 'Outfit', sans-serif;
+            font-size: 2.2rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-badge {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: rgba(16, 185, 129, 0.1);
+            color: var(--accent-secondary);
+            border-radius: 99px;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        /* --- Applicant Dashboard --- */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr; /* Equal width for better symmetry */
+            gap: 2.5rem;
+        }
+
+        .card {
+            background: var(--card-bg);
+            backdrop-filter: var(--glass-blur);
+            border: 1px solid var(--card-border);
+            border-radius: 24px;
+            padding: 2.5rem; /* Increased and unified padding */
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .card-header {
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .card-title {
+            font-family: 'Outfit', sans-serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        /* Applicant Info Card */
+        .profile-hero {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--card-border);
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            background: linear-gradient(135deg, #1e293b, #0f172a);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--accent-primary);
+            border: 1px solid var(--card-border);
+        }
+
+        .profile-text h2 {
+            font-size: 1.5rem;
+            margin-bottom: 0.25rem;
+        }
+
+        .profile-text p {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1.5rem;
+        }
+
+        .metric-item {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1.25rem;
+            border-radius: 16px;
+            border: 1px solid var(--card-border);
+        }
+
+        .metric-label {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        /* Charts */
+        .charts-container {
+            margin-top: 2rem;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        /* Decision Panel */
+        .decision-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        .radio-group {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr); /* Perfect 3-column alignment */
+            gap: 0.75rem;
+        }
+
+        .radio-item input {
+            display: none;
+        }
+
+        .radio-label {
+            display: block;
+            padding: 0.85rem 0.5rem;
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            transition: all 0.2s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .radio-item input:checked + .radio-label {
+            background: var(--accent-primary);
+            border-color: var(--accent-primary);
+            color: white;
+        }
+
+        textarea {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            color: white;
+            padding: 1rem;
+            font-family: inherit;
+            resize: none;
+            height: 100px;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .submit-btn {
+            margin-top: 1rem;
+            background: linear-gradient(to right, var(--accent-primary), #6366f1);
+            color: white;
+            border: none;
+            padding: 1.25rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 10px 30px rgba(59, 130, 246, 0.3);
+        }
+
+        .submit-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 15px 40px rgba(59, 130, 246, 0.4);
+        }
+
+        .submit-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Results Display */
+        #results-overlay {
+            display: none;
+            margin-top: 2rem;
+            animation: slideUp 0.5s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .result-card {
+            background: linear-gradient(135deg, rgba(59, 130, 246, 0.1), rgba(16, 185, 129, 0.1));
+            border: 1px solid var(--accent-primary);
+            border-radius: 20px;
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+        }
+
+        .reward-circle {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: var(--bg-color);
+            border: 4px solid var(--accent-secondary);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--accent-secondary);
+            box-shadow: 0 0 20px var(--accent-secondary);
+        }
+
+        /* --- Custom Applicant Modal --- */
+        #modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            backdrop-filter: blur(8px);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .modal {
+            background: #0f172a;
+            border: 1px solid var(--card-border);
+            width: 100%;
+            max-width: 800px;
+            border-radius: 32px;
+            padding: 3rem;
+            position: relative;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .input-group label {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        input, select {
+            background: var(--card-bg);
+            border: 1px solid var(--card-border);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            color: white;
+            font-family: inherit;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--accent-primary);
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 2rem;
+            right: 2rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+        }
+
+        /* Loading Spinner */
+        .loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #fff;
+            border-bottom-color: transparent;
+            border-radius: 50%;
+            display: none;
+            animation: rotation 1s linear infinite;
+        }
+
+        @keyframes rotation {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .loading .loader { display: inline-block; }
+        .loading .btn-text { display: none; }
+
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+
+
+        <div>
+            <p class="section-label">Evaluation Tasks</p>
+            <div id="task-list" class="task-list">
+                <!-- Tasks will be injected here -->
+                <div class="task-btn animate-pulse" style="height: 60px;"></div>
+                <div class="task-btn animate-pulse" style="height: 60px;"></div>
+            </div>
+        </div>
+
+        <button class="custom-btn" onclick="openCustomModal()">
+            <i data-lucide="plus-circle"></i>
+            Enter Custom Details
+        </button>
+
+        <div style="margin-top: auto;">
+            <p class="section-label">Server Status</p>
+            <div id="api-status" class="status-badge" style="background: rgba(var(--accent-primary), 0.1); color: var(--accent-primary);">
+                <i data-lucide="loader-2" class="animate-spin"></i>
+                Connecting ...
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main id="main-content">
+        <header class="header">
+            <div class="header-info">
+                <h1 id="current-task-name">Loading Environment...</h1>
+                <p id="current-task-desc" style="color: var(--text-secondary); max-width: 600px; line-height: 1.6;">
+                    Please select a task from the sidebar or enter custom applicant details to begin risk assessment.
+                </p>
+            </div>
+            <div id="difficulty-badge" class="status-badge" style="display:none;">
+                <i data-lucide="zap"></i>
+                <span id="diff-text">EASY</span>
+            </div>
+        </header>
+
+        <div class="dashboard-grid">
+            <!-- Left: Applicant Details -->
+            <section class="card">
+                <div class="card-header">
+                    <span class="card-title">Applicant Profile</span>
+                    <i data-lucide="user" style="color: var(--accent-primary);"></i>
+                </div>
+
+                <div class="profile-hero">
+                    <div class="avatar">
+                        <i data-lucide="user-round" size="40"></i>
+                    </div>
+                    <div class="profile-text">
+                        <h2 id="app-name">---</h2>
+                        <p id="app-meta">---</p>
+                    </div>
+                </div>
+
+                <div class="metrics-grid">
+                    <div class="metric-item">
+                        <p class="metric-label">Annual Income</p>
+                        <p id="val-income" class="metric-value">$0</p>
+                    </div>
+                    <div class="metric-item">
+                        <p class="metric-label">Credit Score</p>
+                        <p id="val-credit" class="metric-value">0</p>
+                    </div>
+                    <div class="metric-item">
+                        <p class="metric-label">Existing Debt</p>
+                        <p id="val-debt" class="metric-value">$0</p>
+                    </div>
+                    <div class="metric-item">
+                        <p class="metric-label">Loan Requested</p>
+                        <p id="val-loan" class="metric-value">$0</p>
+                    </div>
+                </div>
+
+                <div class="charts-container">
+                    <canvas id="creditScoreChart"></canvas>
+                    <canvas id="debtChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Right: Decision Engine -->
+            <section class="card">
+                <div class="card-header">
+                    <span class="card-title">Decision Engine</span>
+                    <div class="status-badge" style="background: rgba(59, 130, 246, 0.1); color: var(--accent-primary);">
+                        Waiting for Action
+                    </div>
+                </div>
+
+                <form id="decision-form" class="decision-panel">
+                    <div class="form-group">
+                        <label class="metric-label">Assessed Risk Level</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="risk_level" id="risk-low" value="Low" checked>
+                                <label for="risk-low" class="radio-label">Low</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="risk_level" id="risk-medium" value="Medium">
+                                <label for="risk-medium" class="radio-label">Medium</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="risk_level" id="risk-high" value="High">
+                                <label for="risk-high" class="radio-label">High</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="metric-label">Lending Decision</label>
+                        <div class="radio-group">
+                            <div class="radio-item">
+                                <input type="radio" name="loan_decision" id="dec-app" value="Approve" checked>
+                                <label for="dec-app" class="radio-label">Approve</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="loan_decision" id="dec-cond" value="Conditional Approve">
+                                <label for="dec-cond" class="radio-label">Conditional</label>
+                            </div>
+                            <div class="radio-item">
+                                <input type="radio" name="loan_decision" id="dec-rej" value="Reject">
+                                <label for="dec-rej" class="radio-label">Reject</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="metric-label">Interest Rate Tier</label>
+                        <select name="interest_rate_tier" id="rate-tier">
+                            <option value="7-9%">7-9% (Prime)</option>
+                            <option value="10-13%">10-13% (Standard)</option>
+                            <option value="14%+" selected>14%+ (Subprime)</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="metric-label">Internal Reasoning (Log)</label>
+                        <textarea name="reasoning" placeholder="Detail the financial rationale for this decision..."></textarea>
+                    </div>
+
+                    <button type="submit" id="submit-btn" class="submit-btn">
+                        <span class="btn-text">Submit Final Decision</span>
+                        <div class="loader"></div>
+                    </button>
+                </form>
+
+                <!-- Results Output -->
+                <div id="results-overlay">
+                    <div class="result-card">
+                        <div>
+                            <p class="metric-label">Environmental Reward</p>
+                            <p style="font-size: 1.5rem; font-weight: 700;">Score Achieved</p>
+                        </div>
+                        <div id="reward-val" class="reward-circle">0.0</div>
+                    </div>
+                    
+                    <div class="metric-item" style="border-color: var(--accent-primary);">
+                        <p class="metric-label">Ground Truth Feedback</p>
+                        <p id="feedback-text" style="font-size: 0.9rem; line-height: 1.5; color: var(--text-secondary);">---</p>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- Custom Modal -->
+    <div id="modal-overlay">
+        <div class="modal">
+            <div class="close-modal" onclick="closeCustomModal()">
+                <i data-lucide="x"></i>
+            </div>
+            <h2 style="font-family: 'Outfit'; font-size: 2rem; margin-bottom: 2rem;">Custom Applicant Profile</h2>
+            
+            <form id="custom-profile-form" class="modal-grid">
+                <div class="input-group">
+                    <label>Full Name</label>
+                    <input type="text" name="applicant_name" value="Jane Doe" required>
+                </div>
+                <div class="input-group">
+                    <label>Age</label>
+                    <input type="number" name="age" value="30" required>
+                </div>
+                <div class="input-group">
+                    <label>Annual Income ($)</label>
+                    <input type="number" name="annual_income" value="85000" required>
+                </div>
+                <div class="input-group">
+                    <label>Credit Score (300-850)</label>
+                    <input type="number" name="credit_score" value="700" min="300" max="850" required>
+                </div>
+                <div class="input-group">
+                    <label>Existing Debt ($)</label>
+                    <input type="number" name="existing_debt" value="12000" required>
+                </div>
+                <div class="input-group">
+                    <label>Loan Requested ($)</label>
+                    <input type="number" name="loan_amount_requested" value="250000" required>
+                </div>
+                <div class="input-group">
+                    <label>Employment Type</label>
+                    <select name="employment_type">
+                        <option value="salaried">Salaried</option>
+                        <option value="self_employed">Self Employed</option>
+                        <option value="freelancer">Freelancer</option>
+                        <option value="contract">Contract</option>
+                    </select>
+                </div>
+                <div class="input-group">
+                    <label>Tenure (Years)</label>
+                    <input type="number" name="employment_years" value="5" step="0.1" required>
+                </div>
+                <div class="input-group">
+                    <label>Tenure (Months)</label>
+                    <input type="number" name="repayment_tenure_months" value="360" required>
+                </div>
+                <div class="input-group">
+                    <label>Monthly Expenses ($)</label>
+                    <input type="number" name="monthly_expenses" value="3500" required>
+                </div>
+                <div class="input-group" style="grid-column: span 2;">
+                    <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer;">
+                        <input type="checkbox" name="has_collateral" style="width: auto;">
+                        Applicant Providing Collateral Assets?
+                    </label>
+                </div>
+                <div class="input-group">
+                    <label>Previous Defaults</label>
+                    <input type="number" name="previous_defaults" value="0" required>
+                </div>
+
+                <button type="submit" class="submit-btn" style="grid-column: span 2;">
+                    Load Custom Profile into System
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // --- State Management ---
+        const API_URL = "http://localhost:7860"; // Update this with your actual server URL
+        let currentTask = null;
+        let creditChart = null;
+        let debtChart = null;
+
+        // --- Initialization ---
+        document.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            initCharts();
+            checkAPI();
+            fetchTasks();
+        });
+
+        async function checkAPI() {
+            const badge = document.getElementById('api-status');
+            try {
+                const res = await fetch(`${API_URL}/`);
+                if (res.ok) {
+                    badge.innerHTML = `<i data-lucide="check" size="14"></i> Connected`;
+                    badge.style.background = 'rgba(16, 185, 129, 0.1)';
+                    badge.style.color = '#10b981';
+                } else {
+                    throw new Error();
+                }
+            } catch (e) {
+                badge.innerHTML = `<i data-lucide="alert-circle" size="14"></i> URL Mismatch/Offline`;
+                badge.style.background = 'rgba(239, 68, 68, 0.1)';
+                badge.style.color = '#ef4444';
+            }
+            lucide.createIcons();
+        }
+
+        async function fetchTasks() {
+            try {
+                const res = await fetch(`${API_URL}/tasks`);
+                const data = await res.json();
+                renderTaskList(data.tasks);
+                // Load first task by default
+                if (data.tasks.length > 0) loadTask(data.tasks[0].task_id);
+            } catch (e) {
+                console.error("Failed to fetch tasks", e);
+            }
+        }
+
+        function renderTaskList(tasks) {
+            const container = document.getElementById('task-list');
+            container.innerHTML = tasks.map(task => `
+                <div class="task-btn" id="btn-${task.task_id}" onclick="loadTask('${task.task_id}')">
+                    <div class="task-name">${task.name}</div>
+                    <div class="task-difficulty">${task.difficulty}</div>
+                </div>
+            `).join('');
+        }
+
+        async function loadTask(taskId, customProfile = null) {
+            // Update UI state
+            document.querySelectorAll('.task-btn').forEach(b => b.classList.remove('active'));
+            const btn = document.getElementById(`btn-${taskId}`);
+            if (btn) btn.classList.add('active');
+
+            // Reset results
+            document.getElementById('results-overlay').style.display = 'none';
+            document.getElementById('submit-btn').disabled = false;
+
+            try {
+                const body = customProfile ? { custom_profile: customProfile } : { task_id: taskId };
+                const res = await fetch(`${API_URL}/reset`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(body)
+                });
+                const data = await res.json();
+                updateDashboard(data.state);
+                
+                if (data.model_result) {
+                    const form = document.getElementById('decision-form');
+                    form.elements['risk_level'].value = data.model_result.risk_level;
+                    form.elements['loan_decision'].value = data.model_result.loan_decision;
+                    form.elements['interest_rate_tier'].value = data.model_result.interest_rate_tier;
+                    form.elements['reasoning'].value = data.model_result.explanation;
+                    
+                    setTimeout(() => {
+                        document.getElementById('submit-btn').click();
+                    }, 500);
+                }
+            } catch (e) {
+                alert("Environment reset failed. Check if API is running at " + API_URL);
+            }
+        }
+
+        function updateDashboard(state) {
+            const obs = state.observation;
+            currentTask = state.current_task_id;
+
+            document.getElementById('current-task-name').innerText = state.current_task_id === 'custom_user_profile' ? "Custom Evaluation" : obs.task_id.replace(/_/g, ' ').toUpperCase();
+            document.getElementById('current-task-desc').innerText = obs.task_description;
+            
+            const badge = document.getElementById('difficulty-badge');
+            badge.style.display = 'flex';
+            document.getElementById('diff-text').innerText = obs.task_difficulty.toUpperCase();
+
+            document.getElementById('app-name').innerText = obs.applicant_name;
+            document.getElementById('app-meta').innerText = `${obs.age} yrs • ${obs.employment_type.replace('_', ' ')} • ${obs.employment_years} yrs exp`;
+
+            document.getElementById('val-income').innerText = `$${obs.annual_income.toLocaleString()}`;
+            document.getElementById('val-credit').innerText = obs.credit_score;
+            document.getElementById('val-debt').innerText = `$${obs.existing_debt.toLocaleString()}`;
+            document.getElementById('val-loan').innerText = `$${obs.loan_amount_requested.toLocaleString()}`;
+
+            updateCharts(obs);
+        }
+
+        // --- Charts Implementation ---
+        function initCharts() {
+            const creditCtx = document.getElementById('creditScoreChart').getContext('2d');
+            creditChart = new Chart(creditCtx, {
+                type: 'doughnut',
+                data: {
+                    datasets: [{
+                        data: [0, 850],
+                        backgroundColor: ['#3b82f6', 'rgba(255,255,255,0.05)'],
+                        borderWidth: 0,
+                        circumference: 180,
+                        rotation: 270,
+                    }]
+                },
+                options: {
+                    aspectRatio: 2,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { enabled: false }
+                    }
+                }
+            });
+
+            const debtCtx = document.getElementById('debtChart').getContext('2d');
+            debtChart = new Chart(debtCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['Income', 'Debt', 'Expenses'],
+                    datasets: [{
+                        label: 'Monthly Cash Flow',
+                        data: [0, 0, 0],
+                        backgroundColor: ['#10b981', '#ef4444', '#f59e0b'],
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    scales: {
+                        y: { display: false },
+                        x: { grid: { display: false }, ticks: { color: '#94a3b8' } }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function updateCharts(obs) {
+            // Update Credit Score
+            creditChart.data.datasets[0].data = [obs.credit_score, 850 - obs.credit_score];
+            let color = '#ef4444';
+            if (obs.credit_score > 700) color = '#10b981';
+            else if (obs.credit_score > 600) color = '#f59e0b';
+            creditChart.data.datasets[0].backgroundColor[0] = color;
+            creditChart.update();
+
+            // Update Cash Flow
+            debtChart.data.datasets[0].data = [
+                obs.annual_income / 12,
+                obs.existing_debt / 24, // simplified monthly debt
+                obs.monthly_expenses
+            ];
+            debtChart.update();
+        }
+
+        // --- Form Handling ---
+        document.getElementById('decision-form').onsubmit = async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submit-btn');
+            btn.classList.add('loading');
+            btn.disabled = true;
+
+            const formData = new FormData(e.target);
+            const payload = {
+                risk_level: formData.get('risk_level'),
+                loan_decision: formData.get('loan_decision'),
+                interest_rate_tier: formData.get('interest_rate_tier'),
+                reasoning: formData.get('reasoning')
+            };
+
+            try {
+                const res = await fetch(`${API_URL}/step`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                const data = await res.json();
+                showResults(data);
+            } catch (e) {
+                alert("Decision submission failed.");
+            } finally {
+                btn.classList.remove('loading');
+            }
+        };
+
+        function showResults(data) {
+            document.getElementById('results-overlay').style.display = 'block';
+            const reward = data.reward;
+            const rewardEl = document.getElementById('reward-val');
+            rewardEl.innerText = reward.toFixed(2);
+            
+            // Color reward based on success
+            if (reward > 0.8) rewardEl.style.borderColor = '#10b981';
+            else if (reward > 0.5) rewardEl.style.borderColor = '#f59e0b';
+            else rewardEl.style.borderColor = '#ef4444';
+
+            document.getElementById('feedback-text').innerText = data.info.feedback;
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+        }
+
+        // --- Custom Profile Logic ---
+        function openCustomModal() {
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeCustomModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        document.getElementById('custom-profile-form').onsubmit = (e) => {
+            e.preventDefault();
+            const fd = new FormData(e.target);
+            const profile = {
+                applicant_name: fd.get('applicant_name'),
+                age: parseInt(fd.get('age')),
+                annual_income: parseFloat(fd.get('annual_income')),
+                credit_score: parseInt(fd.get('credit_score')),
+                existing_debt: parseFloat(fd.get('existing_debt')),
+                employment_type: fd.get('employment_type'),
+                employment_years: parseFloat(fd.get('employment_years')),
+                loan_amount_requested: parseFloat(fd.get('loan_amount_requested')),
+                repayment_tenure_months: parseInt(fd.get('repayment_tenure_months')),
+                monthly_expenses: parseFloat(fd.get('monthly_expenses')),
+                has_collateral: fd.get('has_collateral') === 'on',
+                previous_defaults: parseInt(fd.get('previous_defaults'))
+            };
+
+            closeCustomModal();
+            loadTask('custom_user_profile', profile);
+        };
+
+    </script>
+</body>
+</html>

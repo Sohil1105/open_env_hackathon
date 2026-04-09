@@ -31,6 +31,7 @@ from environment import (
     RiskLevel,
     LoanDecision,
     InterestRateTier,
+    ApplicantProfile,
     TASK_ORDER,
     grade_action,
 )
@@ -115,6 +116,7 @@ logger.info("LoanUnderwritingEnv initialized successfully.")
 class ResetRequest(BaseModel):
     """Request body for the /reset endpoint."""
     task_id: Optional[str] = None
+    custom_profile: Optional[ApplicantProfile] = None
 
 
 class StepRequest(BaseModel):
@@ -186,21 +188,38 @@ async def reset_environment(request: Request):
     try:
         # Handle both JSON body and empty/no body gracefully
         task_id = None
+        custom_profile = None
         content_type = request.headers.get("content-type", "")
         if "application/json" in content_type:
             try:
                 body = await request.json()
                 if isinstance(body, dict):
                     task_id = body.get("task_id", None)
+                    custom_profile_data = body.get("custom_profile", None)
+                    if custom_profile_data:
+                        custom_profile = ApplicantProfile(**custom_profile_data)
             except Exception:
-                pass  # Empty body or invalid JSON -> use default task
+                pass
 
-        state = env.reset(task_id=task_id)
-        logger.info(f"Environment reset with task_id={task_id or 'default (easy)'}")
-        return {
+        state = env.reset(task_id=task_id, custom_profile=custom_profile)
+        logger.info(f"Environment reset with task_id={task_id or 'default'} (custom={custom_profile is not None})")
+        
+        response_data = {
             "status": "reset_complete",
             "state": state.model_dump(),
         }
+        
+        # Give the model result if it's a custom profile
+        if custom_profile and env.current_task_id == "custom_user_profile":
+            gt = env._current_task.ground_truth
+            response_data["model_result"] = {
+                "risk_level": gt.risk_level.value if hasattr(gt.risk_level, 'value') else str(gt.risk_level),
+                "loan_decision": gt.loan_decision.value if hasattr(gt.loan_decision, 'value') else str(gt.loan_decision),
+                "interest_rate_tier": gt.interest_rate_tier.value if hasattr(gt.interest_rate_tier, 'value') else str(gt.interest_rate_tier),
+                "explanation": gt.explanation
+            }
+            
+        return response_data
     except KeyError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:

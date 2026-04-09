@@ -304,6 +304,59 @@ def get_task(task_id: str) -> TaskDefinition:
     return ALL_TASKS[task_id]
 
 
+
 def get_all_tasks() -> list[TaskDefinition]:
     """Return all tasks in order of difficulty."""
     return [ALL_TASKS[tid] for tid in TASK_ORDER]
+
+
+def generate_heuristic_ground_truth(profile: ApplicantProfile) -> GroundTruth:
+    """
+    Generate a logical GroundTruth for a given ApplicantProfile using heuristics.
+    Used for custom user-submitted profiles.
+    """
+    # 1. Determine Risk Level
+    dti = profile.debt_to_income_ratio
+    
+    if profile.credit_score >= 740 and dti < 0.25 and profile.previous_defaults == 0:
+        risk_level = RiskLevel.LOW
+    elif profile.credit_score < 600 or dti > 0.55 or profile.previous_defaults >= 2:
+        risk_level = RiskLevel.HIGH
+    else:
+        risk_level = RiskLevel.MEDIUM
+
+    # 2. Determine Loan Decision
+    if risk_level == RiskLevel.LOW:
+        loan_decision = LoanDecision.APPROVE
+    elif risk_level == RiskLevel.MEDIUM:
+        if profile.has_collateral or dti < 0.35:
+            loan_decision = LoanDecision.APPROVE
+        else:
+            loan_decision = LoanDecision.CONDITIONAL_APPROVE
+    else:  # High Risk
+        if profile.has_collateral and dti < 0.45 and profile.credit_score > 550:
+            loan_decision = LoanDecision.CONDITIONAL_APPROVE
+        else:
+            loan_decision = LoanDecision.REJECT
+
+    # 3. Determine Interest Rate Tier
+    if risk_level == RiskLevel.LOW:
+        interest_tier = InterestRateTier.LOW
+    elif risk_level == RiskLevel.MEDIUM:
+        interest_tier = InterestRateTier.MEDIUM
+    else:
+        interest_tier = InterestRateTier.HIGH
+
+    # 4. Generate Explanation
+    explanation = (
+        f"Heuristic Evaluation: Risk is {risk_level.value} due to credit score {profile.credit_score} "
+        f"and DTI {dti:.2%}. Decision is {loan_decision.value} "
+        f"{'with collateral' if profile.has_collateral else 'without collateral'}."
+    )
+
+    return GroundTruth(
+        risk_level=risk_level,
+        loan_decision=loan_decision,
+        interest_rate_tier=interest_tier,
+        explanation=explanation,
+    )
