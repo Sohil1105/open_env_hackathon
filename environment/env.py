@@ -13,6 +13,7 @@ presents one applicant profile for the agent to evaluate.
 from typing import Optional
 
 from .models import (
+    ApplicantProfile,
     Observation,
     Action,
     State,

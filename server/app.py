@@ -97,23 +97,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ─── Static Files & UI Route ────────────────────────────────────────────────
-
-FRONTEND_DIR = os.path.join(PROJECT_ROOT, "frontend")
-if os.path.exists(FRONTEND_DIR):
-    app.mount("/frontend", StaticFiles(directory=FRONTEND_DIR), name="frontend")
-    logger.info(f"Frontend files mounted from: {FRONTEND_DIR}")
-
-
-@app.get("/ui")
-async def serve_ui():
-    """Serve the frontend UI webpage."""
-    index_path = os.path.join(FRONTEND_DIR, "index.html")
-    if os.path.exists(index_path):
-        return FileResponse(index_path, media_type="text/html")
-    raise HTTPException(status_code=404, detail="UI not found. Ensure frontend/index.html exists.")
-
-
 # ─── Global Environment Instance ─────────────────────────────────────────────
 
 env = LoanUnderwritingEnv()
