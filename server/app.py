@@ -25,6 +25,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 # ─── Path Setup ──────────────────────────────────────────────────────────────
@@ -94,6 +95,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ─── Static Files & UI Route ────────────────────────────────────────────────
+
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+if os.path.exists(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+    logger.info(f"Static files mounted from: {STATIC_DIR}")
+
+
+@app.get("/ui")
+async def serve_ui():
+    """Serve the frontend UI webpage."""
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    raise HTTPException(status_code=404, detail="UI not found. Ensure static/index.html exists.")
+
 
 # ─── Global Environment Instance ─────────────────────────────────────────────
 
