@@ -10,6 +10,7 @@ This environment simulates a bank's loan underwriting desk. Each episode
 presents one applicant profile for the agent to evaluate.
 """
 
+from __future__ import annotations
 from typing import Optional
 
 from .models import (
@@ -18,6 +19,7 @@ from .models import (
     State,
     GradingResult,
     TaskDifficulty,
+    ApplicantProfile,
 )
 from .tasks import TaskDefinition, get_task, get_all_tasks, TASK_ORDER, generate_heuristic_ground_truth
 from .rewards import compute_reward, format_reward_breakdown
@@ -47,7 +49,7 @@ class LoanUnderwritingEnv:
     def reset(
         self,
         task_id: Optional[str] = None,
-        custom_profile: Optional[ApplicantProfile] = None
+        custom_profile: Optional["ApplicantProfile"] = None
     ) -> State:
         """
         Reset the environment and load a new applicant profile.

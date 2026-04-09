@@ -14,6 +14,8 @@ Endpoints:
 - POST /grade       -> Grade a response for a given task_id
 """
 
+from __future__ import annotations
+
 import os
 import re
 import logging
