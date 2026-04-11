@@ -32,7 +32,7 @@ from .models import (
     EmploymentType,
     TaskDifficulty,
 )
-from .tasks import get_task, get_all_tasks, TASK_ORDER, ALL_TASKS
+from .tasks import get_task, get_all_tasks, TASK_ORDER, ALL_TASKS, generate_heuristic_ground_truth
 from .graders import grade_action
 from .rewards import compute_reward, format_reward_breakdown
 
@@ -56,4 +56,5 @@ __all__ = [
     "grade_action",
     "compute_reward",
     "format_reward_breakdown",
+    "generate_heuristic_ground_truth",
 ]

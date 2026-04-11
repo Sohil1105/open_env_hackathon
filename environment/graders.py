@@ -295,7 +295,7 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
     feedback_parts = []
 
     # Risk level feedback
-    if risk_score == 1.0:
+    if risk_score >= 0.95:
         feedback_parts.append(f"✅ Risk level: Correct ({action.risk_level.value})")
     elif risk_score > 0:
         feedback_parts.append(
@@ -309,7 +309,7 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         )
 
     # Loan decision feedback
-    if decision_score == 1.0:
+    if decision_score >= 0.95:
         feedback_parts.append(f"✅ Loan decision: Correct ({action.loan_decision.value})")
     elif decision_score > 0:
         feedback_parts.append(
@@ -323,7 +323,7 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         )
 
     # Interest rate feedback
-    if rate_score == 1.0:
+    if rate_score >= 0.95:
         feedback_parts.append(
             f"✅ Interest rate: Correct ({action.interest_rate_tier.value})"
         )
@@ -354,57 +354,4 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         total_score=total_score,
         feedback=feedback,
     )
-
-
-# ─── Tasks 1 to 5 Graders ───────────────────────────────────────────────────
-
-def grade_task_1_action(action: Action, ground_truth: GroundTruth = None) -> float:
-    score = 0.0
-    try:
-        score += 0.4 * get_similarity_score(action.risk_level, "low", RISK_SIMILARITY)
-        score += 0.35 * get_similarity_score(action.loan_decision, "approve", DECISION_SIMILARITY)
-        score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
-    except Exception:
-        pass
-    return max(0.01, min(0.99, score))
-
-def grade_task_2_action(action: Action, ground_truth: GroundTruth = None) -> float:
-    score = 0.0
-    try:
-        score += 0.4 * get_similarity_score(action.risk_level, "medium", RISK_SIMILARITY)
-        score += 0.35 * get_similarity_score(action.loan_decision, "conditional approve", DECISION_SIMILARITY)
-        score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
-    except Exception:
-        pass
-    return max(0.01, min(0.99, score))
-
-def grade_task_3_action(action: Action, ground_truth: GroundTruth = None) -> float:
-    score = 0.0
-    try:
-        score += 0.4 * get_similarity_score(action.risk_level, "high", RISK_SIMILARITY)
-        score += 0.35 * get_similarity_score(action.loan_decision, "reject", DECISION_SIMILARITY)
-        score += 0.25 * get_similarity_score(action.interest_rate_tier, "14%+", RATE_SIMILARITY)
-    except Exception:
-        pass
-    return max(0.01, min(0.99, score))
-
-def grade_task_4_action(action: Action, ground_truth: GroundTruth = None) -> float:
-    score = 0.0
-    try:
-        score += 0.4 * get_similarity_score(action.risk_level, "medium", RISK_SIMILARITY)
-        score += 0.35 * get_similarity_score(action.loan_decision, "conditional approve", DECISION_SIMILARITY)
-        score += 0.25 * get_similarity_score(action.interest_rate_tier, "10-13%", RATE_SIMILARITY)
-    except Exception:
-        pass
-    return max(0.01, min(0.99, score))
-
-def grade_task_5_action(action: Action, ground_truth: GroundTruth = None) -> float:
-    score = 0.0
-    try:
-        score += 0.4 * get_similarity_score(action.risk_level, "low", RISK_SIMILARITY)
-        score += 0.35 * get_similarity_score(action.loan_decision, "approve", DECISION_SIMILARITY)
-        score += 0.25 * get_similarity_score(action.interest_rate_tier, "7-9%", RATE_SIMILARITY)
-    except Exception:
-        pass
-    return max(0.01, min(0.99, score))
 

@@ -6,7 +6,7 @@ The reward is NOT binary — it reflects how many sub-components the agent
 answered correctly and how logically consistent the full decision is.
 """
 
-from .models import Action, GroundTruth, GradingResult
+from .models import Action, GroundTruth, GradingResult, RiskLevel, LoanDecision, InterestRateTier
 from .graders import grade_action
 
 
@@ -41,17 +41,17 @@ def compute_reward(action: Action, ground_truth: GroundTruth) -> tuple[float, Gr
         rate = action.interest_rate_tier
 
         # Consistent combinations
-        if risk == "Low" and decision == "Approve" and rate == "7-9%":
+        if risk == RiskLevel.LOW and decision == LoanDecision.APPROVE and rate == InterestRateTier.LOW:
             consistency_bonus = 0.1
-        elif risk == "Medium" and decision == "Conditional Approve" and rate == "10-13%":
+        elif risk == RiskLevel.MEDIUM and decision == LoanDecision.CONDITIONAL_APPROVE and rate == InterestRateTier.MEDIUM:
             consistency_bonus = 0.1
-        elif risk == "High" and decision == "Reject" and rate == "14%+":
+        elif risk == RiskLevel.HIGH and decision == LoanDecision.REJECT and rate == InterestRateTier.HIGH:
             consistency_bonus = 0.1
-        
+
         # Contradictory combinations
-        if (risk == "Low" and decision == "Reject") or \
-           (risk == "High" and decision == "Approve") or \
-           (risk == "High" and rate == "7-9%"):
+        if (risk == RiskLevel.LOW and decision == LoanDecision.REJECT) or \
+           (risk == RiskLevel.HIGH and decision == LoanDecision.APPROVE) or \
+           (risk == RiskLevel.HIGH and rate == InterestRateTier.LOW):
             consistency_bonus = -0.1
 
     # Clamp final score strictly between 0 and 1

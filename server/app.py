@@ -380,15 +380,12 @@ async def get_openenv_spec():
 def main():
     """
     Start the FastAPI server using uvicorn.
-    This is the entry point called by `start-server` in pyproject.toml.
+    This is the entry point called by `server` in pyproject.toml.
     """
     port = int(os.environ.get("PORT", 7860))
     logger.info(f"Starting Loan Underwriting OpenEnv server on 0.0.0.0:{port}")
     uvicorn.run(app, host="0.0.0.0", port=port)
 
-def main():
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=7860)
 
 if __name__ == "__main__":
     main()
