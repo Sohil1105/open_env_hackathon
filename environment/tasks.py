@@ -275,23 +275,178 @@ JOINT_APP_TASK = TaskDefinition(
 )
 
 
+# ─── Task 6: Lead Qualification (Sales) ──────────────────────────────────────
+
+LEAD_QUALIFICATION_TASK = TaskDefinition(
+    task_id="lead_qualification_sales",
+    name="Lead Qualification Assessment",
+    difficulty=TaskDifficulty.EASY,
+    description=(
+        "You are a sales team member performing initial lead qualification on a potential "
+        "loan applicant. Based on their initial inquiry details, you must decide whether "
+        "this lead is worthy of a full loan application.\n\n"
+        "Based on the applicant's initial profile, you must:\n"
+        "1. Classify the lead strength (Low Risk = Strong Lead / Medium = Borderline / High = Weak Lead)\n"
+        "2. Make a qualification decision (Approve = Qualify for Full Application / "
+        "Conditional Approve = Request More Info / Reject = Disqualify)\n"
+        "3. Recommend a processing priority tier (7-9% = High Priority / 10-13% = Standard / 14%+ = Low Priority)\n\n"
+        "Key decision factors:\n"
+        "- High income + stable employment = Qualify immediately (score high)\n"
+        "- Low income + unstable employment = Disqualify (score high for correct rejection)\n"
+        "- Borderline cases = Request more information (partial credit)"
+    ),
+    profile=ApplicantProfile(
+        applicant_name="Anika Patel",
+        age=31,
+        annual_income=950_000.0,         # High income
+        credit_score=760,                 # Excellent credit
+        existing_debt=80_000.0,           # Low debt
+        employment_type=EmploymentType.SALARIED,
+        employment_years=7.0,             # Stable employment
+        loan_amount_requested=350_000.0,  # Reasonable ask
+        repayment_tenure_months=48,
+        monthly_expenses=35_000.0,
+        has_collateral=True,
+        previous_defaults=0,
+    ),
+    ground_truth=GroundTruth(
+        risk_level=RiskLevel.LOW,
+        loan_decision=LoanDecision.APPROVE,
+        interest_rate_tier=InterestRateTier.LOW,
+        explanation=(
+            "Strong lead: high annual income ($950K), excellent credit score (760), "
+            "salaried with 7 years tenure, low DTI ratio (~8.4%), reasonable loan request "
+            "(~36.8% of income), has collateral, zero defaults. This lead should be "
+            "immediately qualified and prioritized for full application processing."
+        ),
+    ),
+)
+
+
+# ─── Task 7: Document Verification (HR/IT) ──────────────────────────────────
+
+DOCUMENT_VERIFICATION_TASK = TaskDefinition(
+    task_id="document_verification_hr",
+    name="Document Verification Assessment",
+    difficulty=TaskDifficulty.MEDIUM,
+    description=(
+        "You are performing document verification for a loan application. You must assess "
+        "whether the submitted documents are complete, consistent, and sufficient for "
+        "loan processing.\n\n"
+        "Based on the applicant's profile and document indicators, you must:\n"
+        "1. Classify document risk (Low = Complete & Consistent / Medium = Missing Documents / "
+        "High = Suspicious or Inconsistent)\n"
+        "2. Make a verification decision (Approve = All Clear / Conditional Approve = "
+        "Request Missing Docs / Reject = Flag Suspicious)\n"
+        "3. Recommend processing tier (7-9% = Fast Track / 10-13% = Standard Review / "
+        "14%+ = Enhanced Scrutiny)\n\n"
+        "Key indicators: Self-employed applicants with short tenure and previous defaults "
+        "suggest potential document inconsistencies. Missing collateral documentation and "
+        "moderate debt levels require additional verification."
+    ),
+    profile=ApplicantProfile(
+        applicant_name="Vikram Desai",
+        age=37,
+        annual_income=580_000.0,          # Decent income
+        credit_score=640,                  # Fair credit
+        existing_debt=220_000.0,           # Moderate-high debt
+        employment_type=EmploymentType.SELF_EMPLOYED,
+        employment_years=3.5,              # Short tenure
+        loan_amount_requested=450_000.0,
+        repayment_tenure_months=72,
+        monthly_expenses=30_000.0,
+        has_collateral=False,              # No collateral docs
+        previous_defaults=1,              # Past default
+    ),
+    ground_truth=GroundTruth(
+        risk_level=RiskLevel.MEDIUM,
+        loan_decision=LoanDecision.CONDITIONAL_APPROVE,
+        interest_rate_tier=InterestRateTier.MEDIUM,
+        explanation=(
+            "Document verification reveals concerns: self-employed with only 3.5 years tenure "
+            "means income documentation may be incomplete. One previous default requires "
+            "resolution documentation. No collateral means property documents are absent. "
+            "DTI of ~37.9% is moderate-high. Documents should be conditionally accepted with "
+            "requests for: business income proof (3 years), default resolution letter, and "
+            "additional identity verification. Standard 10-13% processing tier."
+        ),
+    ),
+)
+
+
+# ─── Task 8: Customer Onboarding (Project Management) ───────────────────────
+
+CUSTOMER_ONBOARDING_TASK = TaskDefinition(
+    task_id="customer_onboarding_pm",
+    name="Customer Onboarding Assessment",
+    difficulty=TaskDifficulty.EASY,
+    description=(
+        "You are a project manager handling the onboarding of an approved loan customer. "
+        "The loan has been approved and you must assess the completeness of the onboarding "
+        "process and readiness for loan disbursement.\n\n"
+        "Based on the approved loan details, you must:\n"
+        "1. Classify onboarding readiness (Low Risk = All Steps Complete / Medium = "
+        "Steps Missing / High = Critical Gaps)\n"
+        "2. Make an onboarding decision (Approve = Ready to Disburse / Conditional Approve = "
+        "Pending Steps / Reject = Restart Onboarding)\n"
+        "3. Recommend disbursement priority (7-9% = Immediate Disbursement / 10-13% = "
+        "Within 7 Days / 14%+ = Delayed)\n\n"
+        "Onboarding checklist: KYC verification, agreement signing, account setup, "
+        "insurance linkage, EMI mandate registration. All steps completed in order = "
+        "full score. Steps skipped = partial score. Wrong order = penalty."
+    ),
+    profile=ApplicantProfile(
+        applicant_name="Meera Joshi",
+        age=40,
+        annual_income=1_050_000.0,        # High income
+        credit_score=745,                  # Good credit
+        existing_debt=120_000.0,           # Manageable debt
+        employment_type=EmploymentType.SALARIED,
+        employment_years=12.0,             # Very stable
+        loan_amount_requested=600_000.0,
+        repayment_tenure_months=60,
+        monthly_expenses=42_000.0,
+        has_collateral=True,
+        previous_defaults=0,
+    ),
+    ground_truth=GroundTruth(
+        risk_level=RiskLevel.LOW,
+        loan_decision=LoanDecision.APPROVE,
+        interest_rate_tier=InterestRateTier.LOW,
+        explanation=(
+            "Customer onboarding assessment: All steps are complete. Excellent credentials: "
+            "high income ($1.05M), good credit (745), 12 years stable salaried employment, "
+            "low DTI (~11.4%), collateral documented, zero defaults. All onboarding steps "
+            "(KYC, agreement signing, account setup, insurance linkage, EMI mandate) can be "
+            "completed in order. Ready for immediate loan disbursement at best priority tier."
+        ),
+    ),
+)
+
+
 # ─── Registry of all tasks ───────────────────────────────────────────────────
 
 ALL_TASKS = {
+    "lead_qualification_sales": LEAD_QUALIFICATION_TASK,
+    "document_verification_hr": DOCUMENT_VERIFICATION_TASK,
     "easy_salaried_high_credit": EASY_TASK,
     "medium_self_employed_moderate": MEDIUM_TASK,
     "hard_freelancer_complex": HARD_TASK,
+    "customer_onboarding_pm": CUSTOMER_ONBOARDING_TASK,
     "bankruptcy_recovery_edge1": BANKRUPTCY_TASK,
     "joint_applicants_edge2": JOINT_APP_TASK,
 }
 
-# Ordered list for sequential execution
+# Ordered list for sequential execution (loan lifecycle order)
 TASK_ORDER = [
-    "easy_salaried_high_credit",
-    "medium_self_employed_moderate",
-    "hard_freelancer_complex",
-    "bankruptcy_recovery_edge1",
-    "joint_applicants_edge2",
+    "lead_qualification_sales",        # Stage 1 — Lead Qualification (Sales)
+    "document_verification_hr",        # Stage 2 — Document Verification (HR/IT)
+    "easy_salaried_high_credit",       # Stage 3 — Risk Assessment (Easy)
+    "medium_self_employed_moderate",   # Stage 4 — Risk Assessment (Medium)
+    "hard_freelancer_complex",         # Stage 5 — Risk Assessment (Hard)
+    "customer_onboarding_pm",          # Stage 6 — Customer Onboarding (PM)
+    "bankruptcy_recovery_edge1",       # Stage 7 — Portfolio Monitoring
+    "joint_applicants_edge2",          # Stage 8 — Loan Closure
 ]
 
 def get_task(task_id: str) -> TaskDefinition:

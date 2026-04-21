@@ -374,6 +374,28 @@ async def get_openenv_spec():
         raise HTTPException(status_code=404, detail="openenv.yaml not found")
 
 
+# ─── Web UI Endpoint ────────────────────────────────────────────────────────
+
+STATIC_DIR = os.path.join(PROJECT_ROOT, "static")
+
+
+@app.get("/ui")
+async def serve_ui():
+    """Serve the Cyberpunk Enterprise Banking web UI."""
+    index_path = os.path.join(STATIC_DIR, "index.html")
+    if os.path.exists(index_path):
+        return FileResponse(index_path, media_type="text/html")
+    raise HTTPException(
+        status_code=404,
+        detail="UI not found. Ensure static/index.html exists."
+    )
+
+
+# Mount static files directory (after all routes to avoid intercepting API paths)
+if os.path.isdir(STATIC_DIR):
+    app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
+
+
 # ─── Main Entry Point (used by [project.scripts]) ───────────────────────────
 
 

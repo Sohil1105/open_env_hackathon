@@ -213,6 +213,79 @@ tasks:
       interest_rate_weight: 0.25
       consistency_bonus: 0.1
 
+  - id: "lead_qualification_sales"
+    name: "Lead Qualification Assessment"
+    difficulty: "easy"
+    description: >
+      Perform initial lead qualification on a potential loan applicant. Determine
+      whether the lead is worthy of a full loan application based on income level,
+      employment stability, credit score, and overall financial profile. Tests the
+      agent's ability to quickly triage applicants at the sales stage.
+    example_input:
+      income: 950000
+      credit_score: 760
+      debt: 80000
+      loan_amount: 350000
+      employment: "salaried"
+    example_output:
+      risk_level: "Low"
+      loan_decision: "Approve"
+      interest_rate_tier: "7-9%"
+    scoring:
+      risk_level_weight: 0.35
+      loan_decision_weight: 0.45
+      interest_rate_weight: 0.20
+      consistency_bonus: 0.1
+
+  - id: "document_verification_hr"
+    name: "Document Verification Assessment"
+    difficulty: "medium"
+    description: >
+      Perform document verification for a loan application. Assess whether submitted
+      documents are complete, consistent, and sufficient for processing. Self-employed
+      applicants with short tenure and previous defaults require enhanced scrutiny.
+      Tests the agent's ability to identify documentation gaps and inconsistencies.
+    example_input:
+      income: 580000
+      credit_score: 640
+      debt: 220000
+      loan_amount: 450000
+      employment: "self_employed"
+      previous_defaults: 1
+    example_output:
+      risk_level: "Medium"
+      loan_decision: "Conditional Approve"
+      interest_rate_tier: "10-13%"
+    scoring:
+      risk_level_weight: 0.45
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.20
+      consistency_bonus: 0.1
+
+  - id: "customer_onboarding_pm"
+    name: "Customer Onboarding Assessment"
+    difficulty: "easy"
+    description: >
+      Handle the onboarding of an approved loan customer. Assess completeness of
+      onboarding steps including KYC verification, agreement signing, account setup,
+      insurance linkage, and EMI mandate registration. Tests the agent's ability to
+      evaluate process completeness and readiness for loan disbursement.
+    example_input:
+      income: 1050000
+      credit_score: 745
+      debt: 120000
+      loan_amount: 600000
+      employment: "salaried"
+    example_output:
+      risk_level: "Low"
+      loan_decision: "Approve"
+      interest_rate_tier: "7-9%"
+    scoring:
+      risk_level_weight: 0.35
+      loan_decision_weight: 0.35
+      interest_rate_weight: 0.20
+      consistency_bonus: 0.1
+
 # Reward structure
 reward:
   type: "partial_credit"

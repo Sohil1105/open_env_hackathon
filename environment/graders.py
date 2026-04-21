@@ -355,3 +355,296 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         feedback=feedback,
     )
 
+
+# ─── Stage-Specific Graders ─────────────────────────────────────────────────
+
+
+def grade_lead_qualification(action: Action, ground_truth: GroundTruth) -> GradingResult:
+    """
+    Grade lead qualification decision for Stage 1 (Sales).
+
+    Evaluates whether the agent correctly identified lead strength:
+    - High income + stable job → Qualify (Low risk, Approve)
+    - Low income + unstable → Disqualify (High risk, Reject)
+    - Borderline → Request more info (Medium, Conditional Approve)
+
+    Weights: qualification decision (0.45), lead strength (0.35), priority (0.20).
+    Scores clamped to [0.01, 0.99].
+    """
+    if action is None or ground_truth is None:
+        return GradingResult(
+            risk_level_score=0.01,
+            loan_decision_score=0.01,
+            interest_rate_score=0.01,
+            consistency_bonus=0.0,
+            total_score=0.01,
+            feedback="❌ No valid action or ground truth provided for lead qualification.",
+        )
+
+    risk_score = grade_risk_level(action.risk_level, ground_truth.risk_level)
+    decision_score = grade_loan_decision(action.loan_decision, ground_truth.loan_decision)
+    rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
+    consistency = grade_consistency(action)
+
+    # Lead qualification: decision matters most
+    weighted_total = (
+        risk_score * 0.35 +
+        decision_score * 0.45 +
+        rate_score * 0.20 +
+        consistency
+    )
+
+    total_score = max(0.01, min(0.99, weighted_total))
+
+    feedback_parts = []
+    if risk_score >= 0.95:
+        feedback_parts.append(f"✅ Lead strength: Correct ({action.risk_level.value})")
+    elif risk_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Lead strength: Partially correct — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Lead strength: Incorrect — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+
+    if decision_score >= 0.95:
+        feedback_parts.append(f"✅ Qualification: Correct ({action.loan_decision.value})")
+    elif decision_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Qualification: Partially correct — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Qualification: Incorrect — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+
+    if rate_score >= 0.95:
+        feedback_parts.append(f"✅ Processing priority: Correct ({action.interest_rate_tier.value})")
+    elif rate_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Priority: Partially correct — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Priority: Incorrect — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+
+    if consistency > 0:
+        feedback_parts.append(f"🔗 Consistency bonus: +{consistency:.2f}")
+    elif consistency < 0:
+        feedback_parts.append(f"⚠️ Consistency penalty: {consistency:.2f}")
+
+    feedback = "\n".join(feedback_parts)
+
+    return GradingResult(
+        risk_level_score=risk_score,
+        loan_decision_score=decision_score,
+        interest_rate_score=rate_score,
+        consistency_bonus=consistency,
+        total_score=total_score,
+        feedback=feedback,
+    )
+
+
+def grade_document_verification(action: Action, ground_truth: GroundTruth) -> GradingResult:
+    """
+    Grade document verification assessment for Stage 2 (HR/IT).
+
+    Evaluates whether the agent correctly assessed document completeness:
+    - All docs present + consistent → Complete (Low risk, Approve)
+    - Missing docs → Request missing (Medium, Conditional Approve)
+    - Inconsistent details → Flag suspicious (High, Reject)
+
+    Weights: document risk (0.45), verification decision (0.35), processing tier (0.20).
+    Scores clamped to [0.01, 0.99].
+    """
+    if action is None or ground_truth is None:
+        return GradingResult(
+            risk_level_score=0.01,
+            loan_decision_score=0.01,
+            interest_rate_score=0.01,
+            consistency_bonus=0.0,
+            total_score=0.01,
+            feedback="❌ No valid action or ground truth provided for document verification.",
+        )
+
+    risk_score = grade_risk_level(action.risk_level, ground_truth.risk_level)
+    decision_score = grade_loan_decision(action.loan_decision, ground_truth.loan_decision)
+    rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
+    consistency = grade_consistency(action)
+
+    # Document verification: risk assessment (completeness) matters most
+    weighted_total = (
+        risk_score * 0.45 +
+        decision_score * 0.35 +
+        rate_score * 0.20 +
+        consistency
+    )
+
+    total_score = max(0.01, min(0.99, weighted_total))
+
+    feedback_parts = []
+    if risk_score >= 0.95:
+        feedback_parts.append(f"✅ Document assessment: Correct ({action.risk_level.value})")
+    elif risk_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Document assessment: Partially correct — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Document assessment: Incorrect — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+
+    if decision_score >= 0.95:
+        feedback_parts.append(f"✅ Verification decision: Correct ({action.loan_decision.value})")
+    elif decision_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Verification: Partially correct — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Verification: Incorrect — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+
+    if rate_score >= 0.95:
+        feedback_parts.append(f"✅ Processing tier: Correct ({action.interest_rate_tier.value})")
+    elif rate_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Processing tier: Partially correct — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Processing tier: Incorrect — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+
+    if consistency > 0:
+        feedback_parts.append(f"🔗 Consistency bonus: +{consistency:.2f}")
+    elif consistency < 0:
+        feedback_parts.append(f"⚠️ Consistency penalty: {consistency:.2f}")
+
+    feedback = "\n".join(feedback_parts)
+
+    return GradingResult(
+        risk_level_score=risk_score,
+        loan_decision_score=decision_score,
+        interest_rate_score=rate_score,
+        consistency_bonus=consistency,
+        total_score=total_score,
+        feedback=feedback,
+    )
+
+
+def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> GradingResult:
+    """
+    Grade customer onboarding assessment for Stage 5 (Project Management).
+
+    Evaluates whether the agent correctly assessed onboarding completeness:
+    - All steps completed in order → Full score (Low risk, Approve)
+    - Steps skipped → Partial score (Medium, Conditional Approve)
+    - Wrong order or critical gaps → Penalty (High, Reject)
+
+    Weights: readiness (0.35), onboarding decision (0.35), disbursement priority (0.20),
+    consistency (0.10 bonus).
+    Scores clamped to [0.01, 0.99].
+    """
+    if action is None or ground_truth is None:
+        return GradingResult(
+            risk_level_score=0.01,
+            loan_decision_score=0.01,
+            interest_rate_score=0.01,
+            consistency_bonus=0.0,
+            total_score=0.01,
+            feedback="❌ No valid action or ground truth provided for customer onboarding.",
+        )
+
+    risk_score = grade_risk_level(action.risk_level, ground_truth.risk_level)
+    decision_score = grade_loan_decision(action.loan_decision, ground_truth.loan_decision)
+    rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
+    consistency = grade_consistency(action)
+
+    # Customer onboarding: readiness and decision equally important
+    weighted_total = (
+        risk_score * 0.35 +
+        decision_score * 0.35 +
+        rate_score * 0.20 +
+        consistency
+    )
+
+    # Additional onboarding-specific bonus: if all three match exactly, bonus for completeness
+    if risk_score >= 0.95 and decision_score >= 0.95 and rate_score >= 0.95:
+        weighted_total += 0.05  # Onboarding completeness bonus
+
+    total_score = max(0.01, min(0.99, weighted_total))
+
+    feedback_parts = []
+    if risk_score >= 0.95:
+        feedback_parts.append(f"✅ Onboarding readiness: Correct ({action.risk_level.value})")
+    elif risk_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Onboarding readiness: Partially correct — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Onboarding readiness: Incorrect — assessed {action.risk_level.value}, "
+            f"expected {ground_truth.risk_level.value}"
+        )
+
+    if decision_score >= 0.95:
+        feedback_parts.append(f"✅ Disbursement decision: Correct ({action.loan_decision.value})")
+    elif decision_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Disbursement: Partially correct — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Disbursement: Incorrect — decided {action.loan_decision.value}, "
+            f"expected {ground_truth.loan_decision.value}"
+        )
+
+    if rate_score >= 0.95:
+        feedback_parts.append(f"✅ Disbursement priority: Correct ({action.interest_rate_tier.value})")
+    elif rate_score > 0.1:
+        feedback_parts.append(
+            f"⚠️ Priority: Partially correct — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+    else:
+        feedback_parts.append(
+            f"❌ Priority: Incorrect — set {action.interest_rate_tier.value}, "
+            f"expected {ground_truth.interest_rate_tier.value}"
+        )
+
+    if consistency > 0:
+        feedback_parts.append(f"🔗 Consistency bonus: +{consistency:.2f}")
+    elif consistency < 0:
+        feedback_parts.append(f"⚠️ Consistency penalty: {consistency:.2f}")
+
+    # Onboarding completeness summary
+    if risk_score >= 0.95 and decision_score >= 0.95 and rate_score >= 0.95:
+        feedback_parts.append("🎯 All onboarding steps assessed correctly — completeness bonus applied!")
+
+    feedback = "\n".join(feedback_parts)
+
+    return GradingResult(
+        risk_level_score=risk_score,
+        loan_decision_score=decision_score,
+        interest_rate_score=rate_score,
+        consistency_bonus=consistency,
+        total_score=total_score,
+        feedback=feedback,
+    )

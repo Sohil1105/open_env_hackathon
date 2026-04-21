@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="NEXUS BANK — Long-Horizon Loan Lifecycle OpenEnv Command Center. AI-powered loan underwriting and risk assessment environment.">
+<title>NEXUS BANK // Loan Lifecycle Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<style>
+/* ─── CSS Reset & Variables ─────────────────────────────── */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  --bg: #0a0a0f;
+  --primary: #00ff88;
+  --secondary: #7b2fff;
+  --accent: #ff6b35;
+  --surface: #0f1923;
+  --surface-alt: #141e2b;
+  --text: #e0e0ff;
+  --text-dim: #6a7a8a;
+  --danger: #ff3366;
+  --gold: #ffcc00;
+  --border: #1a2a3a;
+  --glow-primary: 0 0 10px rgba(0,255,136,0.3), 0 0 40px rgba(0,255,136,0.1);
+  --glow-secondary: 0 0 10px rgba(123,47,255,0.3), 0 0 40px rgba(123,47,255,0.1);
+  --glow-accent: 0 0 10px rgba(255,107,53,0.3), 0 0 40px rgba(255,107,53,0.1);
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+  --font-display: 'Orbitron', sans-serif;
+}
+
+html { font-size: 14px; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* ─── Particle Canvas ───────────────────────────────────── */
+#particleCanvas {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* ─── Scanline Overlay ──────────────────────────────────── */
+body::after {
+  content: '';
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(0,0,0,0.03) 2px,
+    rgba(0,0,0,0.03) 4px
+  );
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* ─── Top Bar ───────────────────────────────────────────── */
+.top-bar {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.7rem 1.5rem;
+  background: linear-gradient(180deg, rgba(15,25,35,0.95) 0%, rgba(10,10,15,0.9) 100%);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(10px);
+}
+
+.system-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+}
+
+.status-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 8px var(--primary), 0 0 16px var(--primary);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.env-label {
+  font-family: var(--font-display);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  letter-spacing: 3px;
+  padding: 0.3rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: rgba(123,47,255,0.05);
+}
+
+.top-bar .btn-reset-global {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  padding: 0.35rem 1rem;
+  background: transparent;
+  color: var(--danger);
+  border: 1px solid rgba(255,51,102,0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.3s;
+}
+
+.top-bar .btn-reset-global:hover {
+  background: rgba(255,51,102,0.1);
+  border-color: var(--danger);
+  box-shadow: var(--glow-accent);
+}
+
+/* ─── Title ─────────────────────────────────────────────── */
+.title-section {
+  position: relative;
+  z-index: 10;
+  text-align: center;
+  padding: 1.2rem 0 0.6rem;
+}
+
+.glitch-title {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 900;
+  color: var(--primary);
+  text-transform: uppercase;
+  letter-spacing: 8px;
+  position: relative;
+  display: inline-block;
+  text-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2);
+  animation: glitch-skew 4s infinite linear alternate-reverse;
+}
+
+.glitch-title::before,
+.glitch-title::after {
+  content: attr(data-text);
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+}
+
+.glitch-title::before {
+  color: var(--secondary);
+  animation: glitch-before 3s infinite linear alternate-reverse;
+  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+  z-index: -1;
+}
+
+.glitch-title::after {
+  color: var(--accent);
+  animation: glitch-after 2s infinite linear alternate-reverse;
+  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+  z-index: -1;
+}
+
+@keyframes glitch-before {
+  0% { transform: translate(0); }
+  20% { transform: translate(-3px, 2px); }
+  40% { transform: translate(3px, -1px); }
+  60% { transform: translate(-1px, 1px); }
+  80% { transform: translate(2px, -2px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes glitch-after {
+  0% { transform: translate(0); }
+  25% { transform: translate(2px, -2px); }
+  50% { transform: translate(-2px, 1px); }
+  75% { transform: translate(1px, 2px); }
+  100% { transform: translate(0); }
+}
+
+@keyframes glitch-skew {
+  0% { transform: skew(0deg); }
+  2% { transform: skew(0.5deg); }
+  4% { transform: skew(0deg); }
+  50% { transform: skew(0deg); }
+  52% { transform: skew(-0.3deg); }
+  54% { transform: skew(0deg); }
+}
+
+.subtitle {
+  font-size: 0.7rem;
+  color: var(--text-dim);
+  letter-spacing: 6px;
+  text-transform: uppercase;
+  margin-top: 0.3rem;
+}
+
+/* ─── Main Layout ───────────────────────────────────────── */
+.main-container {
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* ─── Panel Base ────────────────────────────────────────── */
+.panel {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+  position: relative;
+}
+
+.panel::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--primary), transparent);
+  animation: neon-flicker 3s ease-in-out infinite;
+}
+
+@keyframes neon-flicker {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+  92% { opacity: 1; }
+  93% { opacity: 0.2; }
+  94% { opacity: 1; }
+}
+
+.panel-header {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.8rem 1rem;
+  border-bottom: 1px solid var(--border);
+  background: rgba(0,0,0,0.3);
+}
+
+.panel-header-icon {
+  font-size: 1rem;
+}
+
+.panel-header-title {
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.panel-body {
+  padding: 1rem;
+}
+
+/* ─── Input Group ───────────────────────────────────────── */
+.input-row {
+  display: flex;
+  align-items: center;
+  margin-bottom: 0.65rem;
+  gap: 0.5rem;
+}
+
+.input-label {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  min-width: 130px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.input-label .prompt-char {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.input-field, .select-field {
+  flex: 1;
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  padding: 0.45rem 0.7rem;
+  outline: none;
+  transition: all 0.3s;
+}
+
+.input-field:focus, .select-field:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 8px rgba(0,255,136,0.15);
+}
+
+.select-field {
+  cursor: pointer;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff88' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  padding-right: 1.5rem;
+}
+
+.select-field option {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.separator {
+  border: none;
+  border-top: 1px dashed var(--border);
+  margin: 0.8rem 0;
+}
+
+.section-label {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  color: var(--secondary);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+  padding-left: 0.2rem;
+}
+
+/* ─── Buttons ───────────────────────────────────────────── */
+.btn-group {
+  display: flex;
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.65rem 1rem;
+  border: 1px solid;
+  border-radius: 6px;
+  cursor: pointer;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 0; height: 0;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.1);
+  transition: all 0.5s;
+  transform: translate(-50%, -50%);
+}
+
+.btn:active::after {
+  width: 300px; height: 300px;
+  opacity: 0;
+}
+
+.btn-execute {
+  background: linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,255,136,0.05) 100%);
+  color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-execute:hover {
+  background: linear-gradient(135deg, rgba(0,255,136,0.25) 0%, rgba(0,255,136,0.1) 100%);
+  box-shadow: var(--glow-primary);
+  transform: translateY(-1px);
+}
+
+.btn-execute:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-reset {
+  background: transparent;
+  color: var(--accent);
+  border-color: rgba(255,107,53,0.3);
+}
+
+.btn-reset:hover {
+  background: rgba(255,107,53,0.1);
+  border-color: var(--accent);
+}
+
+/* ─── Right Panel — Result ──────────────────────────────── */
+.result-box {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1rem;
+  background: rgba(0,0,0,0.3);
+  margin-bottom: 0.8rem;
+  position: relative;
+}
+
+.result-box.active {
+  border-color: var(--primary);
+  animation: border-pulse 2s ease-in-out infinite;
+}
+
+@keyframes border-pulse {
+  0%, 100% { border-color: var(--primary); box-shadow: 0 0 5px rgba(0,255,136,0.1); }
+  50% { border-color: var(--secondary); box-shadow: 0 0 15px rgba(123,47,255,0.15); }
+}
+
+.result-header {
+  font-family: var(--font-display);
+  font-size: 0.65rem;
+  color: var(--gold);
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  margin-bottom: 0.8rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid rgba(255,204,0,0.15);
+}
+
+.result-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.result-label {
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-size: 0.7rem;
+}
+
+.result-value {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.result-value.danger { color: var(--danger); }
+.result-value.warning { color: var(--accent); }
+.result-value.success { color: var(--primary); }
+.result-value.gold { color: var(--gold); }
+
+/* Score Bar */
+.score-bar-container {
+  margin: 1rem 0;
+}
+
+.score-bar-label {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 0.4rem;
+  font-size: 0.7rem;
+}
+
+.score-bar-track {
+  width: 100%;
+  height: 12px;
+  background: rgba(0,0,0,0.5);
+  border-radius: 6px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  transition: width 1.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+  position: relative;
+}
+
+.score-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0;
+  width: 4px; height: 100%;
+  background: white;
+  opacity: 0.6;
+  border-radius: 0 6px 6px 0;
+  animation: score-shimmer 2s ease-in-out infinite;
+}
+
+@keyframes score-shimmer {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.2; }
+}
+
+.feedback-box {
+  background: rgba(0,0,0,0.4);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.8rem;
+  margin-top: 0.8rem;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow-y: auto;
+  color: var(--text);
+}
+
+.feedback-box::-webkit-scrollbar {
+  width: 4px;
+}
+
+.feedback-box::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 2px;
+}
+
+/* Ground Truth Section */
+.ground-truth-box {
+  border: 1px solid rgba(123,47,255,0.2);
+  border-radius: 6px;
+  padding: 0.8rem;
+  background: rgba(123,47,255,0.03);
+  margin-top: 0.8rem;
+}
+
+.ground-truth-box .result-header {
+  color: var(--secondary);
+  border-bottom-color: rgba(123,47,255,0.15);
+}
+
+/* Waiting state */
+.waiting-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-dim);
+}
+
+.waiting-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.waiting-text {
+  font-size: 0.75rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+/* ─── Lifecycle Progress Bar ────────────────────────────── */
+.lifecycle-bar {
+  position: relative;
+  z-index: 10;
+  padding: 1rem 1.5rem 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.lifecycle-container {
+  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.5rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.lifecycle-container::before {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0;
+  width: 100%; height: 2px;
+  background: linear-gradient(90deg, transparent, var(--secondary), transparent);
+  animation: neon-flicker 4s ease-in-out infinite;
+}
+
+.lifecycle-title {
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  color: var(--text-dim);
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.lifecycle-stages {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+}
+
+.lifecycle-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.4rem;
+  cursor: pointer;
+  transition: all 0.3s;
+  padding: 0.3rem 0.5rem;
+  border-radius: 6px;
+  min-width: 80px;
+}
+
+.lifecycle-stage:hover {
+  background: rgba(255,255,255,0.03);
+}
+
+.stage-number {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border: 2px solid var(--border);
+  background: rgba(0,0,0,0.5);
+  color: var(--text-dim);
+  transition: all 0.5s;
+  position: relative;
+}
+
+.stage-number.completed {
+  border-color: var(--primary);
+  background: rgba(0,255,136,0.1);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(0,255,136,0.2);
+}
+
+.stage-number.active {
+  border-color: var(--gold);
+  background: rgba(255,204,0,0.1);
+  color: var(--gold);
+  box-shadow: 0 0 10px rgba(255,204,0,0.3);
+  animation: stage-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes stage-pulse {
+  0%, 100% { box-shadow: 0 0 10px rgba(255,204,0,0.3); }
+  50% { box-shadow: 0 0 20px rgba(255,204,0,0.5); }
+}
+
+.stage-name {
+  font-size: 0.55rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stage-name.active {
+  color: var(--gold);
+}
+
+.stage-name.completed {
+  color: var(--primary);
+}
+
+.stage-connector {
+  width: 30px;
+  height: 2px;
+  background: var(--border);
+  margin-top: -1.2rem;
+  transition: background 0.5s;
+}
+
+.stage-connector.completed {
+  background: linear-gradient(90deg, var(--primary), var(--primary));
+  box-shadow: 0 0 4px rgba(0,255,136,0.3);
+}
+
+/* ─── Loading Spinner ───────────────────────────────────── */
+.spinner {
+  display: inline-block;
+  width: 16px; height: 16px;
+  border: 2px solid rgba(0,255,136,0.2);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── Typewriter ────────────────────────────────────────── */
+.typewriter {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid var(--primary);
+  animation: blink-caret 0.8s step-end infinite;
+}
+
+@keyframes blink-caret {
+  0%, 100% { border-color: var(--primary); }
+  50% { border-color: transparent; }
+}
+
+/* ─── Toast / Notification ──────────────────────────────── */
+.toast {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  padding: 0.8rem 1.2rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  z-index: 9999;
+  transform: translateX(120%);
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  max-width: 350px;
+}
+
+.toast.show {
+  transform: translateX(0);
+}
+
+.toast.success {
+  background: rgba(0,255,136,0.1);
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+
+.toast.error {
+  background: rgba(255,51,102,0.1);
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.toast.info {
+  background: rgba(123,47,255,0.1);
+  border: 1px solid var(--secondary);
+  color: var(--secondary);
+}
+
+/* ─── Responsive ────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .main-container { grid-template-columns: 1fr; }
+  .glitch-title { font-size: 1.3rem; letter-spacing: 4px; }
+  .lifecycle-stages { flex-wrap: wrap; gap: 0.3rem; }
+  .stage-connector { display: none; }
+}
+</style>
+</head>
+
+<body>
+<canvas id="particleCanvas"></canvas>
+
+<!-- ─── Toast Container ─────────────────────────────────── -->
+<div id="toast" class="toast"></div>
+
+<!-- ─── Top Bar ──────────────────────────────────────────── -->
+<header class="top-bar">
+  <div class="system-status">
+    <div class="status-dot"></div>
+    <span>SYSTEM ONLINE</span>
+  </div>
+  <div class="env-label">ENV: loan-lifecycle-v2.0</div>
+  <button id="globalResetBtn" class="btn-reset-global" onclick="globalReset()">⟲ RESET</button>
+</header>
+
+<!-- ─── Title ────────────────────────────────────────────── -->
+<section class="title-section">
+  <h1 class="glitch-title" data-text="NEXUS BANK">NEXUS BANK</h1>
+  <p class="subtitle">Long-Horizon Loan Lifecycle Command Center</p>
+</section>
+
+<!-- ─── Main Content ─────────────────────────────────────── -->
+<main class="main-container">
+
+  <!-- ─── Left Panel: Terminal Input ──────────────────── -->
+  <div class="panel" id="inputPanel">
+    <div class="panel-header">
+      <span class="panel-header-icon">⌨</span>
+      <span class="panel-header-title">Terminal Input</span>
+    </div>
+    <div class="panel-body">
+
+      <div class="input-row">
+        <label class="input-label" for="stageSelect">
+          <span class="prompt-char">›</span> Stage Select
+        </label>
+        <select id="stageSelect" class="select-field" onchange="onStageSelect()">
+          <option value="">— Select Stage —</option>
+        </select>
+      </div>
+
+      <hr class="separator">
+
+      <div class="input-row">
+        <label class="input-label" for="applicantName">
+          <span class="prompt-char">›</span> Applicant Name
+        </label>
+        <input id="applicantName" class="input-field" type="text" placeholder="Auto-filled on stage select">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="annualIncome">
+          <span class="prompt-char">›</span> Annual Income
+        </label>
+        <input id="annualIncome" class="input-field" type="number" placeholder="0.00">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="creditScore">
+          <span class="prompt-char">›</span> Credit Score
+        </label>
+        <input id="creditScore" class="input-field" type="number" min="300" max="850" placeholder="300-850">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="existingDebt">
+          <span class="prompt-char">›</span> Existing Debt
+        </label>
+        <input id="existingDebt" class="input-field" type="number" placeholder="0.00">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="loanAmount">
+          <span class="prompt-char">›</span> Loan Amount
+        </label>
+        <input id="loanAmount" class="input-field" type="number" placeholder="0.00">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="employmentType">
+          <span class="prompt-char">›</span> Employment
+        </label>
+        <select id="employmentType" class="select-field">
+          <option value="salaried">Salaried</option>
+          <option value="self_employed">Self Employed</option>
+          <option value="freelancer">Freelancer</option>
+          <option value="contract">Contract</option>
+          <option value="unemployed">Unemployed</option>
+        </select>
+      </div>
+
+      <hr class="separator">
+      <div class="section-label">▸ Your Decision</div>
+
+      <div class="input-row">
+        <label class="input-label" for="riskLevel">
+          <span class="prompt-char">›</span> Risk Level
+        </label>
+        <select id="riskLevel" class="select-field">
+          <option value="Low">Low</option>
+          <option value="Medium" selected>Medium</option>
+          <option value="High">High</option>
+        </select>
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="loanDecision">
+          <span class="prompt-char">›</span> Loan Decision
+        </label>
+        <select id="loanDecision" class="select-field">
+          <option value="Approve">Approve</option>
+          <option value="Conditional Approve" selected>Conditional Approve</option>
+          <option value="Reject">Reject</option>
+        </select>
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="interestRate">
+          <span class="prompt-char">›</span> Interest Rate
+        </label>
+        <select id="interestRate" class="select-field">
+          <option value="7-9%">7-9%</option>
+          <option value="10-13%" selected>10-13%</option>
+          <option value="14%+">14%+</option>
+        </select>
+      </div>
+
+      <div class="btn-group">
+        <button id="executeBtn" class="btn btn-execute" onclick="executeStep()">▶ EXECUTE</button>
+        <button class="btn btn-reset" onclick="resetForm()">↺ RESET</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ─── Right Panel: Decision Display ──────────────── -->
+  <div class="panel" id="resultPanel">
+    <div class="panel-header">
+      <span class="panel-header-icon">◈</span>
+      <span class="panel-header-title">Decision Display</span>
+    </div>
+    <div class="panel-body" id="resultBody">
+      <div class="waiting-state" id="waitingState">
+        <div class="waiting-icon">◇</div>
+        <div class="waiting-text">Select a stage and execute to view results</div>
+      </div>
+
+      <div id="resultContent" style="display:none;">
+        <div class="result-box active" id="stageResultBox">
+          <div class="result-header">╔═══ STAGE RESULT ═══╗</div>
+          <div class="result-row">
+            <span class="result-label">Task</span>
+            <span class="result-value" id="resTaskName">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Difficulty</span>
+            <span class="result-value" id="resDifficulty">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Decision</span>
+            <span class="result-value" id="resDecision">—</span>
+          </div>
+
+          <div class="score-bar-container">
+            <div class="score-bar-label">
+              <span class="result-label">Total Score</span>
+              <span class="result-value gold" id="resScoreNum">0.00</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill" id="resScoreBar" style="width:0%;background:linear-gradient(90deg,var(--danger),var(--accent),var(--primary));"></div>
+            </div>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">Risk Score</span>
+            <span class="result-value" id="resRiskScore">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Decision Score</span>
+            <span class="result-value" id="resDecisionScore">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Rate Score</span>
+            <span class="result-value" id="resRateScore">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Consistency</span>
+            <span class="result-value" id="resConsistency">—</span>
+          </div>
+        </div>
+
+        <div class="feedback-box" id="resFeedback">Awaiting execution...</div>
+
+        <div class="ground-truth-box" id="groundTruthBox">
+          <div class="result-header">╔═══ GROUND TRUTH ═══╗</div>
+          <div class="result-row">
+            <span class="result-label">Expected Risk</span>
+            <span class="result-value" id="gtRisk">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Expected Decision</span>
+            <span class="result-value" id="gtDecision">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Expected Rate</span>
+            <span class="result-value" id="gtRate">—</span>
+          </div>
+          <div class="feedback-box" id="gtExplanation" style="margin-top:0.5rem;max-height:100px;">—</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- ─── Lifecycle Progress Bar ───────────────────────────── -->
+<section class="lifecycle-bar">
+  <div class="lifecycle-container">
+    <div class="lifecycle-title">Loan Lifecycle Pipeline</div>
+    <div class="lifecycle-stages" id="lifecycleStages">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+</section>
+
+<!-- ─── JavaScript ───────────────────────────────────────── -->
+<script>
+// ─── Constants ──────────────────────────────────────────
+const BASE_URL = window.location.origin;
+const STAGE_META = [
+  { id: 'lead_qualification_sales', label: 'Sales', icon: '✅' },
+  { id: 'document_verification_hr', label: 'Docs', icon: '✅' },
+  { id: 'easy_salaried_high_credit', label: 'Risk I', icon: '✅' },
+  { id: 'medium_self_employed_moderate', label: 'Risk II', icon: '✅' },
+  { id: 'hard_freelancer_complex', label: 'Risk III', icon: '✅' },
+  { id: 'customer_onboarding_pm', label: 'Onboard', icon: '✅' },
+  { id: 'bankruptcy_recovery_edge1', label: 'Monitor', icon: '✅' },
+  { id: 'joint_applicants_edge2', label: 'Close', icon: '✅' },
+];
+
+let completedStages = new Set();
+let activeStageId = null;
+let taskList = [];
+
+// ─── Init ───────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', async () => {
+  initParticles();
+  buildLifecycleBar();
+  await loadTasks();
+  healthCheck();
+});
+
+// ─── API Helpers ────────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  try {
+    const resp = await fetch(`${BASE_URL}${path}`, {
+      headers: { 'Content-Type': 'application/json' },
+      ...options,
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      throw new Error(err.detail || `HTTP ${resp.status}`);
+    }
+    return await resp.json();
+  } catch (e) {
+    showToast(e.message, 'error');
+    throw e;
+  }
+}
+
+// ─── Load Tasks ─────────────────────────────────────────
+async function loadTasks() {
+  try {
+    const data = await apiFetch('/tasks');
+    taskList = data.tasks || [];
+    const select = document.getElementById('stageSelect');
+    taskList.forEach((t, i) => {
+      const opt = document.createElement('option');
+      opt.value = t.task_id;
+      opt.textContent = `S${i+1}: ${t.name}`;
+      select.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('Failed to load tasks:', e);
+  }
+}
+
+// ─── Health Check ───────────────────────────────────────
+async function healthCheck() {
+  try {
+    const data = await apiFetch('/health');
+    showToast(`Connected: ${data.available_tasks} tasks available`, 'success');
+  } catch (e) {
+    showToast('Backend not reachable', 'error');
+  }
+}
+
+// ─── Stage Select Handler ───────────────────────────────
+async function onStageSelect() {
+  const taskId = document.getElementById('stageSelect').value;
+  if (!taskId) return;
+
+  try {
+    // Reset env with this task
+    const data = await apiFetch('/reset', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId }),
+    });
+
+    const obs = data.state?.observation;
+    if (obs) {
+      document.getElementById('applicantName').value = obs.applicant_name || '';
+      document.getElementById('annualIncome').value = obs.annual_income || '';
+      document.getElementById('creditScore').value = obs.credit_score || '';
+      document.getElementById('existingDebt').value = obs.existing_debt || '';
+      document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
+      document.getElementById('employmentType').value = obs.employment_type || 'salaried';
+    }
+
+    activeStageId = taskId;
+    updateLifecycleBar();
+    showToast(`Stage loaded: ${taskId}`, 'info');
+  } catch (e) {
+    console.error('Stage select failed:', e);
+  }
+}
+
+// ─── Execute Step ───────────────────────────────────────
+async function executeStep() {
+  const taskId = document.getElementById('stageSelect').value;
+  if (!taskId) {
+    showToast('Select a stage first', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('executeBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>PROCESSING...';
+
+  try {
+    // Reset first to ensure clean state
+    await apiFetch('/reset', {
+      method: 'POST',
+      body: JSON.stringify({ task_id: taskId }),
+    });
+
+    // Then step with the user's decision
+    const riskLevel = document.getElementById('riskLevel').value;
+    const loanDecision = document.getElementById('loanDecision').value;
+    const interestRate = document.getElementById('interestRate').value;
+
+    const result = await apiFetch('/step', {
+      method: 'POST',
+      body: JSON.stringify({
+        risk_level: riskLevel,
+        loan_decision: loanDecision,
+        interest_rate_tier: interestRate,
+        reasoning: `UI decision: ${riskLevel}, ${loanDecision}, ${interestRate}`,
+      }),
+    });
+
+    displayResult(result);
+
+    // Mark stage completed
+    completedStages.add(taskId);
+    activeStageId = taskId;
+    updateLifecycleBar();
+
+  } catch (e) {
+    console.error('Execute failed:', e);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '▶ EXECUTE';
+  }
+}
+
+// ─── Display Result ─────────────────────────────────────
+function displayResult(result) {
+  document.getElementById('waitingState').style.display = 'none';
+  document.getElementById('resultContent').style.display = 'block';
+
+  const info = result.info || {};
+  const grading = info.grading || {};
+  const gt = info.ground_truth || {};
+
+  // Task info
+  document.getElementById('resTaskName').textContent = info.task_name || '—';
+  const diff = info.task_difficulty || '—';
+  const diffEl = document.getElementById('resDifficulty');
+  diffEl.textContent = diff.toUpperCase();
+  diffEl.className = 'result-value ' + (diff === 'easy' ? 'success' : diff === 'hard' ? 'danger' : 'warning');
+
+  // Decision
+  const dec = document.getElementById('riskLevel').value;
+  document.getElementById('resDecision').textContent = dec;
+
+  // Score
+  const score = result.reward || 0;
+  document.getElementById('resScoreNum').textContent = score.toFixed(3);
+  setTimeout(() => {
+    document.getElementById('resScoreBar').style.width = `${score * 100}%`;
+  }, 100);
+
+  // Component scores
+  setScoreValue('resRiskScore', grading.risk_level_score);
+  setScoreValue('resDecisionScore', grading.loan_decision_score);
+  setScoreValue('resRateScore', grading.interest_rate_score);
+
+  const cons = grading.consistency_bonus || 0;
+  const consEl = document.getElementById('resConsistency');
+  consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
+  consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
+
+  // Feedback — typewriter effect
+  typewriterEffect(document.getElementById('resFeedback'), info.feedback || 'No feedback available.');
+
+  // Ground truth
+  document.getElementById('gtRisk').textContent = gt.risk_level || '—';
+  document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
+  document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
+  document.getElementById('gtExplanation').textContent = gt.explanation || '—';
+}
+
+function setScoreValue(elId, score) {
+  const el = document.getElementById(elId);
+  if (score === undefined || score === null) { el.textContent = '—'; return; }
+  el.textContent = score.toFixed(2);
+  el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
+}
+
+// ─── Typewriter Effect ──────────────────────────────────
+function typewriterEffect(el, text, speed = 12) {
+  el.textContent = '';
+  el.classList.add('typewriter');
+  let i = 0;
+  const interval = setInterval(() => {
+    if (i < text.length) {
+      el.textContent += text.charAt(i);
+      i++;
+    } else {
+      clearInterval(interval);
+      el.classList.remove('typewriter');
+    }
+  }, speed);
+}
+
+// ─── Lifecycle Bar ──────────────────────────────────────
+function buildLifecycleBar() {
+  const container = document.getElementById('lifecycleStages');
+  container.innerHTML = '';
+
+  STAGE_META.forEach((stage, idx) => {
+    if (idx > 0) {
+      const connector = document.createElement('div');
+      connector.className = 'stage-connector';
+      connector.id = `conn-${idx}`;
+      container.appendChild(connector);
+    }
+
+    const stageEl = document.createElement('div');
+    stageEl.className = 'lifecycle-stage';
+    stageEl.onclick = () => {
+      document.getElementById('stageSelect').value = stage.id;
+      onStageSelect();
+    };
+
+    stageEl.innerHTML = `
+      <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
+      <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
+    `;
+    container.appendChild(stageEl);
+  });
+}
+
+function updateLifecycleBar() {
+  STAGE_META.forEach((stage, idx) => {
+    const numEl = document.getElementById(`sn-${stage.id}`);
+    const labelEl = document.getElementById(`sl-${stage.id}`);
+    if (!numEl || !labelEl) return;
+
+    numEl.classList.remove('completed', 'active');
+    labelEl.classList.remove('completed', 'active');
+
+    if (completedStages.has(stage.id)) {
+      numEl.classList.add('completed');
+      numEl.textContent = '✓';
+      labelEl.classList.add('completed');
+    } else if (stage.id === activeStageId) {
+      numEl.classList.add('active');
+      labelEl.classList.add('active');
+    } else {
+      numEl.textContent = idx + 1;
+    }
+
+    // Connectors
+    if (idx > 0) {
+      const conn = document.getElementById(`conn-${idx}`);
+      if (conn) {
+        const prevCompleted = completedStages.has(STAGE_META[idx - 1].id);
+        conn.classList.toggle('completed', prevCompleted);
+      }
+    }
+  });
+}
+
+// ─── Reset Functions ────────────────────────────────────
+async function globalReset() {
+  try {
+    await apiFetch('/reset', { method: 'POST', body: '{}' });
+    completedStages.clear();
+    activeStageId = null;
+    resetForm();
+    document.getElementById('waitingState').style.display = '';
+    document.getElementById('resultContent').style.display = 'none';
+    document.getElementById('resScoreBar').style.width = '0%';
+    updateLifecycleBar();
+    showToast('Environment reset', 'success');
+  } catch (e) {
+    console.error('Global reset failed:', e);
+  }
+}
+
+function resetForm() {
+  document.getElementById('stageSelect').value = '';
+  document.getElementById('applicantName').value = '';
+  document.getElementById('annualIncome').value = '';
+  document.getElementById('creditScore').value = '';
+  document.getElementById('existingDebt').value = '';
+  document.getElementById('loanAmount').value = '';
+  document.getElementById('employmentType').value = 'salaried';
+  document.getElementById('riskLevel').value = 'Medium';
+  document.getElementById('loanDecision').value = 'Conditional Approve';
+  document.getElementById('interestRate').value = '10-13%';
+}
+
+// ─── Toast ──────────────────────────────────────────────
+function showToast(message, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = `toast ${type} show`;
+  setTimeout(() => { toast.classList.remove('show'); }, 3500);
+}
+
+// ─── Particle System ────────────────────────────────────
+function initParticles() {
+  const canvas = document.getElementById('particleCanvas');
+  const ctx = canvas.getContext('2d');
+  let particles = [];
+  const PARTICLE_COUNT = 60;
+  const CONNECTION_DIST = 120;
+
+  function resize() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  class Particle {
+    constructor() {
+      this.x = Math.random() * canvas.width;
+      this.y = Math.random() * canvas.height;
+      this.vx = (Math.random() - 0.5) * 0.4;
+      this.vy = (Math.random() - 0.5) * 0.4;
+      this.size = Math.random() * 2 + 0.5;
+      this.color = Math.random() > 0.5 ? 'rgba(0,255,136,' : 'rgba(123,47,255,';
+    }
+    update() {
+      this.x += this.vx;
+      this.y += this.vy;
+      if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+      ctx.beginPath();
+      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+      ctx.fillStyle = this.color + '0.5)';
+      ctx.fill();
+    }
+  }
+
+  for (let i = 0; i < PARTICLE_COUNT; i++) {
+    particles.push(new Particle());
+  }
+
+  function animate() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Draw connections
+    for (let i = 0; i < particles.length; i++) {
+      for (let j = i + 1; j < particles.length; j++) {
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        if (dist < CONNECTION_DIST) {
+          const alpha = (1 - dist / CONNECTION_DIST) * 0.15;
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(0,255,136,${alpha})`;
+          ctx.lineWidth = 0.5;
+          ctx.stroke();
+        }
+      }
+    }
+
+    particles.forEach(p => {
+      p.update();
+      p.draw();
+    });
+
+    requestAnimationFrame(animate);
+  }
+  animate();
+}
+</script>
+</body>
+</html>
