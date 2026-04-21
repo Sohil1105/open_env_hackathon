@@ -82,25 +82,15 @@ for var, st in env_status.items():
 def _get_api_client():
     """
     Helper to initialize OpenAI client with correct Hugging Face pathing.
-    Includes auto-correction for common secret misconfigurations.
+    Forces the use of the reliable global 'v1' endpoint.
     """
     base_url = os.environ.get("API_BASE_URL", "").strip()
     key = os.environ.get("HF_TOKEN", "").strip()
     model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct").strip()
 
-    # SELF-FIXING LOGIC
-    if not base_url:
-        # Default to standard model path
-        base_url = f"https://api-inference.huggingface.co/models/{model}/v1"
-    elif "huggingface.co" in base_url:
-        # If user provided a URL like 'https://huggingface.co/models/name'
-        # ensure it ends in /v1 for the OpenAI SDK
-        if not base_url.endswith("/v1"):
-            base_url = base_url.rstrip("/") + "/v1"
-        
-        # If it's the root API, inject the model name to use the free tier correctly
-        if base_url == "https://api-inference.huggingface.co/v1":
-             base_url = f"https://api-inference.huggingface.co/models/{model}/v1"
+    # Use the reliable GLOBAL endpoint by default
+    if not base_url or "api-inference.huggingface.co" in base_url:
+        base_url = "https://api-inference.huggingface.co/v1"
 
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
     if not key:
