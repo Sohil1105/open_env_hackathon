@@ -80,18 +80,34 @@ for var, st in env_status.items():
     logger.log(level, f"  {var}: {st}")
 
 def _get_api_client():
-    """Helper to initialize OpenAI client with correct Hugging Face pathing."""
-    base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1")
-    key = os.environ.get("HF_TOKEN", "")
-    model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
+    """
+    Helper to initialize OpenAI client with correct Hugging Face pathing.
+    Includes auto-correction for common secret misconfigurations.
+    """
+    base_url = os.environ.get("API_BASE_URL", "").strip()
+    key = os.environ.get("HF_TOKEN", "").strip()
+    model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct").strip()
 
-    # If it's a default HF URL and NOT a Pro/dedicated endpoint, use the model-specific path
-    if "api-inference.huggingface.co" in base_url and "/models/" not in base_url:
-        # Construct the proper OpenAI-compatible models path
+    # SELF-FIXING LOGIC
+    if not base_url:
+        # Default to standard model path
         base_url = f"https://api-inference.huggingface.co/models/{model}/v1"
-        logger.info(f"Using constructed HF OpenAI-compatible URL: {base_url}")
+    elif "huggingface.co" in base_url:
+        # If user provided a URL like 'https://huggingface.co/models/name'
+        # ensure it ends in /v1 for the OpenAI SDK
+        if not base_url.endswith("/v1"):
+            base_url = base_url.rstrip("/") + "/v1"
+        
+        # If it's the root API, inject the model name to use the free tier correctly
+        if base_url == "https://api-inference.huggingface.co/v1":
+             base_url = f"https://api-inference.huggingface.co/models/{model}/v1"
 
-    return OpenAI(base_url=base_url, api_key=key), model
+    logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
+    if not key:
+        logger.warning("⚠️ HF_TOKEN is empty. AI Agent will likely fail with 401 Unauthorized.")
+
+    # Create client
+    return OpenAI(base_url=base_url, api_key=key if key else "missing-token"), model
 
 
 client, MODEL_NAME = _get_api_client()
