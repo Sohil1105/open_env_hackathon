@@ -39,7 +39,7 @@ Scoring uses **partial credit** — adjacent classifications earn partial points
 | 2 | `medium_self_employed_moderate` | Medium | Self-employed, credit 665, 1 default | Medium → Conditional Approve → 10-13% |
 | 3 | `hard_freelancer_complex` | Hard | Freelancer, credit 572, 2 defaults, no collateral | High → Reject → 14%+ |
 | 4 | `bankruptcy_recovery_edge1` | Medium | Bankruptcy 7 yrs ago, credit rebuilt to 680 | Medium → Conditional Approve → 10-13% |
-| 5 | `joint_applicants_edge2` | Easy | Joint applicants, combined income $120k, credit 720 | Low → Approve → 7-9% |
+| 5 | `joint_applicants_edge2` | Easy | Joint applicants, combined income ₹120k, credit 720 | Low → Approve → 7-9% |
 
 ---
 

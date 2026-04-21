@@ -65,7 +65,7 @@ EASY_TASK = TaskDefinition(
     profile=ApplicantProfile(
         applicant_name="Rajesh Kumar Sharma",
         age=35,
-        annual_income=1_200_000.0,       # $1.2M annual income
+        annual_income=1_200_000.0,       # ₹1.2M annual income
         credit_score=785,                 # Excellent credit
         existing_debt=150_000.0,          # Low relative debt
         employment_type=EmploymentType.SALARIED,
@@ -182,8 +182,8 @@ HARD_TASK = TaskDefinition(
             "This applicant is clearly high-risk: credit score of 572 is poor, debt-to-income "
             "ratio is ~90.5% (extremely high), requesting a loan that is 155% of annual income "
             "with no collateral, freelancer with only 2.5 years of irregular income history, "
-            "and has 2 previous defaults. Monthly income (~$35,000) minus expenses ($32,000) "
-            "leaves only $3,000/month — insufficient to service existing debt plus a new large "
+            "and has 2 previous defaults. Monthly income (~₹35,000) minus expenses (₹32,000) "
+            "leaves only ₹3,000/month — insufficient to service existing debt plus a new large "
             "loan. The application should be rejected. If any rate were offered, it would need "
             "to be in the highest tier (14%+) to compensate for the extreme risk."
         ),
@@ -225,8 +225,8 @@ BANKRUPTCY_TASK = TaskDefinition(
         interest_rate_tier=InterestRateTier.MEDIUM,
         explanation=(
             "This applicant has rebuilt their credit (680) after a bankruptcy 7 years ago. "
-            "Their current debt is manageable ($8,000) against an income of $65,000, but the "
-            "loan amount is relatively high ($120,000) with no collateral. A medium risk "
+            "Their current debt is manageable (₹8,000) against an income of ₹65,000, but the "
+            "loan amount is relatively high (₹120,000) with no collateral. A medium risk "
             "classification with a conditional approval and a 10-13% interest rate is appropriate."
         ),
     ),
@@ -265,10 +265,10 @@ JOINT_APP_TASK = TaskDefinition(
         loan_decision=LoanDecision.APPROVE,
         interest_rate_tier=InterestRateTier.LOW,
         explanation=(
-            "The joint applicants have a strong combined income of $120,000. "
+            "The joint applicants have a strong combined income of ₹120,000. "
             "The primary applicant has a good credit score (720). The existing "
-            "debt of $25,000 is manageable, and they provide collateral for "
-            "the $300,000 loan. This results in a low risk classification, "
+            "debt of ₹25,000 is manageable, and they provide collateral for "
+            "the ₹300,000 loan. This results in a low risk classification, "
             "an approval, and a 7-9% interest rate."
         ),
     ),
@@ -314,7 +314,7 @@ LEAD_QUALIFICATION_TASK = TaskDefinition(
         loan_decision=LoanDecision.APPROVE,
         interest_rate_tier=InterestRateTier.LOW,
         explanation=(
-            "Strong lead: high annual income ($950K), excellent credit score (760), "
+            "Strong lead: high annual income (₹950K), excellent credit score (760), "
             "salaried with 7 years tenure, low DTI ratio (~8.4%), reasonable loan request "
             "(~36.8% of income), has collateral, zero defaults. This lead should be "
             "immediately qualified and prioritized for full application processing."

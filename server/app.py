@@ -416,10 +416,10 @@ Analyze this applicant and make a decision.
 
 APPLICANT DETAILS:
 Name: {applicant.applicant_name}
-Annual Income: ${applicant.annual_income:,.2f}
+Annual Income: ₹{applicant.annual_income:,.2f}
 Credit Score: {applicant.credit_score}
-Existing Debt: ${applicant.existing_debt:,.2f}
-Loan Requested: ${applicant.loan_amount:,.2f}
+Existing Debt: ₹{applicant.existing_debt:,.2f}
+Loan Requested: ₹{applicant.loan_amount:,.2f}
 Employment: {applicant.employment_type}
 Loan Tenure: {applicant.loan_tenure} months
 Debt-to-Income Ratio: {dti:.1f}%

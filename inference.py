@@ -94,16 +94,16 @@ def build_user_prompt(observation: dict) -> str:
 |-------|-------|
 | Name | {observation['applicant_name']} |
 | Age | {observation['age']} years |
-| Annual Income | ${annual_income:,.2f} |
-| Monthly Income | ${monthly_income:,.2f} |
+| Annual Income | ₹{annual_income:,.2f} |
+| Monthly Income | ₹{monthly_income:,.2f} |
 | Credit Score | {observation['credit_score']} |
 | Employment Type | {observation['employment_type']} |
 | Employment Tenure | {observation['employment_years']} years |
-| Monthly Expenses | ${monthly_expenses:,.2f} |
-| Monthly Disposable Income | ${monthly_disposable:,.2f} |
-| Existing Debt | ${existing_debt:,.2f} |
+| Monthly Expenses | ₹{monthly_expenses:,.2f} |
+| Monthly Disposable Income | ₹{monthly_disposable:,.2f} |
+| Existing Debt | ₹{existing_debt:,.2f} |
 | Debt-to-Income Ratio | {dti_ratio:.1f}% |
-| Loan Amount Requested | ${loan_amount:,.2f} |
+| Loan Amount Requested | ₹{loan_amount:,.2f} |
 | Loan-to-Income Ratio | {lti_ratio:.1f}% |
 | Repayment Tenure | {observation['repayment_tenure_months']} months |
 | Has Collateral | {'Yes' if observation['has_collateral'] else 'No'} |
@@ -264,8 +264,8 @@ def main():
         print(f"  Difficulty: {observation.task_difficulty.upper()}")
         print(f"  Applicant: {observation.applicant_name}")
         print(f"  Credit Score: {observation.credit_score}")
-        print(f"  Income: ${observation.annual_income:,.2f}")
-        print(f"  Loan Request: ${observation.loan_amount_requested:,.2f}")
+        print(f"  Income: ₹{observation.annual_income:,.2f}")
+        print(f"  Loan Request: ₹{observation.loan_amount_requested:,.2f}")
         print()
 
         # Get the agent's decision from the LLM
