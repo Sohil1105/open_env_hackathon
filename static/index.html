@@ -869,41 +869,13 @@ body::after {
         </select>
       </div>
 
-      <hr class="separator">
-      <div class="section-label">▸ Your Decision</div>
-
       <div class="input-row">
-        <label class="input-label" for="riskLevel">
-          <span class="prompt-char">›</span> Risk Level
+        <label class="input-label" for="loanTenure">
+          <span class="prompt-char">›</span> Loan Tenure (Months)
         </label>
-        <select id="riskLevel" class="select-field">
-          <option value="Low">Low</option>
-          <option value="Medium" selected>Medium</option>
-          <option value="High">High</option>
-        </select>
+        <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" value="36">
       </div>
 
-      <div class="input-row">
-        <label class="input-label" for="loanDecision">
-          <span class="prompt-char">›</span> Loan Decision
-        </label>
-        <select id="loanDecision" class="select-field">
-          <option value="Approve">Approve</option>
-          <option value="Conditional Approve" selected>Conditional Approve</option>
-          <option value="Reject">Reject</option>
-        </select>
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="interestRate">
-          <span class="prompt-char">›</span> Interest Rate
-        </label>
-        <select id="interestRate" class="select-field">
-          <option value="7-9%">7-9%</option>
-          <option value="10-13%" selected>10-13%</option>
-          <option value="14%+">14%+</option>
-        </select>
-      </div>
 
       <div class="btn-group">
         <button id="executeBtn" class="btn btn-execute" onclick="executeStep()">▶ EXECUTE</button>
@@ -926,7 +898,35 @@ body::after {
 
       <div id="resultContent" style="display:none;">
         <div class="result-box active" id="stageResultBox">
-          <div class="result-header">╔═══ STAGE RESULT ═══╗</div>
+          <div class="result-header">╔═══ AI AGENT DECISION ═══╗</div>
+          <div class="result-row">
+            <span class="result-label">Risk Level</span>
+            <span class="result-value" id="resRiskLevel">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Decision</span>
+            <span class="result-value" id="resDecision">—</span>
+          </div>
+          <div class="result-row">
+            <span class="result-label">Interest Rate</span>
+            <span class="result-value" id="resInterestRate">—</span>
+          </div>
+
+          <div class="score-bar-container">
+            <div class="score-bar-label">
+              <span class="result-label">Agent Score</span>
+              <span class="result-value gold" id="resScoreNum">0.00</span>
+            </div>
+            <div class="score-bar-track">
+              <div class="score-bar-fill" id="resScoreBar" style="width:0%;background:linear-gradient(90deg,var(--danger),var(--accent),var(--primary));"></div>
+            </div>
+          </div>
+
+          <div class="result-row">
+            <span class="result-label">Reasoning</span>
+          </div>
+          <div class="feedback-box" id="resReasoning" style="margin-top:0.5rem; margin-bottom: 1rem;">Awaiting decision...</div>
+
           <div class="result-row">
             <span class="result-label">Task</span>
             <span class="result-value" id="resTaskName">—</span>
@@ -935,21 +935,7 @@ body::after {
             <span class="result-label">Difficulty</span>
             <span class="result-value" id="resDifficulty">—</span>
           </div>
-          <div class="result-row">
-            <span class="result-label">Decision</span>
-            <span class="result-value" id="resDecision">—</span>
-          </div>
-
-          <div class="score-bar-container">
-            <div class="score-bar-label">
-              <span class="result-label">Total Score</span>
-              <span class="result-value gold" id="resScoreNum">0.00</span>
-            </div>
-            <div class="score-bar-track">
-              <div class="score-bar-fill" id="resScoreBar" style="width:0%;background:linear-gradient(90deg,var(--danger),var(--accent),var(--primary));"></div>
-            </div>
-          </div>
-
+          <hr class="separator">
           <div class="result-row">
             <span class="result-label">Risk Score</span>
             <span class="result-value" id="resRiskScore">—</span>
@@ -968,7 +954,7 @@ body::after {
           </div>
         </div>
 
-        <div class="feedback-box" id="resFeedback">Awaiting execution...</div>
+
 
         <div class="ground-truth-box" id="groundTruthBox">
           <div class="result-header">╔═══ GROUND TRUTH ═══╗</div>
@@ -1094,6 +1080,7 @@ async function onStageSelect() {
       document.getElementById('existingDebt').value = obs.existing_debt || '';
       document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
       document.getElementById('employmentType').value = obs.employment_type || 'salaried';
+      document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
     }
 
     activeStageId = taskId;
@@ -1114,30 +1101,38 @@ async function executeStep() {
 
   const btn = document.getElementById('executeBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>PROCESSING...';
+  btn.innerHTML = '<span class="spinner"></span>AI DECIDING...';
 
   try {
-    // Reset first to ensure clean state
-    await apiFetch('/reset', {
+    // Collect applicant details only
+    const applicant = {
+      applicant_name: document.getElementById('applicantName').value,
+      annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
+      credit_score: parseInt(document.getElementById('creditScore').value) || 0,
+      existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
+      loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
+      employment_type: document.getElementById('employmentType').value,
+      loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
+      task_id: taskId
+    };
+
+    showToast('🤖 AI agent is analyzing details...', 'info');
+
+    // Call evaluate endpoint
+    const response = await fetch('/evaluate', {
       method: 'POST',
-      body: JSON.stringify({ task_id: taskId }),
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(applicant)
     });
 
-    // Then step with the user's decision
-    const riskLevel = document.getElementById('riskLevel').value;
-    const loanDecision = document.getElementById('loanDecision').value;
-    const interestRate = document.getElementById('interestRate').value;
+    if (!response.ok) {
+        const err = await response.json();
+        throw new Error(err.detail || 'Evaluation failed');
+    }
 
-    const result = await apiFetch('/step', {
-      method: 'POST',
-      body: JSON.stringify({
-        risk_level: riskLevel,
-        loan_decision: loanDecision,
-        interest_rate_tier: interestRate,
-        reasoning: `UI decision: ${riskLevel}, ${loanDecision}, ${interestRate}`,
-      }),
-    });
+    const result = await response.json();
 
+    // Display what AI decided
     displayResult(result);
 
     // Mark stage completed
@@ -1147,6 +1142,7 @@ async function executeStep() {
 
   } catch (e) {
     console.error('Execute failed:', e);
+    showToast(e.message, 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '▶ EXECUTE';
@@ -1158,27 +1154,46 @@ function displayResult(result) {
   document.getElementById('waitingState').style.display = 'none';
   document.getElementById('resultContent').style.display = 'block';
 
-  const info = result.info || {};
-  const grading = info.grading || {};
-  const gt = info.ground_truth || {};
+  const decision = result.agent_decision || {};
+  const grading = result.grading || {};
+  const gt = result.correct_answer || {};
 
-  // Task info
-  document.getElementById('resTaskName').textContent = info.task_name || '—';
-  const diff = info.task_difficulty || '—';
-  const diffEl = document.getElementById('resDifficulty');
-  diffEl.textContent = diff.toUpperCase();
-  diffEl.className = 'result-value ' + (diff === 'easy' ? 'success' : diff === 'hard' ? 'danger' : 'warning');
+  // AI Decision fields
+  document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
+  document.getElementById('resDecision').textContent = decision.loan_decision || '—';
+  document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
 
-  // Decision
-  const dec = document.getElementById('riskLevel').value;
-  document.getElementById('resDecision').textContent = dec;
+  // Apply color coding based on decision
+  const decisionEl = document.getElementById('resDecision');
+  const box = document.getElementById('stageResultBox');
+  
+  if (decision.loan_decision === 'Approve') {
+    decisionEl.style.color = '#00ff88';
+    box.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.2)';
+  } else if (decision.loan_decision === 'Conditional Approve') {
+    decisionEl.style.color = '#ffcc00';
+    box.style.boxShadow = '0 0 20px rgba(255, 204, 0, 0.2)';
+  } else {
+    decisionEl.style.color = '#ff3366';
+    box.style.boxShadow = '0 0 20px rgba(255, 51, 102, 0.2)';
+  }
 
   // Score
-  const score = result.reward || 0;
+  const score = result.score || 0;
   document.getElementById('resScoreNum').textContent = score.toFixed(3);
   setTimeout(() => {
     document.getElementById('resScoreBar').style.width = `${score * 100}%`;
   }, 100);
+
+  // Reasoning
+  typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || 'No reasoning provided.');
+
+  // Metadata
+  document.getElementById('resTaskName').textContent = result.task_name || '—';
+  const diff = result.task_difficulty || '—';
+  const diffEl = document.getElementById('resDifficulty');
+  diffEl.textContent = diff.toUpperCase();
+  diffEl.className = 'result-value ' + (diff === 'easy' ? 'success' : diff === 'hard' ? 'danger' : 'warning');
 
   // Component scores
   setScoreValue('resRiskScore', grading.risk_level_score);
@@ -1189,9 +1204,6 @@ function displayResult(result) {
   const consEl = document.getElementById('resConsistency');
   consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
   consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
-
-  // Feedback — typewriter effect
-  typewriterEffect(document.getElementById('resFeedback'), info.feedback || 'No feedback available.');
 
   // Ground truth
   document.getElementById('gtRisk').textContent = gt.risk_level || '—';
@@ -1307,9 +1319,8 @@ function resetForm() {
   document.getElementById('existingDebt').value = '';
   document.getElementById('loanAmount').value = '';
   document.getElementById('employmentType').value = 'salaried';
-  document.getElementById('riskLevel').value = 'Medium';
-  document.getElementById('loanDecision').value = 'Conditional Approve';
-  document.getElementById('interestRate').value = '10-13%';
+  const tenureEl = document.getElementById('loanTenure');
+  if (tenureEl) tenureEl.value = '36';
 }
 
 // ─── Toast ──────────────────────────────────────────────

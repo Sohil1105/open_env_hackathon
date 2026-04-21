@@ -19,7 +19,10 @@ import os
 import sys
 import json
 import logging
-from typing import Optional
+import re
+from typing import Optional, List
+
+from openai import OpenAI
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
@@ -75,6 +78,15 @@ for var, st in env_status.items():
     level = logging.INFO if "SET" in st and "NOT" not in st else logging.WARNING
     logger.log(level, f"  {var}: {st}")
 
+# ─── LLM Client Setup ───────────────────────────────────────────────────────
+
+client = OpenAI(
+    base_url=os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1"),
+    api_key=os.environ.get("HF_TOKEN", ""),
+)
+MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
+
+
 # ─── FastAPI Application ─────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -123,6 +135,20 @@ class GradeRequest(BaseModel):
     """Request body for the /grade endpoint."""
     task_id: str
     response: str
+
+
+class ApplicantInput(BaseModel):
+    """Request body for the /evaluate endpoint — applicant details only."""
+    applicant_name: str
+    annual_income: float
+    credit_score: int
+    existing_debt: float
+    loan_amount: float
+    employment_type: str
+    loan_tenure: int
+    task_id: str
+    documents_submitted: Optional[List[str]] = None
+    payment_history: Optional[List[str]] = None
 
 
 # ─── Health Check Endpoints ──────────────────────────────────────────────────
@@ -359,6 +385,161 @@ async def grade_response(request: GradeRequest):
     except Exception as e:
         logger.error(f"Grade failed: {e}")
         raise HTTPException(status_code=500, detail=f"Grading failed: {str(e)}")
+
+
+# ─── Evaluate Endpoint (LLM-driven decision) ────────────────────────────────
+
+
+def _build_llm_prompt(applicant: "ApplicantInput") -> str:
+    """Build the structured prompt sent to the LLM with applicant details."""
+    dti = (applicant.existing_debt / applicant.annual_income * 100) if applicant.annual_income > 0 else 0
+    lti = (applicant.loan_amount / applicant.annual_income * 100) if applicant.annual_income > 0 else 0
+
+    return f"""You are an expert bank loan underwriter.
+Analyze this applicant and make a decision.
+
+APPLICANT DETAILS:
+Name: {applicant.applicant_name}
+Annual Income: ${applicant.annual_income:,.2f}
+Credit Score: {applicant.credit_score}
+Existing Debt: ${applicant.existing_debt:,.2f}
+Loan Requested: ${applicant.loan_amount:,.2f}
+Employment: {applicant.employment_type}
+Loan Tenure: {applicant.loan_tenure} months
+Debt-to-Income Ratio: {dti:.1f}%
+Loan-to-Income Ratio: {lti:.1f}%
+
+KEY RISK INDICATORS:
+- Credit Score: {applicant.credit_score} {"(EXCELLENT 750+)" if applicant.credit_score >= 750 else "(GOOD 700-749)" if applicant.credit_score >= 700 else "(FAIR 620-699)" if applicant.credit_score >= 620 else "(POOR <620)"}
+- DTI Ratio: {dti:.1f}% {"(LOW - Good)" if dti < 30 else "(MODERATE)" if dti < 50 else "(HIGH - Risky)"}
+- Loan-to-Income: {lti:.1f}% {"(Manageable)" if lti < 80 else "(Stretched)" if lti < 150 else "(Overextended)"}
+
+You MUST respond in this exact JSON format:
+{{
+  "risk_level": "Low" or "Medium" or "High",
+  "loan_decision": "Approve" or "Conditional Approve" or "Reject",
+  "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
+  "reasoning": "brief explanation of your decision"
+}}
+
+Only respond with the JSON. Nothing else."""
+
+
+def _parse_llm_json(response_text: str) -> dict:
+    """Extract and parse JSON from LLM response, handling markdown code blocks."""
+    text = response_text.strip()
+    # Strip markdown code fences
+    if "```json" in text:
+        text = text.split("```json")[1].split("```")[0].strip()
+    elif "```" in text:
+        text = text.split("```")[1].split("```")[0].strip()
+    # Try direct parse
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError:
+        pass
+    # Try extracting the first JSON object from text
+    match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
+    if match:
+        try:
+            return json.loads(match.group())
+        except json.JSONDecodeError:
+            pass
+    # Minimal fallback
+    return {
+        "risk_level": "Medium",
+        "loan_decision": "Conditional Approve",
+        "interest_rate_tier": "10-13%",
+        "reasoning": f"Could not parse LLM response: {text[:200]}",
+    }
+
+
+@app.post("/evaluate")
+async def evaluate_applicant(applicant: ApplicantInput):
+    """
+    End-to-end AI evaluation endpoint.
+
+    Takes applicant details only, sends them to the LLM agent, parses the
+    structured decision, grades it against the ground truth for the selected
+    task, and returns the AI's decision + score + reasoning.
+    """
+    try:
+        # 1. Reset the environment to load the correct task & ground truth
+        try:
+            state = env.reset(task_id=applicant.task_id)
+        except KeyError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unknown task_id: '{applicant.task_id}'. "
+                       f"Available tasks: {TASK_ORDER}"
+            )
+
+        # 2. Build prompt and call LLM
+        prompt = _build_llm_prompt(applicant)
+        logger.info(f"/evaluate: task={applicant.task_id}, model={MODEL_NAME}")
+
+        try:
+            llm_response = client.chat.completions.create(
+                model=MODEL_NAME,
+                messages=[
+                    {
+                        "role": "system",
+                        "content": (
+                            "You are an expert bank loan underwriter. "
+                            "Respond ONLY with the requested JSON object. No other text."
+                        ),
+                    },
+                    {"role": "user", "content": prompt},
+                ],
+                temperature=0.1,
+                max_tokens=512,
+            )
+            llm_text = llm_response.choices[0].message.content or ""
+        except Exception as llm_err:
+            logger.warning(f"LLM call failed: {llm_err}. Using fallback.")
+            llm_text = '{"risk_level":"Medium","loan_decision":"Conditional Approve","interest_rate_tier":"10-13%","reasoning":"LLM unavailable — fallback decision."}'
+
+        # 3. Parse LLM response into structured dict
+        parsed = _parse_llm_json(llm_text)
+        logger.info(f"/evaluate LLM parsed: {parsed}")
+
+        # 4. Build Action and grade via env.step
+        action = Action(
+            risk_level=parsed.get("risk_level", "Medium"),
+            loan_decision=parsed.get("loan_decision", "Conditional Approve"),
+            interest_rate_tier=parsed.get("interest_rate_tier", "10-13%"),
+            reasoning=parsed.get("reasoning", ""),
+        )
+        state, reward, done, info = env.step(action)
+
+        logger.info(
+            f"/evaluate: score={reward:.3f}, "
+            f"risk={action.risk_level.value}, decision={action.loan_decision.value}, "
+            f"rate={action.interest_rate_tier.value}"
+        )
+
+        # 5. Return AI decision + score + full grading info
+        return {
+            "agent_decision": {
+                "risk_level": action.risk_level.value,
+                "loan_decision": action.loan_decision.value,
+                "interest_rate_tier": action.interest_rate_tier.value,
+                "reasoning": parsed.get("reasoning", ""),
+            },
+            "score": reward,
+            "correct_answer": info.get("ground_truth", {}),
+            "stage": applicant.task_id,
+            "grading": info.get("grading", {}),
+            "feedback": info.get("feedback", ""),
+            "task_name": info.get("task_name", ""),
+            "task_difficulty": info.get("task_difficulty", ""),
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"/evaluate failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Evaluation failed: {str(e)}")
 
 
 # ─── OpenEnv Spec Endpoint ───────────────────────────────────────────────────
