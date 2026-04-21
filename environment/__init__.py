@@ -33,7 +33,7 @@ from .models import (
     TaskDifficulty,
 )
 from .tasks import get_task, get_all_tasks, TASK_ORDER, ALL_TASKS, generate_heuristic_ground_truth
-from .graders import grade_action
+from .graders import grade_action, calculate_dynamic_ground_truth
 from .rewards import compute_reward, format_reward_breakdown
 
 __all__ = [
@@ -54,6 +54,7 @@ __all__ = [
     "TASK_ORDER",
     "ALL_TASKS",
     "grade_action",
+    "calculate_dynamic_ground_truth",
     "compute_reward",
     "format_reward_breakdown",
     "generate_heuristic_ground_truth",
