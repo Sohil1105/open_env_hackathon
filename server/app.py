@@ -156,8 +156,13 @@ class ApplicantInput(BaseModel):
     existing_debt: float
     loan_amount: float
     employment_type: str
+    employment_years: float
     loan_tenure: int
     task_id: str
+    age: int = 30
+    monthly_expenses: float = 0.0
+    has_collateral: bool = False
+    previous_defaults: int = 0
     documents_submitted: Optional[List[str]] = None
     payment_history: Optional[List[str]] = None
 
@@ -483,11 +488,12 @@ async def evaluate_applicant(applicant: ApplicantInput):
             existing_debt=applicant.existing_debt,
             loan_amount_requested=applicant.loan_amount,
             employment_type=applicant.employment_type,
+            employment_years=applicant.employment_years,
             repayment_tenure_months=applicant.loan_tenure,
-            age=30,  # Default
-            monthly_expenses=applicant.existing_debt / 12, # Estimate
-            has_collateral=False,
-            previous_defaults=0
+            age=applicant.age,
+            monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else (applicant.existing_debt / 12),
+            has_collateral=applicant.has_collateral,
+            previous_defaults=applicant.previous_defaults
         )
 
         # 2. Reset the environment internally (to keep it consistent with UI stage)

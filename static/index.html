@@ -829,6 +829,13 @@ body::after {
       </div>
 
       <div class="input-row">
+        <label class="input-label" for="applicantAge">
+          <span class="prompt-char">›</span> Age
+        </label>
+        <input id="applicantAge" class="input-field" type="number" value="30">
+      </div>
+
+      <div class="input-row">
         <label class="input-label" for="annualIncome">
           <span class="prompt-char">›</span> Annual Income
         </label>
@@ -867,6 +874,20 @@ body::after {
           <option value="contract">Contract</option>
           <option value="unemployed">Unemployed</option>
         </select>
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="employmentYears">
+          <span class="prompt-char">›</span> Tenure (Years)
+        </label>
+        <input id="employmentYears" class="input-field" type="number" value="2">
+      </div>
+
+      <div class="input-row">
+        <label class="input-label" for="prevDefaults">
+          <span class="prompt-char">›</span> Defaults
+        </label>
+        <input id="prevDefaults" class="input-field" type="number" value="0">
       </div>
 
       <div class="input-row">
@@ -1075,11 +1096,14 @@ async function onStageSelect() {
     const obs = data.state?.observation;
     if (obs) {
       document.getElementById('applicantName').value = obs.applicant_name || '';
+      document.getElementById('applicantAge').value = obs.age || 30;
       document.getElementById('annualIncome').value = obs.annual_income || '';
       document.getElementById('creditScore').value = obs.credit_score || '';
       document.getElementById('existingDebt').value = obs.existing_debt || '';
       document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
       document.getElementById('employmentType').value = obs.employment_type || 'salaried';
+      document.getElementById('employmentYears').value = obs.employment_years || 2;
+      document.getElementById('prevDefaults').value = obs.previous_defaults || 0;
       document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
     }
 
@@ -1126,11 +1150,14 @@ async function executeStep() {
     // Collect applicant details only
     const applicant = {
       applicant_name: document.getElementById('applicantName').value,
+      age: parseInt(document.getElementById('applicantAge')?.value || 30),
       annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
       credit_score: parseInt(document.getElementById('creditScore').value) || 0,
       existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
       loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
       employment_type: document.getElementById('employmentType').value,
+      employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
+      previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
       loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
       task_id: taskId
     };
