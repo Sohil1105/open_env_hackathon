@@ -78,13 +78,23 @@ for var, st in env_status.items():
     level = logging.INFO if "SET" in st and "NOT" not in st else logging.WARNING
     logger.log(level, f"  {var}: {st}")
 
-# ─── LLM Client Setup ───────────────────────────────────────────────────────
+def _get_api_client():
+    """Helper to initialize OpenAI client with correct Hugging Face pathing."""
+    base_url = os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1")
+    key = os.environ.get("HF_TOKEN", "")
+    model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
 
-client = OpenAI(
-    base_url=os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1"),
-    api_key=os.environ.get("HF_TOKEN", ""),
-)
-MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
+    # If it's a default HF URL and NOT a Pro/dedicated endpoint, use the model-specific path
+    if "api-inference.huggingface.co" in base_url and "/models/" not in base_url:
+        # Construct the proper OpenAI-compatible models path
+        base_url = f"https://api-inference.huggingface.co/models/{model}/v1"
+        logger.info(f"Using constructed HF OpenAI-compatible URL: {base_url}")
+
+    return OpenAI(base_url=base_url, api_key=key), model
+
+
+client, MODEL_NAME = _get_api_client()
+
 
 
 # ─── FastAPI Application ─────────────────────────────────────────────────────
@@ -497,7 +507,19 @@ async def evaluate_applicant(applicant: ApplicantInput):
             llm_text = llm_response.choices[0].message.content or ""
         except Exception as llm_err:
             logger.warning(f"LLM call failed: {llm_err}. Using fallback.")
-            llm_text = '{"risk_level":"Medium","loan_decision":"Conditional Approve","interest_rate_tier":"10-13%","reasoning":"LLM unavailable — fallback decision."}'
+            reason = "LLM connection failed. Check your HF_TOKEN and API_BASE_URL."
+            if "Authorization" in str(llm_err) or "401" in str(llm_err):
+                reason = "LLM Unauthorized: HF_TOKEN is likely missing or invalid."
+            elif "404" in str(llm_err):
+                reason = f"LLM Model Not Found at {client.base_url}. Model {MODEL_NAME} may be unavailable."
+            
+            llm_text = json.dumps({
+                "risk_level": "Medium",
+                "loan_decision": "Conditional Approve",
+                "interest_rate_tier": "10-13%",
+                "reasoning": f"⚠️ {reason}"
+            })
+
 
         # 3. Parse LLM response into structured dict
         parsed = _parse_llm_json(llm_text)

@@ -860,7 +860,7 @@ body::after {
         <label class="input-label" for="employmentType">
           <span class="prompt-char">›</span> Employment
         </label>
-        <select id="employmentType" class="select-field">
+        <select id="employmentType" class="select-field" onchange="onEmploymentChange()">
           <option value="salaried">Salaried</option>
           <option value="self_employed">Self Employed</option>
           <option value="freelancer">Freelancer</option>
@@ -1090,6 +1090,25 @@ async function onStageSelect() {
     console.error('Stage select failed:', e);
   }
 }
+
+// ─── Auto-Select Stage Based on Employment ──────────────────────────────
+function onEmploymentChange() {
+  const emp = document.getElementById('employmentType').value;
+  const select = document.getElementById('stageSelect');
+  
+  // Mapping: find best match task index
+  let targetTaskId = null;
+  if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
+  else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
+  else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
+
+  if (targetTaskId && select.value !== targetTaskId) {
+    select.value = targetTaskId;
+    // Notify user of auto-sync
+    showToast(`Auto-selected stage: ${targetTaskId}`, 'info');
+  }
+}
+
 
 // ─── Execute Step ───────────────────────────────────────
 async function executeStep() {
