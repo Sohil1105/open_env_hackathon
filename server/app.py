@@ -46,6 +46,7 @@ from environment import (
     ApplicantProfile,
     TASK_ORDER,
     grade_action,
+    calculate_dynamic_ground_truth,
 )
 from environment.tasks import get_task
 
@@ -422,7 +423,7 @@ Loan-to-Income Ratio: {lti:.1f}%
 KEY RISK INDICATORS:
 - Credit Score: {applicant.credit_score} {"(EXCELLENT 750+)" if applicant.credit_score >= 750 else "(GOOD 700-749)" if applicant.credit_score >= 700 else "(FAIR 620-699)" if applicant.credit_score >= 620 else "(POOR <620)"}
 - DTI Ratio: {dti:.1f}% {"(LOW - Good)" if dti < 30 else "(MODERATE)" if dti < 50 else "(HIGH - Risky)"}
-- Loan-to-Income: {lti:.1f}% {"(Manageable)" if lti < 80 else "(Stretched)" if lti < 150 else "(Overextended)"}
+- Loan-to-Income: {lti:.1f}% {"(Manageable)" if lti < 100 else "(Stretched)" if lti < 200 else "(Overextended)"}
 
 You MUST respond in this exact JSON format:
 {{
@@ -470,24 +471,39 @@ async def evaluate_applicant(applicant: ApplicantInput):
     End-to-end AI evaluation endpoint.
 
     Takes applicant details only, sends them to the LLM agent, parses the
-    structured decision, grades it against the ground truth for the selected
-    task, and returns the AI's decision + score + reasoning.
+    structured decision, grades it against a DYNAMIC ground truth computed
+    from the actual details, and returns the AI's decision + score.
     """
     try:
-        # 1. Reset the environment to load the correct task & ground truth
+        # 1. Create an ApplicantProfile from the input (handles dynamic stats)
+        profile = ApplicantProfile(
+            applicant_name=applicant.applicant_name,
+            annual_income=applicant.annual_income,
+            credit_score=applicant.credit_score,
+            existing_debt=applicant.existing_debt,
+            loan_amount_requested=applicant.loan_amount,
+            employment_type=applicant.employment_type,
+            repayment_tenure_months=applicant.loan_tenure,
+            age=30,  # Default
+            monthly_expenses=applicant.existing_debt / 12, # Estimate
+            has_collateral=False,
+            previous_defaults=0
+        )
+
+        # 2. Reset the environment internally (to keep it consistent with UI stage)
         try:
-            state = env.reset(task_id=applicant.task_id)
-        except KeyError:
-            raise HTTPException(
-                status_code=400,
-                detail=f"Unknown task_id: '{applicant.task_id}'. "
-                       f"Available tasks: {TASK_ORDER}"
-            )
+            env.reset(task_id=applicant.task_id)
+        except Exception:
+            env.reset() # Fallback to default task
 
-        # 2. Build prompt and call LLM
+        # 3. Calculate DYNAMIC ground truth based on the PROVIDED details
+        # This fixes the issue where changing credit score didn't change the expected answer.
+        dynamic_gt = calculate_dynamic_ground_truth(profile)
+        logger.info(f"Generated dynamic GT for {applicant.applicant_name}: risk={dynamic_gt.risk_level.value}")
+
+        # 4. Build prompt and call LLM
         prompt = _build_llm_prompt(applicant)
-        logger.info(f"/evaluate: task={applicant.task_id}, model={MODEL_NAME}")
-
+        
         try:
             llm_response = client.chat.completions.create(
                 model=MODEL_NAME,
@@ -506,7 +522,9 @@ async def evaluate_applicant(applicant: ApplicantInput):
             )
             llm_text = llm_response.choices[0].message.content or ""
         except Exception as llm_err:
-            logger.warning(f"LLM call failed: {llm_err}. Using fallback.")
+            # BROAD LOGGING for troubleshooting
+            logger.error(f"LLM EXCEPTION: {type(llm_err).__name__}: {str(llm_err)}")
+            
             reason = "LLM connection failed. Check your HF_TOKEN and API_BASE_URL."
             if "Authorization" in str(llm_err) or "401" in str(llm_err):
                 reason = "LLM Unauthorized: HF_TOKEN is likely missing or invalid."
@@ -520,27 +538,21 @@ async def evaluate_applicant(applicant: ApplicantInput):
                 "reasoning": f"⚠️ {reason}"
             })
 
-
-        # 3. Parse LLM response into structured dict
+        # 5. Parse LLM response into structured dict
         parsed = _parse_llm_json(llm_text)
-        logger.info(f"/evaluate LLM parsed: {parsed}")
 
-        # 4. Build Action and grade via env.step
+        # 6. Build Action and grade using the DYNAMIC ground truth
         action = Action(
             risk_level=parsed.get("risk_level", "Medium"),
             loan_decision=parsed.get("loan_decision", "Conditional Approve"),
             interest_rate_tier=parsed.get("interest_rate_tier", "10-13%"),
             reasoning=parsed.get("reasoning", ""),
         )
-        state, reward, done, info = env.step(action)
+        
+        # Use grade_action directly with our dynamic_gt
+        grading_result = grade_action(action, dynamic_gt)
 
-        logger.info(
-            f"/evaluate: score={reward:.3f}, "
-            f"risk={action.risk_level.value}, decision={action.loan_decision.value}, "
-            f"rate={action.interest_rate_tier.value}"
-        )
-
-        # 5. Return AI decision + score + full grading info
+        # 7. Return AI decision + score + dynamic GT info
         return {
             "agent_decision": {
                 "risk_level": action.risk_level.value,
@@ -548,13 +560,23 @@ async def evaluate_applicant(applicant: ApplicantInput):
                 "interest_rate_tier": action.interest_rate_tier.value,
                 "reasoning": parsed.get("reasoning", ""),
             },
-            "score": reward,
-            "correct_answer": info.get("ground_truth", {}),
+            "score": grading_result.total_score,
+            "correct_answer": {
+                "risk_level": dynamic_gt.risk_level.value,
+                "loan_decision": dynamic_gt.loan_decision.value,
+                "interest_rate_tier": dynamic_gt.interest_rate_tier.value,
+                "explanation": dynamic_gt.explanation
+            },
             "stage": applicant.task_id,
-            "grading": info.get("grading", {}),
-            "feedback": info.get("feedback", ""),
-            "task_name": info.get("task_name", ""),
-            "task_difficulty": info.get("task_difficulty", ""),
+            "grading": {
+                "risk_level_score": grading_result.risk_level_score,
+                "loan_decision_score": grading_result.loan_decision_score,
+                "interest_rate_score": grading_result.interest_rate_score,
+                "consistency_bonus": grading_result.consistency_bonus,
+            },
+            "feedback": grading_result.feedback,
+            "task_name": "Dynamic Case Assessment",
+            "task_difficulty": "adaptive",
         }
 
     except HTTPException:

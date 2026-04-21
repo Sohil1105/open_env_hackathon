@@ -648,3 +648,73 @@ def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> Grad
         total_score=total_score,
         feedback=feedback,
     )
+
+def calculate_dynamic_ground_truth(obs: "ApplicantProfile") -> GroundTruth:
+    """
+    Calculate the 'Correct' decision based on actual applicant data.
+    This allows the ground truth to adapt when the user provides custom details.
+    """
+    # 1. Determine Risk Level
+    # Score-based heuristics
+    score = obs.credit_score
+    income = obs.annual_income
+    debt = obs.existing_debt
+    loan = obs.loan_amount_requested
+    defaults = getattr(obs, 'previous_defaults', 0)
+    
+    dti = (debt / income) if income > 0 else 1.0
+    lti = (loan / income) if income > 0 else 2.0
+    
+    risk_level = RiskLevel.MEDIUM
+    if score >= 740 and dti < 0.35 and defaults == 0:
+        risk_level = RiskLevel.LOW
+    elif score < 620 or dti > 0.60 or defaults > 1:
+        risk_level = RiskLevel.HIGH
+        
+    # 2. Determine Loan Decision
+    loan_decision = LoanDecision.CONDITIONAL_APPROVE
+    if risk_level == RiskLevel.LOW and lti < 3.0:
+        loan_decision = LoanDecision.APPROVE
+    elif risk_level == RiskLevel.HIGH or lti > 5.0:
+        loan_decision = LoanDecision.REJECT
+        
+    # 3. Determine Interest Rate
+    interest_rate = InterestRateTier.MEDIUM
+    if risk_level == RiskLevel.LOW:
+        interest_rate = InterestRateTier.LOW
+    elif risk_level == RiskLevel.HIGH:
+        interest_rate = InterestRateTier.HIGH
+        
+    # 4. Generate Explanation
+    explanation = get_underwriting_explanation(obs, risk_level, loan_decision, interest_rate)
+    
+    return GroundTruth(
+        risk_level=risk_level,
+        loan_decision=loan_decision,
+        interest_rate_tier=interest_rate,
+        explanation=explanation
+    )
+
+def get_underwriting_explanation(obs: "ApplicantProfile", risk: RiskLevel, dec: LoanDecision, rate: InterestRateTier) -> str:
+    """Generate a detailed explanation for the dynamic ground truth."""
+    parts = [f"Automated risk assessment for {obs.applicant_name}:"]
+    
+    # Risk factor
+    if risk == RiskLevel.LOW:
+        parts.append(f"- Low Risk: Strong credit score ({obs.credit_score}) and healthy debt-to-income.")
+    elif risk == RiskLevel.HIGH:
+        parts.append(f"- High Risk: Credit concerns ({obs.credit_score}) or high debt load.")
+    else:
+        parts.append(f"- Medium Risk: Balanced profile with moderate credit score ({obs.credit_score}).")
+        
+    # Decision factor
+    if dec == LoanDecision.APPROVE:
+        parts.append("- Decision: Straight approval granted based on profile stability.")
+    elif dec == LoanDecision.REJECT:
+        parts.append("- Decision: Rejected due to risk profile or affordability limits.")
+    else:
+        parts.append("- Decision: Conditional approval with additional verification required.")
+        
+    parts.append(f"- Interest Tier: {rate.value} reflects the assessed risk profile.")
+    
+    return "\n".join(parts)
