@@ -1,0 +1,13 @@
+{
+    "applicant_name": "Priya Patel",
+    "annual_income": 800000,
+    "credit_score": 720,
+    "existing_debt": 150000,
+    "loan_amount": 1500000,
+    "employment_type": "self_employed",
+    "loan_tenure": 48,
+    "task_id": "medium_self_employed_moderate",
+    "age": 35,
+    "job_history_years": 5,
+    "past_defaults": 0
+}
