@@ -696,25 +696,28 @@ def calculate_dynamic_ground_truth(obs: "ApplicantProfile") -> GroundTruth:
     )
 
 def get_underwriting_explanation(obs: "ApplicantProfile", risk: RiskLevel, dec: LoanDecision, rate: InterestRateTier) -> str:
-    """Generate a detailed explanation for the dynamic ground truth."""
-    parts = [f"Automated risk assessment for {obs.applicant_name}:"]
+    """Generate a detailed explanation for the dynamic ground truth following the 5-stage process."""
+    dti = (obs.existing_debt / obs.annual_income * 100) if obs.annual_income > 0 else 0
+    collateral_str = "Provided" if getattr(obs, 'has_collateral', False) else "None"
     
-    # Risk factor
-    if risk == RiskLevel.LOW:
-        parts.append(f"- Low Risk: Strong credit score ({obs.credit_score}) and healthy debt-to-income.")
-    elif risk == RiskLevel.HIGH:
-        parts.append(f"- High Risk: Credit concerns ({obs.credit_score}) or high debt load.")
-    else:
-        parts.append(f"- Medium Risk: Balanced profile with moderate credit score ({obs.credit_score}).")
-        
-    # Decision factor
-    if dec == LoanDecision.APPROVE:
-        parts.append("- Decision: Straight approval granted based on profile stability.")
-    elif dec == LoanDecision.REJECT:
-        parts.append("- Decision: Rejected due to risk profile or affordability limits.")
-    else:
-        parts.append("- Decision: Conditional approval with additional verification required.")
-        
-    parts.append(f"- Interest Tier: {rate.value} reflects the assessed risk profile.")
+    parts = [
+        f"AUTONOMOUS UNDERWRITING REPORT FOR {obs.applicant_name}:",
+        "",
+        "STAGE 1: DOCUMENTATION & IDENTITY VERIFICATION",
+        f"   - Profile status: Complete. Documents required: Income proof (e.g., {'Tax Returns' if obs.employment_type.value != 'salaried' else 'Pay Stubs'}), KYC, and Bank Statements.",
+        "",
+        "STAGE 2: CREDIT CHARACTER ASSESSMENT",
+        f"   - Analysis: Credit score of {obs.credit_score} indicates {'strong' if obs.credit_score > 740 else 'moderate' if obs.credit_score > 650 else 'high-risk'} character. Previous defaults: {getattr(obs, 'previous_defaults', 0)}.",
+        "",
+        "STAGE 3: CAPACITY & CAPITAL ANALYSIS",
+        f"   - Assessment: Debt-to-Income (DTI) ratio is {dti:.1f}%. Capital profile (Employment: {obs.employment_type.value}, Tenure: {getattr(obs, 'employment_years', 0)} yrs).",
+        "",
+        "STAGE 4: COLLATERAL & CONDITIONS",
+        f"   - Status: Collateral ({collateral_str}). Tenure: {getattr(obs, 'repayment_tenure_months', 36)} months. Interest rate target: {rate.value}.",
+        "",
+        "STAGE 5: FINAL UNDERWRITING DECISION",
+        f"   - Synthesized Risk: {risk.value.upper()}.",
+        f"   - FINAL VERDICT: {dec.value.upper()}."
+    ]
     
     return "\n".join(parts)

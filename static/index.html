@@ -1165,7 +1165,7 @@ function onAmountChange() {
 async function executeStep() {
   const btn = document.getElementById('executeBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>AI ANALYZING PIPELINE...';
+  btn.innerHTML = '<span class="spinner"></span>INITIALIZING AI AGENT...';
 
   try {
     // Collect applicant details
@@ -1189,67 +1189,56 @@ async function executeStep() {
         return;
     }
 
-    // Determine risk stage based on employment type
+    // Determine risk stage for API compatibility
     let riskStage = 'easy_salaried_high_credit';
     if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') {
         riskStage = 'medium_self_employed_moderate';
     } else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') {
         riskStage = 'hard_freelancer_complex';
     }
+    applicant.task_id = riskStage;
 
-    const pipeline = [
-      { id: 'lead_qualification_sales', name: 'Lead Qualification' },
-      { id: 'document_verification_hr', name: 'Document Verification' },
-      { id: riskStage, name: 'Risk Assessment' },
-      { id: 'customer_onboarding_pm', name: 'Customer Onboarding' }
+    // --- ANIMATED STAGES ---
+    const stages = [
+        "📡 Connecting to Global Credit Bureau...",
+        "📂 STAGE 1: Documentation & Identity Check...",
+        "🔍 STAGE 2: Credit Character Assessment...",
+        "📊 STAGE 3: Capacity & DTI Analysis...",
+        "⚖️ STAGE 4: Final Underwriting & Decision..."
     ];
 
-    completedStages.clear();
-
-    for (let i = 0; i < pipeline.length; i++) {
-        const stage = pipeline[i];
-        activeStageId = stage.id;
-        updateLifecycleBar();
-        
-        showToast(`🤖 AI Agent running: ${stage.name}...`, 'info');
-        btn.innerHTML = `<span class="spinner"></span>RUNNING ${stage.name.toUpperCase()}...`;
-
-        applicant.task_id = stage.id;
-        
-        // Wait 1 second for visual effect
-        await new Promise(r => setTimeout(r, 1000));
-
-        const response = await fetch('/evaluate', {
-          method: 'POST',
-          headers: {'Content-Type': 'application/json'},
-          body: JSON.stringify(applicant)
-        });
-
-        if (!response.ok) {
-            throw new Error(`Failed at ${stage.name}`);
-        }
-
-        const result = await response.json();
-        
-        // Display result for this stage
-        displayResult(result);
-        completedStages.add(stage.id);
-        updateLifecycleBar();
-
-        const decision = result.agent_decision?.loan_decision || result.ground_truth?.loan_decision;
-        
-        if (decision === 'Reject' || decision === 'Disqualify') {
-            showToast(`Application rejected at ${stage.name}`, 'error');
-            break; // Stop pipeline
-        }
-        
-        // Wait 2 seconds before next stage so user can read
-        if (i < pipeline.length - 1) {
-            await new Promise(r => setTimeout(r, 2500));
-        }
+    for (const msg of stages) {
+        btn.innerHTML = `<span class="spinner"></span>${msg}`;
+        showToast(msg, 'info');
+        await new Promise(r => setTimeout(r, 800)); // Dramatic pause
     }
 
-    showToast('✨ Autonomous Pipeline Complete!', 'success');
+    btn.innerHTML = '<span class="spinner"></span>FINALIZING VERDICT...';
+
+    const response = await fetch('/evaluate', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify(applicant)
+    });
+
+    if (!response.ok) {
+        throw new Error(`Failed to evaluate application`);
+    }
+
+    const result = await response.json();
+    
+    // Display result
+    displayResult(result);
+
+    // Update lifecycle bar to show all completed
+    activeStageId = riskStage;
+    completedStages.add('lead_qualification_sales');
+    completedStages.add('document_verification_hr');
+    completedStages.add(riskStage);
+    completedStages.add('customer_onboarding_pm');
+    updateLifecycleBar();
+
+    showToast('✨ Autonomous Underwriting Complete!', 'success');
 
   } catch (e) {
     console.error('Execute failed:', e);

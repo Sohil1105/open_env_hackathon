@@ -427,134 +427,11 @@ async def grade_response(request: GradeRequest):
 import json
 import re
 
-STAGE_PROMPTS = {
-    "lead_qualification_sales": """
-        You are a bank sales officer.
-        Review this initial inquiry and decide:
-        Should we proceed with full application? Yes/No/Maybe
-
-        Applicant: {profile}
-
-        Respond in JSON:
-        {{
-            "qualification_decision": "Qualify" or "Disqualify" or "Request More Info",
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "detailed explanation"
-        }}
-    """,
-    "document_verification_hr": """
-        You are a bank compliance officer.
-        Review the applicant documents and assess completeness.
-
-        Applicant: {profile}
-
-        Respond in JSON:
-        {{
-            "document_status": "Complete" or "Incomplete" or "Suspicious",
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "detailed explanation of document assessment"
-        }}
-    """,
-    "easy_salaried_high_credit": """
-        You are a senior bank loan underwriter.
-        Analyze this applicant profile carefully.
-
-        Applicant: {profile}
-
-        Based on the financial data make your underwriting decision.
-
-        Respond ONLY in this JSON format:
-        {{
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "step by step explanation of your decision"
-        }}
-    """,
-    "medium_self_employed_moderate": """
-        You are a senior bank loan underwriter.
-        Analyze this self-employed applicant profile carefully.
-
-        Applicant: {profile}
-
-        Based on the financial data make your underwriting decision.
-
-        Respond ONLY in this JSON format:
-        {{
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "step by step explanation of your decision"
-        }}
-    """,
-    "hard_freelancer_complex": """
-        You are a senior bank loan underwriter.
-        Analyze this freelancer applicant profile carefully.
-
-        Applicant: {profile}
-
-        Based on the financial data make your underwriting decision.
-
-        Respond ONLY in this JSON format:
-        {{
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "step by step explanation of your decision"
-        }}
-    """,
-    "customer_onboarding_pm": """
-        You are a project manager handling customer onboarding.
-        Review the applicant's profile and assess onboarding readiness.
-
-        Applicant: {profile}
-
-        Respond in JSON:
-        {{
-            "onboarding_status": "Complete" or "Incomplete" or "Critical Gaps",
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "detailed explanation of onboarding readiness"
-        }}
-    """,
-    "bankruptcy_recovery_edge1": """
-        You are a senior bank loan underwriter.
-        Analyze this applicant with a history of bankruptcy.
-
-        Applicant: {profile}
-
-        Based on the financial data make your underwriting decision.
-
-        Respond ONLY in this JSON format:
-        {{
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "step by step explanation of your decision"
-        }}
-    """,
-    "joint_applicants_edge2": """
-        You are a senior bank loan underwriter.
-        Analyze this joint applicant profile carefully.
-
-        Applicant: {profile}
-
-        Based on the financial data make your underwriting decision.
-
-        Respond ONLY in this JSON format:
-        {{
-            "risk_level": "Low" or "Medium" or "High",
-            "loan_decision": "Approve" or "Conditional Approve" or "Reject",
-            "interest_rate_tier": "7-9%" or "10-13%" or "14%+",
-            "reasoning": "step by step explanation of your decision"
-        }}
-    """
-}
+STAGE_PROMPTS = { k: '\nYou are an Advanced Autonomous Bank Underwriting Agent. Your mission is to replace the manual, multi-department loan approval process with a high-speed AI pipeline.\n\nPerform the full evaluation by processing the applicant through these 5 professional banking stages:\n\nSTAGE 1: DOCUMENTATION & IDENTITY VERIFICATION\n- Review the applicant\'s profile for completeness.\n- List specific documents required for this profile (e.g., if self-employed, ask for 2 years of tax returns; if salaried, ask for recent pay stubs).\n\nSTAGE 2: CREDIT CHARACTER ASSESSMENT\n- Evaluate the Credit Score ({credit_score}) and Past Defaults ({past_defaults}). \n- Analyze their reliability as a borrower.\n\nSTAGE 3: CAPACITY & CAPITAL ANALYSIS\n- Calculate the Debt-to-Income (DTI) ratio (Existing Debt: {existing_debt} / Annual Income: {annual_income}).\n- Assess if their income provides enough "Capacity" to repay the requested Loan Amount ({loan_amount}).\n- Consider their "Capital" (employment stability and years of experience).\n\nSTAGE 4: COLLATERAL & CONDITIONS\n- Evaluate if "Collateral" ({has_collateral}) is provided to secure the loan.\n- Check "Conditions": Is the loan tenure ({loan_tenure} months) and interest rate tier appropriate for current market conditions?\n\nSTAGE 5: FINAL UNDERWRITING DECISION\n- Synthesize all findings into a final Risk Level and Loan Decision.\n\nApplicant Profile:\n{profile}\n\nRespond STRICTLY in JSON format with this structure:\n{{\n    "risk_level": "Low" | "Medium" | "High",\n    "loan_decision": "Approve" | "Conditional Approve" | "Reject",\n    "interest_rate_tier": "7-9%" | "10-13%" | "14%+",\n    "requested_documents": ["list", "of", "required", "docs"],\n    "reasoning": "A comprehensive report covering all 5 stages in detail."\n}}\n' for k in [
+    "lead_qualification_sales", "document_verification_hr", "easy_salaried_high_credit",
+    "medium_self_employed_moderate", "hard_freelancer_complex", "customer_onboarding_pm",
+    "bankruptcy_recovery_edge1", "joint_applicants_edge2"
+] }
 
 class LifecycleSession:
     current_stage: int = 0
@@ -670,7 +547,16 @@ async def evaluate_applicant(applicant: ApplicantInput):
     Past Defaults: {getattr(applicant, 'previous_defaults', 0)}
     """
 
-    full_prompt = prompt_template.format(profile=profile_text)
+    full_prompt = prompt_template.format(
+        profile=profile_text,
+        credit_score=applicant.credit_score,
+        past_defaults=getattr(applicant, 'previous_defaults', 0),
+        existing_debt=applicant.existing_debt,
+        annual_income=applicant.annual_income,
+        loan_amount=applicant.loan_amount,
+        has_collateral="Provided" if getattr(applicant, 'has_collateral', False) else "None",
+        loan_tenure=applicant.loan_tenure
+    )
 
     # 3. Call LLM
     try:
