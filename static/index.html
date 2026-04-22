@@ -1265,7 +1265,6 @@ function displayResult(result) {
   // Metadata
   document.getElementById('resTaskName').textContent = result.task_name || '—';
   
-  const diffEl = document.getElementById('resDifficulty');
   const stageStatus = `Stage ${result.stage_number}/8 Complete`;
   const nextStageText = result.next_stage ? `Next: ${result.next_stage_name}` : 'Finished';
   // You can show this wherever fits best, maybe next to task name
