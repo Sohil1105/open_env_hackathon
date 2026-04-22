@@ -86,7 +86,7 @@ def _get_api_client():
     """
     base_url = os.environ.get("API_BASE_URL", "").strip()
     key = os.environ.get("HF_TOKEN", "").strip()
-    model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct").strip()
+    model = os.environ.get("MODEL_NAME", "mistralai/Mixtral-8x7B-Instruct-v0.1").strip()
 
     # Use the reliable GLOBAL endpoint by default
     if not base_url or "api-inference.huggingface.co" in base_url:
