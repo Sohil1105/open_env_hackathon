@@ -38,7 +38,7 @@ from environment.rewards import format_reward_breakdown
 # ─── Client Setup (exact spec from requirements) ─────────────────────────────
 
 client = OpenAI(
-    base_url=os.environ.get("API_BASE_URL", "https://api-inference.huggingface.co/v1"),
+    base_url=os.environ.get("API_BASE_URL", "https://router.huggingface.co/hf-inference/v1"),
     api_key=os.environ.get("HF_TOKEN", ""),
 )
 MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")

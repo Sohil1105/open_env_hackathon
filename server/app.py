@@ -90,7 +90,7 @@ def _get_api_client():
 
     # Use the reliable GLOBAL endpoint by default
     if not base_url or "api-inference.huggingface.co" in base_url:
-        base_url = "https://api-inference.huggingface.co/v1"
+        base_url = "https://router.huggingface.co/hf-inference/v1"
 
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
     if not key:
@@ -548,7 +548,7 @@ async def evaluate_applicant(applicant: ApplicantInput):
                 "risk_level": dynamic_gt.risk_level.value,
                 "loan_decision": dynamic_gt.loan_decision.value,
                 "interest_rate_tier": dynamic_gt.interest_rate_tier.value,
-                "reasoning": f"Automated Assessment: {dynamic_gt.explanation} (Note: {reason})"
+                "reasoning": f"Automated Assessment: {dynamic_gt.explanation}"
             })
 
         # 5. Parse LLM response into structured dict
