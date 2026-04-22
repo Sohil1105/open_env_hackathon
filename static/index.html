@@ -1255,10 +1255,22 @@ function displayResult(result) {
   }, 100);
 
   // Reasoning
-  typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || 'No reasoning provided.');
+  const reasoning = result.agent_decision?.reasoning
+        || result.reasoning
+        || result.explanation
+        || 'No reasoning provided';
+  
+  typewriterEffect(document.getElementById('resReasoning'), reasoning);
 
   // Metadata
   document.getElementById('resTaskName').textContent = result.task_name || '—';
+  
+  const diffEl = document.getElementById('resDifficulty');
+  const stageStatus = `Stage ${result.stage_number}/8 Complete`;
+  const nextStageText = result.next_stage ? `Next: ${result.next_stage_name}` : 'Finished';
+  // You can show this wherever fits best, maybe next to task name
+  document.getElementById('resTaskName').textContent = `${result.task_name || '—'} (${stageStatus})`;
+
   const diff = result.task_difficulty || '—';
   const diffEl = document.getElementById('resDifficulty');
   diffEl.textContent = diff.toUpperCase();
