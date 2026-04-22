@@ -236,9 +236,20 @@ async def reset_environment(request: Request):
                 body = await request.json()
                 if isinstance(body, dict):
                     task_id = body.get("task_id", None)
+                    
+                    if task_id == TASK_ORDER[0]:
+                        global_session.applicant_profile = {}
+                        global_session.completed_stages = []
+                        global_session.stage_scores = {}
+                        
                     custom_profile_data = body.get("custom_profile", None)
                     if custom_profile_data:
                         custom_profile = ApplicantProfile(**custom_profile_data)
+                    elif getattr(global_session, 'applicant_profile', None) and task_id != TASK_ORDER[0]:
+                        try:
+                            custom_profile = ApplicantProfile(**global_session.applicant_profile)
+                        except Exception:
+                            pass
             except Exception:
                 pass
         state = env.reset(task_id=task_id, custom_profile=custom_profile)
@@ -697,7 +708,7 @@ async def evaluate_applicant(applicant: ApplicantInput):
             "risk_level": gt.risk_level.value,
             "loan_decision": gt.loan_decision.value,
             "interest_rate_tier": gt.interest_rate_tier.value,
-            "reasoning": f"[AI Error: {str(e)}] Using ground truth fallback."
+            "reasoning": gt.explanation
         }
 
     # 5. Calculate dynamic ground truth
@@ -715,6 +726,7 @@ async def evaluate_applicant(applicant: ApplicantInput):
         has_collateral=applicant.has_collateral,
         previous_defaults=applicant.previous_defaults
     )
+    global_session.applicant_profile = profile.model_dump()
     ground_truth = calculate_dynamic_ground_truth(profile)
 
     # 6. Grade the decision
