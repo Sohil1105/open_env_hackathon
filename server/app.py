@@ -86,7 +86,7 @@ def _get_api_client():
     """
     base_url = os.environ.get("API_BASE_URL", "").strip()
     key = os.environ.get("HF_TOKEN", "").strip()
-    model = os.environ.get("MODEL_NAME", "mistralai/Mistral-7B-Instruct-v0.3").strip()
+    model = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct").strip()
 
     # Use the reliable GLOBAL endpoint by default
     if not base_url or "api-inference.huggingface.co" in base_url:
@@ -517,8 +517,11 @@ async def evaluate_applicant(applicant: ApplicantInput):
         prompt = _build_llm_prompt(applicant)
         
         try:
-            llm_response = client.chat.completions.create(
-                model=MODEL_NAME,
+            # Instantiate dynamically so we capture the latest HF_TOKEN from environment if changed
+            local_client, local_model_name = _get_api_client()
+            
+            llm_response = local_client.chat.completions.create(
+                model=local_model_name,
                 messages=[
                     {
                         "role": "system",
@@ -548,7 +551,7 @@ async def evaluate_applicant(applicant: ApplicantInput):
                 "risk_level": dynamic_gt.risk_level.value,
                 "loan_decision": dynamic_gt.loan_decision.value,
                 "interest_rate_tier": dynamic_gt.interest_rate_tier.value,
-                "reasoning": f"Automated Assessment: {dynamic_gt.explanation}"
+                "reasoning": f"[Debug Mode] Automated Assessment: {dynamic_gt.explanation} [Err: {type(llm_err).__name__} - {str(llm_err)}]"
             })
 
         # 5. Parse LLM response into structured dict
