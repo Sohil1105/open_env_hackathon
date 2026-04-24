@@ -30,19 +30,24 @@ jobs:
       - name: Install git-lfs
         run: git lfs install
 
-      # Step 3: Remove binary files to satisfy HF restrictions (Mentors still see them on GitHub)
-      - name: Clean binaries for HF
-        run: |
-          git config user.name "github-actions"
-          git config user.email "github-actions@github.com"
-          rm -f *.png
-          git add .
-          git commit -m "chore: remove binary plots for Space sync [skip ci]" || echo "No changes to commit"
-
-      # Step 4: Push to Hugging Face Space via direct git push
-      - name: Push to Hugging Face Hub
+      # Step 3: Prepare clean push (Orphan branch to strip history)
+      - name: Prepare and Push to HF
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          
+          # 1. Create a new orphan branch (no history)
+          git checkout --orphan hf-sync
+          
+          # 2. Remove binary files that HF rejects
+          rm -f *.png
+          git add .
+          
+          # 3. Create a single "clean" commit
+          git commit -m "Sync to Space: $(date)"
+          
+          # 4. Force push this single commit to HF main
           git remote add hf https://Sourav0511:$HF_TOKEN@huggingface.co/spaces/Sourav0511/open-env-hackathon || true
-          git push hf main --force
+          git push hf hf-sync:main --force
