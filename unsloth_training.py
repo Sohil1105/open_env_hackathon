@@ -5,7 +5,7 @@ Using Unsloth and TRL for memory-efficient training on Llama-3-8B.
 COLAB SETUP:
 Run this block first to install dependencies:
 !pip install unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
-!pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes gradio
+!pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes
 """
 
 import os
@@ -17,7 +17,7 @@ from datasets import Dataset, load_dataset
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
 from transformers import TrainingArguments, TextStreamer
-import gradio as gr
+
 
 # --- 1. CONFIGURATION ---
 MODEL_NAME = "unsloth/llama-3-8b-Instruct-bnb-4bit"
@@ -172,27 +172,3 @@ if HF_TOKEN != "":
 else:
     print("⚠️ Skipping upload: Please paste your Hugging Face Token into the HF_TOKEN variable.")
 
-# --- 9. GRADIO UI ---
-def evaluate_loan(profile):
-    FastLanguageModel.for_inference(model)
-    prompt = f"### Instruction:\nEvaluate this loan application: {profile}\n\n### Response:\n"
-    inputs = tokenizer([prompt], return_tensors = "pt").to(device)
-    
-    outputs = model.generate(**inputs, max_new_tokens = 256)
-    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    
-    if "### Response:\n" in response:
-        return response.split("### Response:\n")[-1].strip()
-    return response
-
-demo = gr.Interface(
-    fn=evaluate_loan,
-    inputs=gr.Textbox(lines=5, label="Applicant Profile", placeholder="Income: $50,000, FICO: 700, DTI: 15%, Purpose: credit card..."),
-    outputs=gr.Textbox(label="Decision (JSON)"),
-    title="🏦 Loan Underwriting AI",
-    description="Autonomous Credit Assessment using fine-tuned Llama-3-8B on real-world LendingClub data."
-)
-
-if __name__ == "__main__":
-    print("🚀 Launching Gradio UI...")
-    demo.launch(share=True)
