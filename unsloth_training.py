@@ -5,58 +5,72 @@ Using Unsloth and TRL for memory-efficient training on Llama-3-8B.
 COLAB SETUP:
 Run this block first to install dependencies:
 !pip install unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git
-!pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes
+!pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes gradio
 """
 
 import os
 import json
 import torch
+import math
 import matplotlib.pyplot as plt
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from unsloth import FastLanguageModel
 from trl import SFTTrainer
 from transformers import TrainingArguments, TextStreamer
+import gradio as gr
 
 # --- 1. CONFIGURATION ---
 MODEL_NAME = "unsloth/llama-3-8b-Instruct-bnb-4bit"
 MAX_SEQ_LENGTH = 512
-DTYPE = None 
+# Fixed DTYPE for hardware optimization
+DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 LOAD_IN_4BIT = True
+# Fixed device selection
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
-# --- 2. DATASET GENERATION ---
+# --- 2. DATASET LOADING (Real World) ---
 def get_training_data():
-    """Generates synthetic banking cases for training."""
-    data = [
-        {
-            "profile": "Name: Rajesh Kumar, Income: ₹1,200,000, Credit Score: 785, Debt: ₹150,000, Loan: ₹500,000, Employment: salaried",
-            "response": {
-                "risk_level": "Low",
-                "loan_decision": "Approve",
-                "reasoning": "High credit score and low DTI ratio (12.5%) indicate excellent repayment capacity."
-            }
-        },
-        {
-            "profile": "Name: Priya Singh, Income: ₹720,000, Credit Score: 665, Debt: ₹280,000, Loan: ₹400,000, Employment: self_employed",
-            "response": {
-                "risk_level": "Medium",
-                "loan_decision": "Conditional Approve",
-                "reasoning": "Moderate credit score. DTI is acceptable (38%), but self-employment requires document verification."
-            }
-        },
-        {
-            "profile": "Name: Arjun Das, Income: ₹420,000, Credit Score: 572, Debt: ₹400,000, Loan: ₹300,000, Employment: salaried",
-            "response": {
-                "risk_level": "High",
-                "loan_decision": "Reject",
-                "reasoning": "Low credit score and extremely high DTI ratio (>90%). High risk of default."
-            }
-        }
-    ]
+    """Loads real-world loan data from HuggingFace and converts to instruction format."""
+    print("📥 Loading real-world dataset from HuggingFace (AnguloM/loan_data)...")
+    raw = load_dataset("AnguloM/loan_data", split="train")
     
     formatted = []
-    for item in data:
-        text = f"### Instruction:\nEvaluate this loan application: {item['profile']}\n\n### Response:\n{json.dumps(item['response'])}"
+    for row in raw:
+        # Decode income from log scale
+        income = round(math.exp(row["log.annual.inc"]), 2)
+        dti = row["dti"]
+        fico = row["fico"]
+        purpose = row["purpose"].replace("_", " ")
+        delinq = row["delinq.2yrs"]
+        pub_rec = row["pub.rec"]
+        inq = row["inq.last.6mths"]
+        not_paid = row["not.fully.paid"]
+        credit_policy = row["credit.policy"]
+
+        # Derive decision based on dataset features
+        if credit_policy == 1 and not_paid == 0 and fico >= 720 and dti < 20:
+            risk, decision = "Low", "Approve"
+            reason = f"Strong FICO ({fico}), low DTI ({dti}%), clean repayment history."
+        elif credit_policy == 1 and not_paid == 0 and fico >= 660:
+            risk, decision = "Medium", "Conditional Approve"
+            reason = f"Acceptable FICO ({fico}), DTI ({dti}%) — requires document verification."
+        else:
+            risk, decision = "High", "Reject"
+            reason = f"Low FICO ({fico}), high DTI ({dti}%) or poor repayment record."
+
+        profile = (
+            f"Income: ${income:,}, FICO: {fico}, DTI: {dti}%, "
+            f"Purpose: {purpose}, Delinquencies: {delinq}, "
+            f"Public Records: {pub_rec}, Inquiries (6mo): {inq}"
+        )
+
+        text = (
+            f"### Instruction:\nEvaluate this loan application: {profile}\n\n"
+            f"### Response:\n"
+            f'{{"risk_level":"{risk}","decision":"{decision}","reason":"{reason}"}}'
+        )
         formatted.append({"text": text})
+
     return Dataset.from_list(formatted)
 
 # --- 3. MODEL LOADING ---
@@ -93,11 +107,12 @@ trainer = SFTTrainer(
     train_dataset = dataset,
     dataset_text_field = "text",
     max_seq_length = MAX_SEQ_LENGTH,
+    packing = True,  # Added packing=True for efficiency
     args = TrainingArguments(
         per_device_train_batch_size = 1,
         gradient_accumulation_steps = 4,
         warmup_steps = 5,
-        max_steps = 60,
+        num_train_epochs = 3, # Changed max_steps=60 to num_train_epochs=3
         learning_rate = 2e-4,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
@@ -136,8 +151,8 @@ print("🔍 LIVE VERIFICATION (UNSEEN CASE)")
 print("="*50)
 
 FastLanguageModel.for_inference(model)
-test_profile = "Name: Rahul Verma, Income: ₹600,000, Credit Score: 620, Debt: ₹300,000, Loan: ₹200,000"
-inputs = tokenizer([f"### Instruction:\nEvaluate this loan application: {test_profile}\n\n### Response:\n"], return_tensors = "pt").to("cuda")
+test_profile = "Income: $85,000, FICO: 740, DTI: 12.0%, Purpose: home improvement, Delinquencies: 0, Public Records: 0, Inquiries (6mo): 0"
+inputs = tokenizer([f"### Instruction:\nEvaluate this loan application: {test_profile}\n\n### Response:\n"], return_tensors = "pt").to(device)
 
 streamer = TextStreamer(tokenizer)
 _ = model.generate(**inputs, streamer = streamer, max_new_tokens = 256)
@@ -156,3 +171,28 @@ if HF_TOKEN != "":
     print("✅ Model uploaded successfully to: https://huggingface.co/Sourav0511/loan-underwriting-lora")
 else:
     print("⚠️ Skipping upload: Please paste your Hugging Face Token into the HF_TOKEN variable.")
+
+# --- 9. GRADIO UI ---
+def evaluate_loan(profile):
+    FastLanguageModel.for_inference(model)
+    prompt = f"### Instruction:\nEvaluate this loan application: {profile}\n\n### Response:\n"
+    inputs = tokenizer([prompt], return_tensors = "pt").to(device)
+    
+    outputs = model.generate(**inputs, max_new_tokens = 256)
+    response = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    
+    if "### Response:\n" in response:
+        return response.split("### Response:\n")[-1].strip()
+    return response
+
+demo = gr.Interface(
+    fn=evaluate_loan,
+    inputs=gr.Textbox(lines=5, label="Applicant Profile", placeholder="Income: $50,000, FICO: 700, DTI: 15%, Purpose: credit card..."),
+    outputs=gr.Textbox(label="Decision (JSON)"),
+    title="🏦 Loan Underwriting AI",
+    description="Autonomous Credit Assessment using fine-tuned Llama-3-8B on real-world LendingClub data."
+)
+
+if __name__ == "__main__":
+    print("🚀 Launching Gradio UI...")
+    demo.launch(share=True)
