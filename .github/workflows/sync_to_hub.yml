@@ -30,7 +30,16 @@ jobs:
       - name: Install git-lfs
         run: git lfs install
 
-      # Step 3: Push to Hugging Face Space via direct git push
+      # Step 3: Remove binary files to satisfy HF restrictions (Mentors still see them on GitHub)
+      - name: Clean binaries for HF
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          rm -f *.png
+          git add .
+          git commit -m "chore: remove binary plots for Space sync [skip ci]" || echo "No changes to commit"
+
+      # Step 4: Push to Hugging Face Space via direct git push
       - name: Push to Hugging Face Hub
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
