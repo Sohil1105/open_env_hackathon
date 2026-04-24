@@ -111,8 +111,8 @@ trainer = SFTTrainer(
     args = TrainingArguments(
         per_device_train_batch_size = 1,
         gradient_accumulation_steps = 4,
-        warmup_steps = 5,
-        num_train_epochs = 3, # Changed max_steps=60 to num_train_epochs=3
+        warmup_steps = 10,
+        num_train_epochs = 3,
         learning_rate = 2e-4,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
@@ -122,6 +122,9 @@ trainer = SFTTrainer(
         lr_scheduler_type = "linear",
         seed = 3407,
         output_dir = "outputs",
+        save_steps = 500,
+        save_total_limit = 2,
+        report_to = "none",
     ),
 )
 
