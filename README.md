@@ -130,23 +130,53 @@ Final score clamped to **[0.0, 1.0]**.
 ```
 loan-underwriting-openenv/
 ├── environment/
-│   ├── __init__.py       # Package exports
 │   ├── env.py            # Main OpenEnv environment class
 │   ├── tasks.py          # 5 task definitions (easy/medium/hard/edge)
 │   ├── graders.py        # Automated graders returning 0.0–1.0
 │   ├── models.py         # Pydantic typed Observation, Action, State
 │   └── rewards.py        # Partial reward function logic
 ├── server/
-│   └── app.py            # FastAPI server entry point (pyproject.toml)
+│   └── app.py            # FastAPI server entry point
 ├── static/
 │   └── index.html        # Interactive cyberpunk web UI
-├── app.py                # FastAPI server (root-level)
 ├── inference.py          # Baseline LLM agent script
+├── unsloth_training.py   # Fine-tuning script (Unsloth + TRL)
 ├── openenv.yaml          # OpenEnv spec metadata
-├── Dockerfile            # Container for HF Spaces (port 7860)
+├── Dockerfile            # Container for HF Spaces
 ├── requirements.txt      # Python dependencies
 └── README.md
 ```
+
+---
+
+## 🚀 Training & Fine-Tuning
+
+The agent is fine-tuned using **Unsloth** and **Hugging Face TRL** on synthetic banking datasets to improve decision accuracy and alignment with the **Five C’s of Credit**.
+
+### Training Performance
+
+| Metric | Visualization | Description |
+|--------|---------------|-------------|
+| **Loss** | ![Training Loss](training_loss.png) | Fine-tuning loss showing convergence over 60 steps. |
+| **Reward** | ![Reward Progress](reward_plot.png) | Improvement in OpenEnv reward score as the model aligns with ground truth. |
+
+### How to Run Training
+
+The training script is optimized for Google Colab (L4/A100/T4 GPUs).
+
+1. **Install Requirements**:
+   ```bash
+   pip install "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
+   pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes
+   ```
+
+2. **Execute Script**:
+   ```bash
+   python unsloth_training.py
+   ```
+
+3. **Results**:
+   The script saves LoRA weights to `loan_underwriting_lora/` and generates the labeled plots shown above.
 
 ---
 

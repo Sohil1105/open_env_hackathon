@@ -347,72 +347,117 @@ body::after {
   padding-left: 0.2rem;
 }
 
-/* ─── Buttons ───────────────────────────────────────────── */
-.btn-group {
+/* ─── Wizard Styles ─────────────────────────────────────── */
+.wizard-steps {
   display: flex;
-  gap: 0.8rem;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  position: relative;
+}
+
+.wizard-steps::before {
+  content: '';
+  position: absolute;
+  top: 15px; left: 0;
+  width: 100%; height: 2px;
+  background: var(--border);
+  z-index: 0;
+}
+
+.wizard-step-indicator {
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-dim);
+  z-index: 1;
+  transition: all 0.3s;
+}
+
+.wizard-step-indicator.active {
+  border-color: var(--primary);
+  color: var(--primary);
+  box-shadow: 0 0 10px rgba(0,255,136,0.3);
+}
+
+.wizard-step-indicator.completed {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: var(--bg);
+}
+
+.wizard-content-step {
+  display: none;
+  animation: fadeIn 0.4s ease-out;
+}
+
+.wizard-content-step.active {
+  display: block;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ─── File Upload Simulation ────────────────────────────── */
+.file-upload-zone {
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  text-align: center;
+  margin-bottom: 1rem;
+  transition: all 0.3s;
+  cursor: pointer;
+  background: rgba(255,255,255,0.02);
+}
+
+.file-upload-zone:hover {
+  border-color: var(--secondary);
+  background: rgba(123,47,255,0.05);
+}
+
+.file-upload-icon {
+  font-size: 2rem;
+  color: var(--text-dim);
+  margin-bottom: 0.5rem;
+}
+
+.file-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
   margin-top: 1rem;
 }
 
-.btn {
-  flex: 1;
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  font-weight: 700;
-  padding: 0.65rem 1rem;
-  border: 1px solid;
-  border-radius: 6px;
+.file-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: rgba(0,0,0,0.3);
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  border-left: 3px solid var(--primary);
+  font-size: 0.75rem;
+}
+
+.file-item .remove-file {
+  color: var(--danger);
   cursor: pointer;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
 }
 
-.btn::after {
-  content: '';
-  position: absolute;
-  top: 50%; left: 50%;
-  width: 0; height: 0;
-  border-radius: 50%;
-  background: rgba(255,255,255,0.1);
-  transition: all 0.5s;
-  transform: translate(-50%, -50%);
-}
-
-.btn:active::after {
-  width: 300px; height: 300px;
-  opacity: 0;
-}
-
-.btn-execute {
-  background: linear-gradient(135deg, rgba(0,255,136,0.15) 0%, rgba(0,255,136,0.05) 100%);
-  color: var(--primary);
-  border-color: var(--primary);
-}
-
-.btn-execute:hover {
-  background: linear-gradient(135deg, rgba(0,255,136,0.25) 0%, rgba(0,255,136,0.1) 100%);
-  box-shadow: var(--glow-primary);
-  transform: translateY(-1px);
-}
-
-.btn-execute:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.btn-reset {
-  background: transparent;
-  color: var(--accent);
-  border-color: rgba(255,107,53,0.3);
-}
-
-.btn-reset:hover {
-  background: rgba(255,107,53,0.1);
-  border-color: var(--accent);
+/* ─── Wizard Nav ────────────────────────────────────────── */
+.wizard-nav {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
 }
 
 /* ─── Right Panel — Result ──────────────────────────────── */
@@ -809,101 +854,126 @@ body::after {
       <span class="panel-header-title">Terminal Input</span>
     </div>
     <div class="panel-body">
+      <!-- Wizard Progress Indicators -->
+      <div class="wizard-steps">
+        <div class="wizard-step-indicator active" id="stepInd-1">1</div>
+        <div class="wizard-step-indicator" id="stepInd-2">2</div>
+        <div class="wizard-step-indicator" id="stepInd-3">3</div>
+        <div class="wizard-step-indicator" id="stepInd-4">4</div>
+      </div>
 
       <div class="input-row" style="display:none;">
         <select id="stageSelect" class="select-field"></select>
       </div>
-      <div class="input-row">
-        <label class="input-label" style="color:var(--accent);">
-          <span class="prompt-char">›</span> Pipeline Mode
-        </label>
-        <div class="input-field" style="display:flex; align-items:center; background:rgba(0,255,136,0.1); color:var(--accent); border:1px solid var(--accent);">
-          🚀 AUTONOMOUS AI UNDERWRITER ACTIVE
+
+      <!-- Step 1: Basic Profile -->
+      <div class="wizard-content-step active" id="wizardStep-1">
+        <div class="section-label">Step 1: Identity & Profile</div>
+        <div class="input-row">
+          <label class="input-label" for="applicantName">
+            <span class="prompt-char">›</span> Applicant Name
+          </label>
+          <input id="applicantName" class="input-field" type="text" placeholder="Enter Full Name">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="applicantAge">
+            <span class="prompt-char">›</span> Age
+          </label>
+          <input id="applicantAge" class="input-field" type="number" value="30">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="employmentType">
+            <span class="prompt-char">›</span> Employment
+          </label>
+          <select id="employmentType" class="select-field" onchange="onEmploymentChange()">
+            <option value="salaried">Salaried</option>
+            <option value="self_employed">Self Employed</option>
+            <option value="freelancer">Freelancer</option>
+            <option value="contract">Contract</option>
+            <option value="unemployed">Unemployed</option>
+          </select>
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="employmentYears">
+            <span class="prompt-char">›</span> Job History (Yrs)
+          </label>
+          <input id="employmentYears" class="input-field" type="number" value="2">
         </div>
       </div>
 
-      <hr class="separator">
-
-      <div class="input-row">
-        <label class="input-label" for="applicantName">
-          <span class="prompt-char">›</span> Applicant Name
-        </label>
-        <input id="applicantName" class="input-field" type="text" placeholder="Auto-filled on stage select">
+      <!-- Step 2: Financial Details -->
+      <div class="wizard-content-step" id="wizardStep-2">
+        <div class="section-label">Step 2: Financial Health</div>
+        <div class="input-row">
+          <label class="input-label" for="annualIncome">
+            <span class="prompt-char">›</span> Annual Income
+          </label>
+          <input id="annualIncome" class="input-field" type="number" placeholder="₹0.00">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="creditScore">
+            <span class="prompt-char">›</span> Credit Score
+          </label>
+          <input id="creditScore" class="input-field" type="number" min="300" max="850" placeholder="300-850">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="existingDebt">
+            <span class="prompt-char">›</span> Existing Debt
+          </label>
+          <input id="existingDebt" class="input-field" type="number" placeholder="₹0.00">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="prevDefaults">
+            <span class="prompt-char">›</span> Past Defaults
+          </label>
+          <input id="prevDefaults" class="input-field" type="number" value="0">
+        </div>
       </div>
 
-      <div class="input-row">
-        <label class="input-label" for="applicantAge">
-          <span class="prompt-char">›</span> Age
-        </label>
-        <input id="applicantAge" class="input-field" type="number" value="30">
+      <!-- Step 3: Loan Request -->
+      <div class="wizard-content-step" id="wizardStep-3">
+        <div class="section-label">Step 3: Loan Configuration</div>
+        <div class="input-row">
+          <label class="input-label" for="loanAmount">
+            <span class="prompt-char">›</span> Requested Amount
+          </label>
+          <input id="loanAmount" class="input-field" type="number" placeholder="₹0.00" oninput="onAmountChange()">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="loanTenure">
+            <span class="prompt-char">›</span> Tenure (Months)
+          </label>
+          <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" value="36">
+        </div>
+        <div class="input-row">
+          <label class="input-label">
+            <span class="prompt-char">›</span> Collateral
+          </label>
+          <div style="flex:1; display:flex; gap:1rem; align-items:center;">
+             <input type="checkbox" id="hasCollateral" style="width:20px; height:20px; accent-color:var(--primary);">
+             <span style="font-size:0.8rem; color:var(--text-dim);">Provide Collateral Guarantee</span>
+          </div>
+        </div>
       </div>
 
-      <div class="input-row">
-        <label class="input-label" for="annualIncome">
-          <span class="prompt-char">›</span> Annual Income
-        </label>
-        <input id="annualIncome" class="input-field" type="number" placeholder="₹0.00">
+      <!-- Step 4: Documents -->
+      <div class="wizard-content-step" id="wizardStep-4">
+        <div class="section-label">Step 4: Document Upload</div>
+        <div class="file-upload-zone" onclick="simulateFileUpload()">
+          <div class="file-upload-icon">📂</div>
+          <div style="font-size:0.8rem; margin-bottom:0.3rem;">Drop bank statements or ID here</div>
+          <div style="font-size:0.6rem; color:var(--text-dim);">Supported: PDF, JPG, PNG (Max 5MB)</div>
+        </div>
+        <div class="file-list" id="fileList">
+          <!-- Files will appear here -->
+        </div>
       </div>
 
-      <div class="input-row">
-        <label class="input-label" for="creditScore">
-          <span class="prompt-char">›</span> Credit Score
-        </label>
-        <input id="creditScore" class="input-field" type="number" min="300" max="850" placeholder="300-850">
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="existingDebt">
-          <span class="prompt-char">›</span> Existing Debt
-        </label>
-        <input id="existingDebt" class="input-field" type="number" placeholder="₹0.00">
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="loanAmount">
-          <span class="prompt-char">›</span> Loan Amount
-        </label>
-        <input id="loanAmount" class="input-field" type="number" placeholder="₹0.00" oninput="onAmountChange()">
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="employmentType">
-          <span class="prompt-char">›</span> Employment
-        </label>
-        <select id="employmentType" class="select-field" onchange="onEmploymentChange()">
-          <option value="salaried">Salaried</option>
-          <option value="self_employed">Self Employed</option>
-          <option value="freelancer">Freelancer</option>
-          <option value="contract">Contract</option>
-          <option value="unemployed">Unemployed</option>
-        </select>
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="employmentYears">
-          <span class="prompt-char">›</span> Job History (Yrs)
-        </label>
-        <input id="employmentYears" class="input-field" type="number" value="2">
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="prevDefaults">
-          <span class="prompt-char">›</span> Past Defaults
-        </label>
-        <input id="prevDefaults" class="input-field" type="number" value="0">
-      </div>
-
-      <div class="input-row">
-        <label class="input-label" for="loanTenure">
-          <span class="prompt-char">›</span> Loan Tenure (Months)
-        </label>
-        <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" value="36">
-      </div>
-
-
-      <div class="btn-group">
-        <button id="executeBtn" class="btn btn-execute" onclick="executeStep()">▶ EXECUTE AUTOPILOT</button>
-        <button class="btn btn-reset" onclick="resetForm()">↺ RESET</button>
+      <!-- Navigation -->
+      <div class="wizard-nav">
+        <button id="prevBtn" class="btn btn-reset" onclick="changeWizardStep(-1)" disabled>BACK</button>
+        <button id="nextBtn" class="btn btn-execute" onclick="changeWizardStep(1)">NEXT</button>
+        <button id="executeBtn" class="btn btn-execute" onclick="executeStep()" style="display:none;">▶ START UNDERWRITING</button>
       </div>
     </div>
   </div>
@@ -921,6 +991,7 @@ body::after {
       </div>
 
       <div id="resultContent" style="display:none;">
+        <div id="sourceIndicator" style="display:none; padding:0.6rem 1rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;"></div>
         <div class="result-box active" id="stageResultBox">
           <div class="result-header">╔═══ AI AGENT DECISION ═══╗</div>
           <div class="result-row">
@@ -1030,6 +1101,8 @@ const STAGE_META = [
 let completedStages = new Set();
 let activeStageId = null;
 let taskList = [];
+let currentWizardStep = 1;
+let uploadedFiles = [];
 
 // ─── Init ───────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1038,6 +1111,80 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadTasks();
   healthCheck();
 });
+
+// ─── Wizard Navigation ──────────────────────────────────
+function changeWizardStep(delta) {
+  const nextStep = currentWizardStep + delta;
+  if (nextStep < 1 || nextStep > 4) return;
+
+  // Validation before moving forward
+  if (delta > 0) {
+    if (currentWizardStep === 1) {
+      if (!document.getElementById('applicantName').value) {
+        showToast('Please enter Applicant Name', 'error');
+        return;
+      }
+    } else if (currentWizardStep === 2) {
+      if (!document.getElementById('annualIncome').value) {
+        showToast('Please enter Annual Income', 'error');
+        return;
+      }
+    }
+  }
+
+  // Hide current
+  document.getElementById(`wizardStep-${currentWizardStep}`).classList.remove('active');
+  document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('active');
+  if (currentWizardStep < nextStep) document.getElementById(`stepInd-${currentWizardStep}`).classList.add('completed');
+
+  // Show next
+  currentWizardStep = nextStep;
+  document.getElementById(`wizardStep-${currentWizardStep}`).classList.add('active');
+  document.getElementById(`stepInd-${currentWizardStep}`).classList.add('active');
+  document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('completed');
+
+  // Update buttons
+  document.getElementById('prevBtn').disabled = currentWizardStep === 1;
+  if (currentWizardStep === 4) {
+    document.getElementById('nextBtn').style.display = 'none';
+    document.getElementById('executeBtn').style.display = 'block';
+  } else {
+    document.getElementById('nextBtn').style.display = 'block';
+    document.getElementById('executeBtn').style.display = 'none';
+  }
+
+  showToast(`Switched to Step ${currentWizardStep}`, 'info');
+}
+
+// ─── File Upload Simulation ──────────────────────────────
+function simulateFileUpload() {
+  const fileNames = [
+    'ID_Card_Front.jpg', 'ID_Card_Back.jpg', 'Salary_Slip_March.pdf', 
+    'Bank_Statement_6M.pdf', 'Collateral_Deed.pdf', 'Tax_Returns_2025.pdf'
+  ];
+  const randomFile = fileNames[Math.floor(Math.random() * fileNames.length)];
+  
+  if (uploadedFiles.includes(randomFile)) {
+    showToast('File already uploaded', 'info');
+    return;
+  }
+
+  uploadedFiles.push(randomFile);
+  const fileList = document.getElementById('fileList');
+  const div = document.createElement('div');
+  div.className = 'file-item';
+  div.innerHTML = `
+    <span>📄 ${randomFile}</span>
+    <span class="remove-file" onclick="removeFile('${randomFile}', this)">✕</span>
+  `;
+  fileList.appendChild(div);
+  showToast(`Uploaded: ${randomFile}`, 'success');
+}
+
+function removeFile(name, el) {
+  uploadedFiles = uploadedFiles.filter(f => f !== name);
+  el.parentElement.remove();
+}
 
 // ─── API Helpers ────────────────────────────────────────
 async function apiFetch(path, options = {}) {
@@ -1078,24 +1225,21 @@ async function loadTasks() {
 async function healthCheck() {
   try {
     const data = await apiFetch('/health');
-    showToast(`Connected: ${data.available_tasks} tasks available`, 'success');
+    showToast(`NEXUS Bank Server Online`, 'success');
   } catch (e) {
     showToast('Backend not reachable', 'error');
   }
 }
 
-// ─── Stage Select Handler ───────────────────────────────
+// ─── Stage Select Handler (Internal) ────────────────────
 async function onStageSelect() {
   const taskId = document.getElementById('stageSelect').value;
   if (!taskId) return;
-
   try {
-    // Reset env with this task
     const data = await apiFetch('/reset', {
       method: 'POST',
       body: JSON.stringify({ task_id: taskId }),
     });
-
     const obs = data.state?.observation;
     if (obs) {
       document.getElementById('applicantName').value = obs.applicant_name || '';
@@ -1109,66 +1253,41 @@ async function onStageSelect() {
       document.getElementById('prevDefaults').value = obs.previous_defaults || 0;
       document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
     }
-
     activeStageId = taskId;
     updateLifecycleBar();
-    showToast(`Stage loaded: ${taskId}`, 'info');
-  } catch (e) {
-    console.error('Stage select failed:', e);
-  }
+  } catch (e) {}
 }
 
-// ─── Auto-Select Stage Based on Employment ──────────────────────────────
+// ─── Auto-Select Stage Based on Employment ──────────────
 function onEmploymentChange() {
   const emp = document.getElementById('employmentType').value;
   const select = document.getElementById('stageSelect');
-  
-  // Mapping: find best match task index
   let targetTaskId = null;
   if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
   else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
   else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
-
-  if (targetTaskId && select.value !== targetTaskId) {
-    select.value = targetTaskId;
-    // Notify user of auto-sync
-    showToast(`Auto-selected stage: ${targetTaskId}`, 'info');
-  }
+  if (targetTaskId) select.value = targetTaskId;
 }
 
-// ─── Auto-Select Tenure Based on Amount ──────────────────────────────
 function onAmountChange() {
   const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
   const tenure = document.getElementById('loanTenure');
-  
   if (amt <= 0) return;
-
   let suggestedTenure = 12;
   if (amt > 100000) suggestedTenure = 84;
   else if (amt > 50000) suggestedTenure = 60;
   else if (amt > 25000) suggestedTenure = 48;
-  else if (amt > 10000) suggestedTenure = 36;
-  else suggestedTenure = 12;
-
-  if (tenure.value != suggestedTenure) {
-    tenure.value = suggestedTenure;
-    // Highlight the change subtly
-    tenure.style.borderColor = 'var(--accent)';
-    setTimeout(() => tenure.style.borderColor = '', 1000);
-  }
+  else suggestedTenure = 36;
+  tenure.value = suggestedTenure;
 }
 
-
-
 // ─── Execute Step ───────────────────────────────────────
-// ─── Execute Pipeline ───────────────────────────────────────
 async function executeStep() {
   const btn = document.getElementById('executeBtn');
   btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>INITIALIZING AI AGENT...';
+  btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
 
   try {
-    // Collect applicant details
     const applicant = {
       applicant_name: document.getElementById('applicantName').value,
       age: parseInt(document.getElementById('applicantAge')?.value || 30),
@@ -1179,133 +1298,100 @@ async function executeStep() {
       employment_type: document.getElementById('employmentType').value,
       employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
       previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
-      loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36
+      loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
+      has_collateral: document.getElementById('hasCollateral').checked,
+      documents_submitted: uploadedFiles
     };
 
-    if (!applicant.applicant_name || !applicant.annual_income || !applicant.loan_amount) {
-        showToast('Please fill in Name, Income, and Loan Amount', 'error');
-        btn.disabled = false;
-        btn.innerHTML = '▶ EXECUTE AUTOPILOT';
-        return;
-    }
-
-    // Determine risk stage for API compatibility
     let riskStage = 'easy_salaried_high_credit';
-    if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') {
-        riskStage = 'medium_self_employed_moderate';
-    } else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') {
-        riskStage = 'hard_freelancer_complex';
-    }
+    if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
+    else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
     applicant.task_id = riskStage;
 
-    // --- ANIMATED STAGES ---
     const stages = [
-        "📡 Connecting to Global Credit Bureau...",
-        "📂 STAGE 1: Documentation & Identity Check...",
-        "🔍 STAGE 2: Credit Character Assessment...",
-        "📊 STAGE 3: Capacity & DTI Analysis...",
-        "⚖️ STAGE 4: Final Underwriting & Decision..."
+        "📂 SCANNING DOCUMENTS...",
+        "🔍 CHECKING CREDIT BUREAU...",
+        "⚖️ WEIGHING COLLATERAL...",
+        "📊 CALCULATING REPAYMENT...",
+        "🏦 FINALIZING VERDICT..."
     ];
 
     for (const msg of stages) {
         btn.innerHTML = `<span class="spinner"></span>${msg}`;
         showToast(msg, 'info');
-        await new Promise(r => setTimeout(r, 800)); // Dramatic pause
+        await new Promise(r => setTimeout(r, 700));
     }
-
-    btn.innerHTML = '<span class="spinner"></span>FINALIZING VERDICT...';
 
     const response = await fetch('/evaluate', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(applicant)
     });
-
-    if (!response.ok) {
-        throw new Error(`Failed to evaluate application`);
-    }
-
     const result = await response.json();
     
-    // Display result
     displayResult(result);
-
-    // Update lifecycle bar to show all completed
     activeStageId = riskStage;
     completedStages.add('lead_qualification_sales');
     completedStages.add('document_verification_hr');
     completedStages.add(riskStage);
     completedStages.add('customer_onboarding_pm');
     updateLifecycleBar();
-
-    showToast('✨ Autonomous Underwriting Complete!', 'success');
+    showToast('✨ Decision Rendered', 'success');
 
   } catch (e) {
-    console.error('Execute failed:', e);
     showToast(e.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.innerHTML = '▶ EXECUTE AUTOPILOT';
+    btn.innerHTML = '▶ START UNDERWRITING';
   }
 }
+
 // ─── Display Result ─────────────────────────────────────
 function displayResult(result) {
   document.getElementById('waitingState').style.display = 'none';
   document.getElementById('resultContent').style.display = 'block';
 
+  const sourceEl = document.getElementById('sourceIndicator');
+  const source = result.decision_source || 'unknown';
+  if (source === 'model') {
+    sourceEl.style.display = 'block';
+    sourceEl.style.background = 'rgba(0,255,136,0.1)';
+    sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
+    sourceEl.style.color = '#00ff88';
+    sourceEl.textContent = '✅ DECISION SOURCE: AI CORE';
+  } else {
+    sourceEl.style.display = 'block';
+    sourceEl.style.background = 'rgba(255,51,102,0.15)';
+    sourceEl.style.border = '1px solid rgba(255,51,102,0.5)';
+    sourceEl.style.color = '#ff3366';
+    sourceEl.textContent = '⚠️ DECISION SOURCE: HEURISTIC FALLBACK';
+  }
+
   const decision = result.agent_decision || {};
   const grading = result.grading || {};
   const gt = result.correct_answer || {};
 
-  // AI Decision fields
   document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
   document.getElementById('resDecision').textContent = decision.loan_decision || '—';
   document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
 
-  // Apply color coding based on decision
   const decisionEl = document.getElementById('resDecision');
-  const box = document.getElementById('stageResultBox');
-  
-  if (decision.loan_decision === 'Approve') {
-    decisionEl.style.color = '#00ff88';
-    box.style.boxShadow = '0 0 20px rgba(0, 255, 136, 0.2)';
-  } else if (decision.loan_decision === 'Conditional Approve') {
-    decisionEl.style.color = '#ffcc00';
-    box.style.boxShadow = '0 0 20px rgba(255, 204, 0, 0.2)';
-  } else {
-    decisionEl.style.color = '#ff3366';
-    box.style.boxShadow = '0 0 20px rgba(255, 51, 102, 0.2)';
-  }
+  if (decision.loan_decision === 'Approve') decisionEl.style.color = '#00ff88';
+  else if (decision.loan_decision === 'Conditional Approve') decisionEl.style.color = '#ffcc00';
+  else decisionEl.style.color = '#ff3366';
 
-  // Score
   const score = result.score || 0;
   document.getElementById('resScoreNum').textContent = score.toFixed(3);
-  setTimeout(() => {
-    document.getElementById('resScoreBar').style.width = `${score * 100}%`;
-  }, 100);
+  document.getElementById('resScoreBar').style.width = `${score * 100}%`;
 
-  // Reasoning
-  const reasoning = result.agent_decision?.reasoning
-        || result.reasoning
-        || result.explanation
-        || 'No reasoning provided';
-  
-  typewriterEffect(document.getElementById('resReasoning'), reasoning);
+  typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
 
-  // Metadata
   document.getElementById('resTaskName').textContent = result.task_name || '—';
-  
-  const stageStatus = `Stage ${result.stage_number}/8 Complete`;
-  const nextStageText = result.next_stage ? `Next: ${result.next_stage_name}` : 'Finished';
-  // You can show this wherever fits best, maybe next to task name
-  document.getElementById('resTaskName').textContent = `${result.task_name || '—'} (${stageStatus})`;
-
   const diff = result.task_difficulty || '—';
   const diffEl = document.getElementById('resDifficulty');
   diffEl.textContent = diff.toUpperCase();
   diffEl.className = 'result-value ' + (diff === 'easy' ? 'success' : diff === 'hard' ? 'danger' : 'warning');
 
-  // Component scores
   setScoreValue('resRiskScore', grading.risk_level_score);
   setScoreValue('resDecisionScore', grading.loan_decision_score);
   setScoreValue('resRateScore', grading.interest_rate_score);
@@ -1315,7 +1401,6 @@ function displayResult(result) {
   consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
   consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
 
-  // Ground truth
   document.getElementById('gtRisk').textContent = gt.risk_level || '—';
   document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
   document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
@@ -1329,7 +1414,6 @@ function setScoreValue(elId, score) {
   el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
 }
 
-// ─── Typewriter Effect ──────────────────────────────────
 function typewriterEffect(el, text, speed = 12) {
   el.textContent = '';
   el.classList.add('typewriter');
@@ -1345,11 +1429,9 @@ function typewriterEffect(el, text, speed = 12) {
   }, speed);
 }
 
-// ─── Lifecycle Bar ──────────────────────────────────────
 function buildLifecycleBar() {
   const container = document.getElementById('lifecycleStages');
   container.innerHTML = '';
-
   STAGE_META.forEach((stage, idx) => {
     if (idx > 0) {
       const connector = document.createElement('div');
@@ -1357,14 +1439,8 @@ function buildLifecycleBar() {
       connector.id = `conn-${idx}`;
       container.appendChild(connector);
     }
-
     const stageEl = document.createElement('div');
     stageEl.className = 'lifecycle-stage';
-    stageEl.onclick = () => {
-      document.getElementById('stageSelect').value = stage.id;
-      onStageSelect();
-    };
-
     stageEl.innerHTML = `
       <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
       <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
@@ -1378,10 +1454,8 @@ function updateLifecycleBar() {
     const numEl = document.getElementById(`sn-${stage.id}`);
     const labelEl = document.getElementById(`sl-${stage.id}`);
     if (!numEl || !labelEl) return;
-
     numEl.classList.remove('completed', 'active');
     labelEl.classList.remove('completed', 'active');
-
     if (completedStages.has(stage.id)) {
       numEl.classList.add('completed');
       numEl.textContent = '✓';
@@ -1392,19 +1466,13 @@ function updateLifecycleBar() {
     } else {
       numEl.textContent = idx + 1;
     }
-
-    // Connectors
     if (idx > 0) {
       const conn = document.getElementById(`conn-${idx}`);
-      if (conn) {
-        const prevCompleted = completedStages.has(STAGE_META[idx - 1].id);
-        conn.classList.toggle('completed', prevCompleted);
-      }
+      if (conn) conn.classList.toggle('completed', completedStages.has(STAGE_META[idx - 1].id));
     }
   });
 }
 
-// ─── Reset Functions ────────────────────────────────────
 async function globalReset() {
   try {
     await apiFetch('/reset', { method: 'POST', body: '{}' });
@@ -1414,101 +1482,56 @@ async function globalReset() {
     document.getElementById('waitingState').style.display = '';
     document.getElementById('resultContent').style.display = 'none';
     document.getElementById('resScoreBar').style.width = '0%';
+    currentWizardStep = 1;
+    document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
+    document.getElementById('wizardStep-1').classList.add('active');
+    document.getElementById('stepInd-1').classList.add('active');
+    document.getElementById('prevBtn').disabled = true;
+    document.getElementById('nextBtn').style.display = 'block';
+    document.getElementById('executeBtn').style.display = 'none';
     updateLifecycleBar();
-    showToast('Environment reset', 'success');
-  } catch (e) {
-    console.error('Global reset failed:', e);
-  }
+    showToast('Session Reset', 'success');
+  } catch (e) {}
 }
 
 function resetForm() {
-  document.getElementById('stageSelect').value = '';
   document.getElementById('applicantName').value = '';
   document.getElementById('annualIncome').value = '';
   document.getElementById('creditScore').value = '';
   document.getElementById('existingDebt').value = '';
   document.getElementById('loanAmount').value = '';
   document.getElementById('employmentType').value = 'salaried';
-  const tenureEl = document.getElementById('loanTenure');
-  if (tenureEl) tenureEl.value = '36';
+  document.getElementById('loanTenure').value = '36';
+  document.getElementById('hasCollateral').checked = false;
+  uploadedFiles = [];
+  document.getElementById('fileList').innerHTML = '';
 }
 
-// ─── Toast ──────────────────────────────────────────────
 function showToast(message, type = 'info') {
   const toast = document.getElementById('toast');
   toast.textContent = message;
   toast.className = `toast ${type} show`;
-  setTimeout(() => { toast.classList.remove('show'); }, 3500);
+  setTimeout(() => { toast.classList.remove('show'); }, 3000);
 }
 
-// ─── Particle System ────────────────────────────────────
 function initParticles() {
   const canvas = document.getElementById('particleCanvas');
   const ctx = canvas.getContext('2d');
   let particles = [];
-  const PARTICLE_COUNT = 60;
-  const CONNECTION_DIST = 120;
-
-  function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
-  }
+  const PARTICLE_COUNT = 40;
+  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
   resize();
   window.addEventListener('resize', resize);
-
   class Particle {
-    constructor() {
-      this.x = Math.random() * canvas.width;
-      this.y = Math.random() * canvas.height;
-      this.vx = (Math.random() - 0.5) * 0.4;
-      this.vy = (Math.random() - 0.5) * 0.4;
-      this.size = Math.random() * 2 + 0.5;
-      this.color = Math.random() > 0.5 ? 'rgba(0,255,136,' : 'rgba(123,47,255,';
-    }
-    update() {
-      this.x += this.vx;
-      this.y += this.vy;
-      if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-      if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-    }
-    draw() {
-      ctx.beginPath();
-      ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-      ctx.fillStyle = this.color + '0.5)';
-      ctx.fill();
-    }
+    constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3; this.size = Math.random() * 1.5; }
+    update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvas.width) this.vx *= -1; if (this.y < 0 || this.y > canvas.height) this.vy *= -1; }
+    draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,255,136,0.3)'; ctx.fill(); }
   }
-
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
-    particles.push(new Particle());
-  }
-
+  for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
   function animate() {
     ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw connections
-    for (let i = 0; i < particles.length; i++) {
-      for (let j = i + 1; j < particles.length; j++) {
-        const dx = particles[i].x - particles[j].x;
-        const dy = particles[i].y - particles[j].y;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-        if (dist < CONNECTION_DIST) {
-          const alpha = (1 - dist / CONNECTION_DIST) * 0.15;
-          ctx.beginPath();
-          ctx.moveTo(particles[i].x, particles[i].y);
-          ctx.lineTo(particles[j].x, particles[j].y);
-          ctx.strokeStyle = `rgba(0,255,136,${alpha})`;
-          ctx.lineWidth = 0.5;
-          ctx.stroke();
-        }
-      }
-    }
-
-    particles.forEach(p => {
-      p.update();
-      p.draw();
-    });
-
+    particles.forEach(p => { p.update(); p.draw(); });
     requestAnimationFrame(animate);
   }
   animate();

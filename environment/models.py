@@ -71,6 +71,7 @@ class ApplicantProfile(BaseModel):
     monthly_expenses: float = Field(..., ge=0, description="Average monthly expenses in USD")
     has_collateral: bool = Field(..., description="Whether applicant offers collateral")
     previous_defaults: int = Field(..., ge=0, description="Number of previous loan defaults")
+    documents_submitted: Optional[list[str]] = Field(default=[], description="List of documents provided by the applicant")
 
     @property
     def debt_to_income_ratio(self) -> float:
@@ -112,6 +113,7 @@ class Observation(BaseModel):
     monthly_expenses: float
     has_collateral: bool
     previous_defaults: int
+    documents_submitted: Optional[list[str]] = Field(default=[], description="Documents verified")
     task_description: str = Field(..., description="What the agent must decide")
     task_id: str = Field(..., description="Unique identifier for the current task")
     task_difficulty: str = Field(..., description="Difficulty level: easy, medium, hard")
@@ -138,6 +140,7 @@ class Observation(BaseModel):
             monthly_expenses=profile.monthly_expenses,
             has_collateral=profile.has_collateral,
             previous_defaults=profile.previous_defaults,
+            documents_submitted=profile.documents_submitted,
             task_description=task_description,
             task_id=task_id,
             task_difficulty=task_difficulty,

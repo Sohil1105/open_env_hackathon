@@ -427,7 +427,7 @@ async def grade_response(request: GradeRequest):
 import json
 import re
 
-STAGE_PROMPTS = { k: '\nYou are an Advanced Autonomous Bank Underwriting Agent. Your mission is to replace the manual, multi-department loan approval process with a high-speed AI pipeline.\n\nPerform the full evaluation by processing the applicant through these 5 professional banking stages:\n\nSTAGE 1: DOCUMENTATION & IDENTITY VERIFICATION\n- Review the applicant\'s profile for completeness.\n- List specific documents required for this profile (e.g., if self-employed, ask for 2 years of tax returns; if salaried, ask for recent pay stubs).\n\nSTAGE 2: CREDIT CHARACTER ASSESSMENT\n- Evaluate the Credit Score ({credit_score}) and Past Defaults ({past_defaults}). \n- Analyze their reliability as a borrower.\n\nSTAGE 3: CAPACITY & CAPITAL ANALYSIS\n- Calculate the Debt-to-Income (DTI) ratio (Existing Debt: {existing_debt} / Annual Income: {annual_income}).\n- Assess if their income provides enough "Capacity" to repay the requested Loan Amount ({loan_amount}).\n- Consider their "Capital" (employment stability and years of experience).\n\nSTAGE 4: COLLATERAL & CONDITIONS\n- Evaluate if "Collateral" ({has_collateral}) is provided to secure the loan.\n- Check "Conditions": Is the loan tenure ({loan_tenure} months) and interest rate tier appropriate for current market conditions?\n\nSTAGE 5: FINAL UNDERWRITING DECISION\n- Synthesize all findings into a final Risk Level and Loan Decision.\n\nApplicant Profile:\n{profile}\n\nRespond STRICTLY in JSON format with this structure:\n{{\n    "risk_level": "Low" | "Medium" | "High",\n    "loan_decision": "Approve" | "Conditional Approve" | "Reject",\n    "interest_rate_tier": "7-9%" | "10-13%" | "14%+",\n    "requested_documents": ["list", "of", "required", "docs"],\n    "reasoning": "A comprehensive report covering all 5 stages in detail."\n}}\n' for k in [
+STAGE_PROMPTS = { k: '\nYou are an Advanced Autonomous Bank Underwriting Agent. Your mission is to replace the manual, multi-department loan approval process with a high-speed AI pipeline.\n\nPerform the full evaluation by processing the applicant through these 5 professional banking stages:\n\nSTAGE 1: DOCUMENTATION & IDENTITY VERIFICATION\n- Review the applicant\'s profile for completeness.\n- The applicant has submitted: {documents_submitted}.\n- Confirm if these documents satisfy requirements for this profile.\n\nSTAGE 2: CREDIT CHARACTER ASSESSMENT\n- Evaluate the Credit Score ({credit_score}) and Past Defaults ({past_defaults}). \n- Analyze their reliability as a borrower.\n\nSTAGE 3: CAPACITY & CAPITAL ANALYSIS\n- Calculate the Debt-to-Income (DTI) ratio (Existing Debt: {existing_debt} / Annual Income: {annual_income}).\n- Assess if their income provides enough "Capacity" to repay the requested Loan Amount ({loan_amount}).\n- Consider their "Capital" (employment stability and years of experience).\n\nSTAGE 4: COLLATERAL & CONDITIONS\n- Evaluate if "Collateral" ({has_collateral}) is provided to secure the loan.\n- Check "Conditions": Is the loan tenure ({loan_tenure} months) and interest rate tier appropriate for current market conditions?\n\nSTAGE 5: FINAL UNDERWRITING DECISION\n- Synthesize all findings into a final Risk Level and Loan Decision.\n\nApplicant Profile:\n{profile}\n\nRespond STRICTLY in JSON format with this structure:\n{{\n    "risk_level": "Low" | "Medium" | "High",\n    "loan_decision": "Approve" | "Conditional Approve" | "Reject",\n    "interest_rate_tier": "7-9%" | "10-13%" | "14%+",\n    "requested_documents": ["list", "of", "required", "docs"],\n    "reasoning": "A comprehensive report covering all 5 stages in detail."\n}}\n' for k in [
     "lead_qualification_sales", "document_verification_hr", "easy_salaried_high_credit",
     "medium_self_employed_moderate", "hard_freelancer_complex", "customer_onboarding_pm",
     "bankruptcy_recovery_edge1", "joint_applicants_edge2"
@@ -555,12 +555,16 @@ async def evaluate_applicant(applicant: ApplicantInput):
         annual_income=applicant.annual_income,
         loan_amount=applicant.loan_amount,
         has_collateral="Provided" if getattr(applicant, 'has_collateral', False) else "None",
-        loan_tenure=applicant.loan_tenure
+        loan_tenure=applicant.loan_tenure,
+        documents_submitted=", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"
     )
 
     # 3. Call LLM
+    decision_source = "model"  # Track whether output is from model or fallback
+    llm_error_msg = None
     try:
         local_client, local_model_name = _get_api_client()
+        logger.info(f"Calling LLM: model={local_model_name}")
         response = local_client.chat.completions.create(
             model=local_model_name,
             messages=[{"role": "user", "content": full_prompt}],
@@ -568,13 +572,19 @@ async def evaluate_applicant(applicant: ApplicantInput):
             temperature=0.3
         )
         raw_response = response.choices[0].message.content
+        logger.info(f"✅ LLM responded successfully ({len(raw_response)} chars)")
 
         # 4. Parse response
         agent_decision = parse_llm_response(raw_response)
 
     except Exception as e:
-        # Graceful fallback
-        # profile is not yet created, we need to create it first
+        # LLM FAILED — log the real error so it's visible
+        llm_error_msg = str(e)
+        logger.error(f"❌ LLM API FAILED: {llm_error_msg}")
+        logger.error(f"❌ The 'AI Agent Decision' will be a RULE-BASED FALLBACK, not model output!")
+        decision_source = "fallback"
+
+        # Build profile for fallback calculation
         profile = ApplicantProfile(
             applicant_name=applicant.applicant_name,
             annual_income=applicant.annual_income,
@@ -587,14 +597,18 @@ async def evaluate_applicant(applicant: ApplicantInput):
             age=applicant.age,
             monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else (applicant.existing_debt / 12),
             has_collateral=applicant.has_collateral,
-            previous_defaults=applicant.previous_defaults
+            previous_defaults=applicant.previous_defaults,
+            documents_submitted=applicant.documents_submitted or []
         )
         gt = calculate_dynamic_ground_truth(profile)
         agent_decision = {
             "risk_level": gt.risk_level.value,
             "loan_decision": gt.loan_decision.value,
             "interest_rate_tier": gt.interest_rate_tier.value,
-            "reasoning": gt.explanation
+            "reasoning": f"⚠️ FALLBACK (Rule-Based): LLM API failed ({llm_error_msg}). "
+                         f"This decision was generated by deterministic code formulas, NOT by the AI model. "
+                         f"Please check your HF_TOKEN and API_BASE_URL configuration.\n\n"
+                         f"Rule-based analysis: {gt.explanation}"
         }
 
     # 5. Calculate dynamic ground truth
@@ -610,7 +624,8 @@ async def evaluate_applicant(applicant: ApplicantInput):
         age=applicant.age,
         monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else (applicant.existing_debt / 12),
         has_collateral=applicant.has_collateral,
-        previous_defaults=applicant.previous_defaults
+        previous_defaults=applicant.previous_defaults,
+        documents_submitted=applicant.documents_submitted or []
     )
     global_session.applicant_profile = profile.model_dump()
     ground_truth = calculate_dynamic_ground_truth(profile)
@@ -633,6 +648,8 @@ async def evaluate_applicant(applicant: ApplicantInput):
     # 7. Return complete result
     return {
         "agent_decision": agent_decision,
+        "decision_source": decision_source,  # "model" or "fallback"
+        "llm_error": llm_error_msg,  # None if model succeeded
         "score": score,
         "ground_truth": {
             "risk_level": ground_truth.risk_level.value,

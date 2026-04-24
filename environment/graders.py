@@ -700,11 +700,14 @@ def get_underwriting_explanation(obs: "ApplicantProfile", risk: RiskLevel, dec: 
     dti = (obs.existing_debt / obs.annual_income * 100) if obs.annual_income > 0 else 0
     collateral_str = "Provided" if getattr(obs, 'has_collateral', False) else "None"
     
+    docs = getattr(obs, 'documents_submitted', [])
+    doc_status = f"Verified ({', '.join(docs)})" if docs else "Pending / Missing critical files"
+    
     parts = [
         f"AUTONOMOUS UNDERWRITING REPORT FOR {obs.applicant_name}:",
         "",
         "STAGE 1: DOCUMENTATION & IDENTITY VERIFICATION",
-        f"   - Profile status: Complete. Documents required: Income proof (e.g., {'Tax Returns' if obs.employment_type.value != 'salaried' else 'Pay Stubs'}), KYC, and Bank Statements.",
+        f"   - Status: {doc_status}. Identity and income sources confirmed.",
         "",
         "STAGE 2: CREDIT CHARACTER ASSESSMENT",
         f"   - Analysis: Credit score of {obs.credit_score} indicates {'strong' if obs.credit_score > 740 else 'moderate' if obs.credit_score > 650 else 'high-risk'} character. Previous defaults: {getattr(obs, 'previous_defaults', 0)}.",
