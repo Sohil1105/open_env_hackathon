@@ -3,9 +3,12 @@ Loan Underwriting AI - Autonomous Fine-Tuning Script
 Using Unsloth and TRL for memory-efficient training on Llama-3-8B.
 
 COLAB SETUP:
-Run this block first to install dependencies:
+Run this block first to install dependencies (Sequential for Python 3.12 compatibility):
+!pip install unsloth_zoo
 !pip install --no-deps "unsloth[colab-new] @ git+https://github.com/unslothai/unsloth.git"
-!pip install --no-deps "xformers<0.0.27" "trl<0.9.0" peft accelerate bitsandbytes
+!pip install --no-deps trl peft accelerate
+!pip install bitsandbytes
+!pip install xformers
 """
 
 import os

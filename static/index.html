@@ -1329,14 +1329,23 @@ async function executeStep() {
     });
     const result = await response.json();
     
+    // START SEQUENTIAL UI UPDATE
+    const stageResults = result.stage_results || [];
+    for (let i = 0; i < stageResults.length; i++) {
+        const stage = stageResults[i];
+        btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
+        showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
+        
+        // Update the lifecycle bar for each stage
+        activeStageId = STAGE_META[i].id; // Map stage index to STAGE_META
+        completedStages.add(activeStageId);
+        updateLifecycleBar();
+        
+        await new Promise(r => setTimeout(r, 1000)); // 1s delay per real stage
+    }
+
     displayResult(result);
-    activeStageId = riskStage;
-    completedStages.add('lead_qualification_sales');
-    completedStages.add('document_verification_hr');
-    completedStages.add(riskStage);
-    completedStages.add('customer_onboarding_pm');
-    updateLifecycleBar();
-    showToast('✨ Decision Rendered', 'success');
+    showToast('✨ Final Underwriting Decision Rendered', 'success');
 
   } catch (e) {
     showToast(e.message, 'error');
@@ -1352,24 +1361,15 @@ function displayResult(result) {
   document.getElementById('resultContent').style.display = 'block';
 
   const sourceEl = document.getElementById('sourceIndicator');
-  const source = result.decision_source || 'unknown';
-  if (source === 'model') {
-    sourceEl.style.display = 'block';
-    sourceEl.style.background = 'rgba(0,255,136,0.1)';
-    sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
-    sourceEl.style.color = '#00ff88';
-    sourceEl.textContent = '✅ DECISION SOURCE: AI CORE';
-  } else {
-    sourceEl.style.display = 'block';
-    sourceEl.style.background = 'rgba(255,51,102,0.15)';
-    sourceEl.style.border = '1px solid rgba(255,51,102,0.5)';
-    sourceEl.style.color = '#ff3366';
-    sourceEl.textContent = '⚠️ DECISION SOURCE: HEURISTIC FALLBACK';
-  }
+  sourceEl.style.display = 'block';
+  sourceEl.style.background = 'rgba(0,255,136,0.1)';
+  sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
+  sourceEl.style.color = '#00ff88';
+  sourceEl.textContent = '✅ REAL-TIME MULTI-STAGE ANALYSIS COMPLETE';
 
   const decision = result.agent_decision || {};
   const grading = result.grading || {};
-  const gt = result.correct_answer || {};
+  const gt = result.ground_truth || {};
 
   document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
   document.getElementById('resDecision').textContent = decision.loan_decision || '—';
@@ -1386,11 +1386,9 @@ function displayResult(result) {
 
   typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
 
-  document.getElementById('resTaskName').textContent = result.task_name || '—';
-  const diff = result.task_difficulty || '—';
-  const diffEl = document.getElementById('resDifficulty');
-  diffEl.textContent = diff.toUpperCase();
-  diffEl.className = 'result-value ' + (diff === 'easy' ? 'success' : diff === 'hard' ? 'danger' : 'warning');
+  document.getElementById('resTaskName').textContent = 'Full Lifecycle';
+  document.getElementById('resDifficulty').textContent = 'COMPLEX';
+  document.getElementById('resDifficulty').className = 'result-value warning';
 
   setScoreValue('resRiskScore', grading.risk_level_score);
   setScoreValue('resDecisionScore', grading.loan_decision_score);

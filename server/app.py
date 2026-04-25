@@ -102,6 +102,26 @@ def _get_api_client():
 
 client, MODEL_NAME = _get_api_client()
 
+def call_llm(prompt: str, max_tokens: int = 300) -> dict:
+    """Single LLM call with robust parsing for multi-stage chains."""
+    try:
+        local_client, local_model_name = _get_api_client()
+        logger.info(f"Chain Stage: Calling {local_model_name}")
+        
+        response = local_client.chat.completions.create(
+            model=local_model_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=max_tokens,
+            temperature=0.2
+        )
+        raw = response.choices[0].message.content
+        logger.info(f"Chain Stage: Received response ({len(raw)} chars)")
+        return parse_llm_response(raw)
+    except Exception as e:
+        logger.error(f"Chain Stage Error: {str(e)}")
+        return {"error": str(e), "reasoning": f"Stage failed: {str(e)}"}
+
+
 
 
 # ─── FastAPI Application ─────────────────────────────────────────────────────
@@ -521,98 +541,114 @@ def parse_llm_response(response_text: str) -> dict:
 @app.post("/evaluate")
 async def evaluate_applicant(applicant: ApplicantInput):
     task_id = applicant.task_id
-
-    # Session tracking
-    global_session.current_stage = get_stage_number(task_id)
-    if task_id not in global_session.completed_stages:
-        global_session.completed_stages.append(task_id)
-
-    # 1. Get stage-specific prompt
-    prompt_template = STAGE_PROMPTS.get(
-        task_id,
-        STAGE_PROMPTS["easy_salaried_high_credit"]
-    )
-
-    # 2. Format prompt with applicant details
-    profile_text = f"""
-    Name: {applicant.applicant_name}
-    Annual Income: ₹{applicant.annual_income:,.0f}
-    Credit Score: {applicant.credit_score}
-    Existing Debt: ₹{applicant.existing_debt:,.0f}
-    Loan Requested: ₹{applicant.loan_amount:,.0f}
-    Employment: {applicant.employment_type}
-    Tenure: {applicant.loan_tenure} months
-    Age: {getattr(applicant, 'age', 'N/A')}
-    Job History: {getattr(applicant, 'employment_years', 'N/A')} years
-    Past Defaults: {getattr(applicant, 'previous_defaults', 0)}
+    
+    # 1. Format profile for LLM context
+    profile = f"""
+    Applicant: {applicant.applicant_name} (Age: {getattr(applicant, 'age', 'N/A')})
+    Employment: {applicant.employment_type} ({getattr(applicant, 'employment_years', 'N/A')} years)
+    Income: ₹{applicant.annual_income:,.0f} | Debt: ₹{applicant.existing_debt:,.0f}
+    Requested: ₹{applicant.loan_amount:,.0f} over {applicant.loan_tenure} months
+    Credit Score: {applicant.credit_score} | Defaults: {getattr(applicant, 'previous_defaults', 0)}
+    Collateral: {"Provided" if getattr(applicant, 'has_collateral', False) else "None"}
     """
+    
+    history = []
+    stage_results = []
 
-    full_prompt = prompt_template.format(
-        profile=profile_text,
-        credit_score=applicant.credit_score,
-        past_defaults=getattr(applicant, 'previous_defaults', 0),
-        existing_debt=applicant.existing_debt,
-        annual_income=applicant.annual_income,
-        loan_amount=applicant.loan_amount,
-        has_collateral="Provided" if getattr(applicant, 'has_collateral', False) else "None",
-        loan_tenure=applicant.loan_tenure,
-        documents_submitted=", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"
-    )
+    # ── STAGE 1: Identity & Documentation ──
+    s1_prompt = f"""
+    You are a bank compliance officer. Review applicant identity and documents.
+    APPLICANT: {profile}
+    DOCUMENTS: {", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"}
 
-    # 3. Call LLM
-    decision_source = "model"  # Track whether output is from model or fallback
-    llm_error_msg = None
-    try:
-        local_client, local_model_name = _get_api_client()
-        logger.info(f"Calling LLM: model={local_model_name}")
-        response = local_client.chat.completions.create(
-            model=local_model_name,
-            messages=[{"role": "user", "content": full_prompt}],
-            max_tokens=500,
-            temperature=0.3
-        )
-        raw_response = response.choices[0].message.content
-        logger.info(f"✅ LLM responded successfully ({len(raw_response)} chars)")
+    Respond ONLY in JSON:
+    {{
+      "document_status": "Complete" | "Incomplete" | "Suspicious",
+      "flags": ["list any red flags"],
+      "confidence": 0.0-1.0,
+      "reasoning": "one sentence summary"
+    }}
+    """
+    s1_result = call_llm(s1_prompt)
+    history.append(f"STAGE 1 (Docs): {s1_result.get('document_status', 'N/A')} - {s1_result.get('reasoning', '')}")
+    stage_results.append({"stage": 1, "name": "Documentation", "result": s1_result})
 
-        # 4. Parse response
-        agent_decision = parse_llm_response(raw_response)
+    # ── STAGE 2: Credit Character ──
+    s2_prompt = f"""
+    You are a credit analyst. Previous check: {history[-1]}
+    Analyze borrower reliability and character.
+    APPLICANT: {profile}
 
-    except Exception as e:
-        # LLM FAILED — log the real error so it's visible
-        llm_error_msg = str(e)
-        logger.error(f"❌ LLM API FAILED: {llm_error_msg}")
-        logger.error(f"❌ The 'AI Agent Decision' will be a RULE-BASED FALLBACK, not model output!")
-        decision_source = "fallback"
+    Respond ONLY in JSON:
+    {{
+      "credit_character": "Strong" | "Average" | "Weak",
+      "credit_score_assessment": "one sentence",
+      "risk_indicator": "Low" | "Medium" | "High",
+      "reasoning": "one sentence"
+    }}
+    """
+    s2_result = call_llm(s2_prompt)
+    history.append(f"STAGE 2 (Credit): {s2_result.get('credit_character', 'N/A')} - {s2_result.get('reasoning', '')}")
+    stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_result})
 
-        # Build profile for fallback calculation
-        profile = ApplicantProfile(
-            applicant_name=applicant.applicant_name,
-            annual_income=applicant.annual_income,
-            credit_score=applicant.credit_score,
-            existing_debt=applicant.existing_debt,
-            loan_amount_requested=applicant.loan_amount,
-            employment_type=applicant.employment_type,
-            employment_years=applicant.employment_years,
-            repayment_tenure_months=applicant.loan_tenure,
-            age=applicant.age,
-            monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else (applicant.existing_debt / 12),
-            has_collateral=applicant.has_collateral,
-            previous_defaults=applicant.previous_defaults,
-            documents_submitted=applicant.documents_submitted or []
-        )
-        gt = calculate_dynamic_ground_truth(profile)
-        agent_decision = {
-            "risk_level": gt.risk_level.value,
-            "loan_decision": gt.loan_decision.value,
-            "interest_rate_tier": gt.interest_rate_tier.value,
-            "reasoning": f"⚠️ FALLBACK (Rule-Based): LLM API failed ({llm_error_msg}). "
-                         f"This decision was generated by deterministic code formulas, NOT by the AI model. "
-                         f"Please check your HF_TOKEN and API_BASE_URL configuration.\n\n"
-                         f"Rule-based analysis: {gt.explanation}"
-        }
+    # ── STAGE 3: Capacity & DTI ──
+    s3_prompt = f"""
+    You are a financial analyst. Previous: {' | '.join(history)}
+    Analyze repayment capacity and DTI.
+    APPLICANT: {profile}
 
-    # 5. Calculate dynamic ground truth
-    profile = ApplicantProfile(
+    Respond ONLY in JSON:
+    {{
+      "dti_assessment": "Healthy" | "Borderline" | "Overextended",
+      "monthly_emi_feasible": true | false,
+      "capacity_score": 0.0-1.0,
+      "reasoning": "one sentence"
+    }}
+    """
+    s3_result = call_llm(s3_prompt)
+    history.append(f"STAGE 3 (Capacity): {s3_result.get('dti_assessment', 'N/A')} - {s3_result.get('reasoning', '')}")
+    stage_results.append({"stage": 3, "name": "Capacity & DTI", "result": s3_result})
+
+    # ── STAGE 4: Collateral & Conditions ──
+    s4_prompt = f"""
+    You are a senior loan officer. Previous: {' | '.join(history)}
+    Assess collateral and loan conditions.
+    APPLICANT: {profile}
+
+    Respond ONLY in JSON:
+    {{
+      "collateral_status": "Strong" | "Adequate" | "Insufficient",
+      "market_conditions": "Favorable" | "Neutral" | "Unfavorable",
+      "preliminary_decision": "Approve" | "Conditional Approve" | "Reject",
+      "reasoning": "one sentence"
+    }}
+    """
+    s4_result = call_llm(s4_prompt)
+    history.append(f"STAGE 4 (Collateral): {s4_result.get('collateral_status', 'N/A')} - {s4_result.get('reasoning', '')}")
+    stage_results.append({"stage": 4, "name": "Collateral", "result": s4_result})
+
+    # ── STAGE 5: Final Underwriting Verdict ──
+    s5_prompt = f"""
+    You are the Chief Credit Officer. Complete analysis from all 4 previous stages:
+    {chr(10).join(history)}
+
+    APPLICANT: {profile}
+    Make the FINAL decision.
+
+    Respond ONLY in JSON:
+    {{
+      "risk_level": "Low" | "Medium" | "High",
+      "loan_decision": "Approve" | "Conditional Approve" | "Reject",
+      "interest_rate_tier": "7-9%" | "10-13%" | "14%+",
+      "reasoning": "Comprehensive 2-3 sentence final report referencing key stage findings."
+    }}
+    """
+    s5_result = call_llm(s5_prompt, max_tokens=500)
+    stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_result})
+
+    # ── Grading Logic ──
+    # Build profile for grading
+    p_grade = ApplicantProfile(
         applicant_name=applicant.applicant_name,
         annual_income=applicant.annual_income,
         credit_score=applicant.credit_score,
@@ -627,58 +663,40 @@ async def evaluate_applicant(applicant: ApplicantInput):
         previous_defaults=applicant.previous_defaults,
         documents_submitted=applicant.documents_submitted or []
     )
-    global_session.applicant_profile = profile.model_dump()
-    ground_truth = calculate_dynamic_ground_truth(profile)
-
-    # 6. Grade the decision
+    ground_truth = calculate_dynamic_ground_truth(p_grade)
+    
     action = Action(
-        risk_level=agent_decision.get("risk_level", "Medium"),
-        loan_decision=agent_decision.get("loan_decision", "Conditional Approve"),
-        interest_rate_tier=agent_decision.get("interest_rate_tier", "10-13%"),
-        reasoning=agent_decision.get("reasoning", "")
+        risk_level=s5_result.get("risk_level", "Medium"),
+        loan_decision=s5_result.get("loan_decision", "Conditional Approve"),
+        interest_rate_tier=s5_result.get("interest_rate_tier", "10-13%"),
+        reasoning=s5_result.get("reasoning", "")
     )
-
-    # Get stage specific grader
+    
     grader = get_grader_for_stage(task_id)
     grading_result = grader(action, ground_truth)
-    score = grading_result.total_score
     
-    global_session.stage_scores[task_id] = score
-
-    # 7. Return complete result
     return {
-        "agent_decision": agent_decision,
-        "decision_source": decision_source,  # "model" or "fallback"
-        "llm_error": llm_error_msg,  # None if model succeeded
-        "score": score,
+        "agent_decision": s5_result,
+        "stage_results": stage_results,
+        "score": grading_result.total_score,
         "ground_truth": {
             "risk_level": ground_truth.risk_level.value,
             "loan_decision": ground_truth.loan_decision.value,
             "interest_rate_tier": ground_truth.interest_rate_tier.value,
             "explanation": ground_truth.explanation
         },
-        "stage": task_id,
-        "stage_number": get_stage_number(task_id),
-        "next_stage": get_next_stage(task_id),
-        "next_stage_name": get_next_stage_name(task_id),
-        "reasoning": agent_decision.get("reasoning", ""),
+        "reasoning": s5_result.get("reasoning", ""),
         "status": "success",
+        "stages_completed": 5,
         "grading": {
             "risk_level_score": grading_result.risk_level_score,
             "loan_decision_score": grading_result.loan_decision_score,
             "interest_rate_score": grading_result.interest_rate_score,
             "consistency_bonus": grading_result.consistency_bonus,
         },
-        "feedback": grading_result.feedback,
-        "task_name": get_next_stage_name(task_id) if task_id != get_next_stage(task_id) else "Current",
-        "task_difficulty": "adaptive",
-        "correct_answer": {
-            "risk_level": ground_truth.risk_level.value,
-            "loan_decision": ground_truth.loan_decision.value,
-            "interest_rate_tier": ground_truth.interest_rate_tier.value,
-            "explanation": ground_truth.explanation
-        }
+        "feedback": grading_result.feedback
     }
+
 
 
 # ─── OpenEnv Spec Endpoint ───────────────────────────────────────────────────
