@@ -98,9 +98,11 @@ model = FastLanguageModel.get_peft_model(
 # --- 4. PREPARE DATA ---
 print("📊 Preparing Dataset...")
 dataset = get_training_data()
+
+# CHANGE: Added num_proc=4 for parallel pre-tokenization processing
 def add_eos(examples):
     return {"text": [t + tokenizer.eos_token for t in examples["text"]]}
-dataset = dataset.map(add_eos, batched=True)
+dataset = dataset.map(add_eos, batched=True, num_proc=4)
 
 # --- 5. TRAINING ---
 print("⚙️ Setting up Trainer...")
@@ -112,10 +114,12 @@ trainer = SFTTrainer(
     max_seq_length = MAX_SEQ_LENGTH,
     packing = True,  # Added packing=True for efficiency
     args = TrainingArguments(
-        per_device_train_batch_size = 1,
-        gradient_accumulation_steps = 4,
+        per_device_train_batch_size = 2,      # CHANGE: Increased from 1
+        gradient_accumulation_steps = 2,      # CHANGE: Reduced from 4 (Effective batch = 4)
+        dataloader_num_workers = 4,            # CHANGE: Added for faster data loading
+        dataloader_pin_memory = True,          # CHANGE: Added for faster GPU transfer
         warmup_steps = 10,
-        num_train_epochs = 3,
+        num_train_epochs = 1,
         learning_rate = 2e-4,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
@@ -177,4 +181,3 @@ if HF_TOKEN != "":
     print("✅ Model uploaded successfully to: https://huggingface.co/Sourav0511/loan-underwriting-lora")
 else:
     print("⚠️ Skipping upload: Please paste your Hugging Face Token into the HF_TOKEN variable.")
-
