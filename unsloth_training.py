@@ -33,13 +33,21 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # --- 2. DATASET LOADING (Real World) ---
 def get_training_data():
-    """Loads real-world loan data from HuggingFace and converts to instruction format."""
-    print("📥 Loading real-world dataset from HuggingFace (AnguloM/loan_data)...")
+    """
+    Inclusive classification to extract 4,000+ balanced real-world examples.
+    Includes a 10% validation split.
+    """
+    import math
+    import random
+    from datasets import Dataset, load_dataset
+    random.seed(42)
+
+    print("📥 Loading full real-world dataset (9.5k rows)...")
     raw = load_dataset("AnguloM/loan_data", split="train")
-    
-    formatted = []
+
+    low_cases, medium_cases, high_cases = [], [], []
+
     for row in raw:
-        # Decode income from log scale
         income = round(math.exp(row["log.annual.inc"]), 2)
         dti = row["dti"]
         fico = row["fico"]
@@ -48,33 +56,51 @@ def get_training_data():
         pub_rec = row["pub.rec"]
         inq = row["inq.last.6mths"]
         not_paid = row["not.fully.paid"]
-        credit_policy = row["credit.policy"]
 
-        # Derive decision based on dataset features
-        if credit_policy == 1 and not_paid == 0 and fico >= 720 and dti < 20:
-            risk, decision = "Low", "Approve"
-            reason = f"Strong FICO ({fico}), low DTI ({dti}%), clean repayment history."
-        elif credit_policy == 1 and not_paid == 0 and fico >= 660:
-            risk, decision = "Medium", "Conditional Approve"
-            reason = f"Acceptable FICO ({fico}), DTI ({dti}%) — requires document verification."
+        # Compute monthly DTI properly
+        monthly_income = income / 12
+        installment = row.get("installment", 0)
+        real_dti = (installment / monthly_income * 100) if monthly_income > 0 else dti
+
+        # MORE INCLUSIVE LOGIC to capture more of the 9.5k rows
+        if fico < 650 or real_dti > 40 or delinq >= 1 or pub_rec >= 1 or not_paid == 1:
+            risk, decision, rate = "High", "Reject", "14%+"
+            reason = f"High risk identified: FICO {fico}, DTI {real_dti:.1f}%, or history of negative records."
+            high_cases.append((income, dti, fico, purpose, delinq, pub_rec, inq, reason, risk, decision, rate))
+        elif fico >= 710 and real_dti < 22 and delinq == 0 and pub_rec == 0 and not_paid == 0:
+            risk, decision, rate = "Low", "Approve", "7-9%"
+            reason = f"Excellent credit: FICO {fico}, DTI {real_dti:.1f}%, and clean history."
+            low_cases.append((income, dti, fico, purpose, delinq, pub_rec, inq, reason, risk, decision, rate))
         else:
-            risk, decision = "High", "Reject"
-            reason = f"Low FICO ({fico}), high DTI ({dti}%) or poor repayment record."
+            risk, decision, rate = "Medium", "Conditional Approve", "10-13%"
+            reason = f"Moderate risk. FICO {fico} and DTI {real_dti:.1f}% require verification."
+            medium_cases.append((income, dti, fico, purpose, delinq, pub_rec, inq, reason, risk, decision, rate))
 
-        profile = (
-            f"Income: ${income:,}, FICO: {fico}, DTI: {dti}%, "
-            f"Purpose: {purpose}, Delinquencies: {delinq}, "
-            f"Public Records: {pub_rec}, Inquiries (6mo): {inq}"
-        )
+    print(f"📊 Extracted Categories — Low: {len(low_cases)}, Medium: {len(medium_cases)}, High: {len(high_cases)}")
 
-        text = (
-            f"### Instruction:\nEvaluate this loan application: {profile}\n\n"
-            f"### Response:\n"
-            f'{{"risk_level":"{risk}","decision":"{decision}","reason":"{reason}"}}'
-        )
+    # Balance to target ~1,400 per class for 4,200 total
+    target_per_class = min(len(low_cases), len(medium_cases), len(high_cases), 1400)
+    print(f"⚖️ Balancing to ~{target_per_class} per class...")
+
+    balanced = (
+        random.sample(low_cases, target_per_class) +
+        random.sample(medium_cases, target_per_class) +
+        random.sample(high_cases, target_per_class)
+    )
+    random.shuffle(balanced)
+
+    formatted = []
+    for case in balanced:
+        inc, d, f, p, de, pb, i, reason, risk, dec, rate = case
+        profile = f"Income: ${inc:,}, FICO: {f}, DTI: {d}%, Purpose: {p}, Delinquencies: {de}, Public Records: {pb}, Inquiries (6mo): {i}"
+        text = f"### Instruction:\nEvaluate this loan application: {profile}\n\n### Response:\n" \
+               f'{{"risk_level":"{risk}","decision":"{dec}","interest_rate":"{rate}","reason":"{reason}"}}'
         formatted.append({"text": text})
 
-    return Dataset.from_list(formatted)
+    full_ds = Dataset.from_list(formatted)
+    split_ds = full_ds.train_test_split(test_size=0.1, seed=42)
+    print(f"✅ Final Dataset — Train: {len(split_ds['train'])}, Validation: {len(split_ds['test'])}")
+    return split_ds
 
 # --- 3. MODEL LOADING ---
 print("🚀 Loading Model...")
@@ -87,9 +113,9 @@ model, tokenizer = FastLanguageModel.from_pretrained(
 
 model = FastLanguageModel.get_peft_model(
     model,
-    r = 16,
+    r = 32,
     target_modules = ["q_proj", "k_proj", "v_proj", "o_proj", "gate_proj", "up_proj", "down_proj"],
-    lora_alpha = 16,
+    lora_alpha = 32,
     lora_dropout = 0,
     bias = "none",
     use_gradient_checkpointing = "unsloth",
@@ -97,36 +123,40 @@ model = FastLanguageModel.get_peft_model(
 
 # --- 4. PREPARE DATA ---
 print("📊 Preparing Dataset...")
-dataset = get_training_data()
+dataset_dict = get_training_data()
 
-# CHANGE: Added num_proc=4 for parallel pre-tokenization processing
 def add_eos(examples):
     return {"text": [t + tokenizer.eos_token for t in examples["text"]]}
-dataset = dataset.map(add_eos, batched=True, num_proc=4)
+
+train_dataset = dataset_dict["train"].map(add_eos, batched=True, num_proc=4)
+eval_dataset = dataset_dict["test"].map(add_eos, batched=True, num_proc=4)
 
 # --- 5. TRAINING ---
 print("⚙️ Setting up Trainer...")
 trainer = SFTTrainer(
     model = model,
     tokenizer = tokenizer,
-    train_dataset = dataset,
+    train_dataset = train_dataset,
+    eval_dataset = eval_dataset,
     dataset_text_field = "text",
     max_seq_length = MAX_SEQ_LENGTH,
-    packing = True,  # Added packing=True for efficiency
+    packing = True,
     args = TrainingArguments(
-        per_device_train_batch_size = 2,      # CHANGE: Increased from 1
-        gradient_accumulation_steps = 2,      # CHANGE: Reduced from 4 (Effective batch = 4)
-        dataloader_num_workers = 4,            # CHANGE: Added for faster data loading
-        dataloader_pin_memory = True,          # CHANGE: Added for faster GPU transfer
-        warmup_steps = 10,
-        num_train_epochs = 1,
-        learning_rate = 2e-4,
+        per_device_train_batch_size = 2,
+        gradient_accumulation_steps = 4,
+        dataloader_num_workers = 4,
+        dataloader_pin_memory = True,
+        warmup_steps = 100,
+        num_train_epochs = 5,
+        learning_rate = 5e-5,
+        evaluation_strategy = "steps",
+        eval_steps = 100,
         fp16 = not torch.cuda.is_bf16_supported(),
         bf16 = torch.cuda.is_bf16_supported(),
         logging_steps = 1,
         optim = "adamw_8bit",
         weight_decay = 0.01,
-        lr_scheduler_type = "linear",
+        lr_scheduler_type = "cosine",
         seed = 3407,
         output_dir = "outputs",
         save_steps = 500,
@@ -155,6 +185,41 @@ plt.gcf().set_facecolor('#1a1a1a')
 plt.savefig("training_loss.png")
 print("✅ Loss plot saved to training_loss.png")
 
+# --- MERGE LORA INTO BASE MODEL ---
+print("🔀 Saving LoRA adapter first...")
+model.save_pretrained("lora_adapter_temp")
+tokenizer.save_pretrained("lora_adapter_temp")
+
+print("🔀 Reloading in 16-bit for clean merge...")
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from peft import PeftModel
+import torch
+
+base_model = AutoModelForCausalLM.from_pretrained(
+    "unsloth/llama-3-8b-Instruct",
+    torch_dtype=torch.float16,
+    device_map="auto"
+)
+merged_model = PeftModel.from_pretrained(base_model, "lora_adapter_temp")
+merged_model = merged_model.merge_and_unload()
+print("✅ LoRA merged in 16-bit — no rounding errors")
+
+# --- PUSH MERGED MODEL ---
+HF_TOKEN = "" # @param {type:"string"}
+
+if HF_TOKEN != "":
+    print("📤 Uploading MERGED model to HuggingFace...")
+    merged_model.push_to_hub(
+        "Sourav0511/loan-underwriting-merged-v2",
+        token=HF_TOKEN,
+        max_shard_size="2GB"
+    )
+    tokenizer.push_to_hub(
+        "Sourav0511/loan-underwriting-merged-v2",
+        token=HF_TOKEN
+    )
+    print("✅ Merged model uploaded to: https://huggingface.co/Sourav0511/loan-underwriting-merged-v2")
+
 # --- 7. VERIFICATION TEST ---
 print("\n" + "="*50)
 print("🔍 LIVE VERIFICATION (UNSEEN CASE)")
@@ -172,12 +237,11 @@ print("SUCCESS: Pipeline is fully operational.")
 print("="*50)
 
 # --- 8. SAVE & UPLOAD TO HUGGING FACE ---
-HF_TOKEN = "" 
 
 if HF_TOKEN != "":
-    print("📤 Uploading model to Hugging Face...")
-    model.push_to_hub("Sourav0511/loan-underwriting-lora", token = HF_TOKEN)
-    tokenizer.push_to_hub("Sourav0511/loan-underwriting-lora", token = HF_TOKEN)
-    print("✅ Model uploaded successfully to: https://huggingface.co/Sourav0511/loan-underwriting-lora")
+    print("📤 Uploading LoRA adapter to Hugging Face...")
+    model.push_to_hub("Sourav0511/loan-underwriting-lora-v2", token = HF_TOKEN)
+    tokenizer.push_to_hub("Sourav0511/loan-underwriting-lora-v2", token = HF_TOKEN)
+    print("✅ Adapter uploaded successfully to: https://huggingface.co/Sourav0511/loan-underwriting-lora-v2")
 else:
     print("⚠️ Skipping upload: Please paste your Hugging Face Token into the HF_TOKEN variable.")

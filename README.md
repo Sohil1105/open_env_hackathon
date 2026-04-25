@@ -14,7 +14,7 @@ An **OpenEnv-compliant** reinforcement learning environment that simulates a ban
 Built for the **Scaler x Meta PyTorch Hackathon (OpenEnv Round 1)**.
 
 🔗 **Live Demo:** [https://sourav0511-open-env-hackathon.hf.space/ui](https://sourav0511-open-env-hackathon.hf.space/ui)
-🧠 **Fine-Tuned Model:** [https://huggingface.co/Sourav0511/loan-underwriting-lora](https://huggingface.co/Sourav0511/loan-underwriting-lora)
+🧠 **Fine-Tuned Model:** [https://huggingface.co/Sourav0511/loan-underwriting-lora-v2](https://huggingface.co/Sourav0511/loan-underwriting-lora-v2)
 
 ---
 

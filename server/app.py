@@ -95,7 +95,7 @@ def _get_api_client():
     """
     base_url = os.environ.get("API_BASE_URL", "").strip()
     key = os.environ.get("HF_TOKEN", "").strip()
-    model = os.environ.get("MODEL_NAME", "mistralai/Mixtral-8x7B-Instruct-v0.1").strip()
+    model = os.getenv("MODEL_NAME", "Sourav0511/loan-underwriting-merged-v2").strip()
 
     # Use the reliable GLOBAL endpoint by default
     if not base_url or "api-inference.huggingface.co" in base_url:
@@ -604,6 +604,26 @@ async def evaluate_applicant(applicant: ApplicantInput):
 
         # ── STAGE 2: Credit Character ──
         s2_prompt = f"""
+UNDERWRITING THRESHOLDS (US Standard — apply exactly):
+FICO >= 720 AND DTI < 20% AND defaults = 0 → LOW risk
+FICO 660-719 AND DTI 20-35% AND defaults = 0 → MEDIUM risk
+FICO 620-659 AND DTI 35-45% AND defaults <= 1 → MEDIUM-HIGH risk
+FICO < 620 OR DTI > 45% OR defaults >= 2 → HIGH risk
+
+DTI OVERRIDE RULE (applies regardless of FICO):
+If DTI > 40% → risk cannot be LOW. Minimum = MEDIUM.
+If DTI > 55% → risk = HIGH. No exceptions.
+
+FICO FLOOR RULE:
+If FICO < 620 → risk cannot be LOW or MEDIUM. Minimum = HIGH.
+
+You MUST classify using these exact thresholds. Do not use qualitative language like "strong credit" or "healthy DTI" without first computing against these numbers.
+
+APPLICANT NUMERIC VALUES FOR THRESHOLD COMPUTATION:
+FICO = {applicant.credit_score}
+Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
+Previous Defaults = {applicant.previous_defaults}
+
         You are a credit analyst. Previous check: {history[-1]}
         Analyze borrower reliability and character.
         APPLICANT: {profile}
@@ -622,6 +642,24 @@ async def evaluate_applicant(applicant: ApplicantInput):
 
         # ── STAGE 3: Capacity & DTI ──
         s3_prompt = f"""
+DTI CLASSIFICATION (US Standard):
+DTI < 20% → Excellent. Supports LOW risk.
+DTI 20-35% → Acceptable. Supports MEDIUM risk.
+DTI 36-45% → Elevated. Supports MEDIUM-HIGH risk.
+DTI > 45% → Dangerous. Supports HIGH risk. Overrides strong FICO.
+DTI > 55% → Critical. AUTO HIGH risk. No approval possible.
+
+CRITICAL RULE: A high FICO score does NOT override a dangerous DTI.
+Example: FICO=750, DTI=48% → MEDIUM risk (DTI overrides FICO).
+Example: FICO=800, DTI=60% → HIGH risk (DTI critical override).
+
+State the exact DTI percentage and classify it against the above scale before drawing any conclusions.
+
+APPLICANT NUMERIC VALUES:
+FICO = {applicant.credit_score}
+Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
+Previous Defaults = {applicant.previous_defaults}
+
         You are a financial analyst. Previous: {' | '.join(history)}
         Analyze repayment capacity and DTI.
         APPLICANT: {profile}
@@ -658,6 +696,34 @@ async def evaluate_applicant(applicant: ApplicantInput):
 
         # ── STAGE 5: Final Underwriting Verdict ──
         s5_prompt = f"""
+HARD FALLBACK RULES (check first, before reading prior stages):
+If applicant FICO < 620 → FINAL DECISION = High / Reject / 14%+. No exceptions.
+If applicant DTI > 55% → FINAL DECISION = High / Reject / 14%+. No exceptions.
+If applicant defaults >= 2 → FINAL DECISION = High / Reject / 14%+. No exceptions.
+If any TWO of: FICO < 660, DTI > 40%, defaults >= 1 → FINAL DECISION = High / Reject / 14%+.
+
+Only proceed to stage synthesis below if NONE of the above rules triggered.
+
+APPLICANT NUMERIC VALUES:
+FICO = {applicant.credit_score}
+Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
+Previous Defaults = {applicant.previous_defaults}
+
+CHAIN OF EVIDENCE REQUIREMENT:
+Before giving your final decision, you MUST explicitly state:
+- Stage 1 result: [quote the document/identity assessment]
+- Stage 2 result: [quote the risk classification and FICO/DTI values used]
+- Stage 3 result: [quote the DTI classification]
+- Stage 4 result: [quote the preliminary decision]
+Then and only then, give your FINAL DECISION.
+
+If Stage 4 result was "Conditional Approve", your final decision CANNOT be
+"Approve" unless ALL THREE of these are true:
+- FICO >= 720
+- DTI < 20%
+- defaults = 0
+Otherwise maintain "Conditional Approve" or downgrade. Never upgrade.
+
         You are the Chief Credit Officer. Complete analysis from all 4 previous stages:
         {chr(10).join(history)}
 
