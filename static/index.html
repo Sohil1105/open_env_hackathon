@@ -899,6 +899,12 @@ body::after {
           </label>
           <input id="employmentYears" class="input-field" type="number" value="2">
         </div>
+        <div class="input-row">
+          <label class="input-label" for="loanPurpose">
+            <span class="prompt-char">›</span> Loan Purpose
+          </label>
+          <input id="loanPurpose" class="input-field" placeholder="Purpose (e.g. home improvement)" />
+        </div>
       </div>
 
       <!-- Step 2: Financial Details -->
@@ -927,6 +933,18 @@ body::after {
             <span class="prompt-char">›</span> Past Defaults
           </label>
           <input id="prevDefaults" class="input-field" type="number" value="0">
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="publicRecords">
+            <span class="prompt-char">›</span> Public Records
+          </label>
+          <input id="publicRecords" class="input-field" type="number" min="0" placeholder="Public Records" />
+        </div>
+        <div class="input-row">
+          <label class="input-label" for="inquiries">
+            <span class="prompt-char">›</span> Inquiries (6mo)
+          </label>
+          <input id="inquiries" class="input-field" type="number" min="0" placeholder="Credit Inquiries (6mo)" />
         </div>
       </div>
 
@@ -1129,6 +1147,11 @@ function changeWizardStep(delta) {
         showToast('Please enter Annual Income', 'error');
         return;
       }
+      const cs = parseInt(document.getElementById('creditScore').value);
+      if (isNaN(cs) || cs < 300 || cs > 850) { showToast('FICO must be 300–850', 'error'); return; }
+      if (parseFloat(document.getElementById('existingDebt').value) < 0) { showToast('Debt cannot be negative', 'error'); return; }
+    } else if (currentWizardStep === 3) {
+      if (parseFloat(document.getElementById('loanAmount').value) <= 0) { showToast('Loan amount must be greater than 0', 'error'); return; }
     }
   }
 
@@ -1300,6 +1323,9 @@ async function executeStep() {
       previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
       loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
       has_collateral: document.getElementById('hasCollateral').checked,
+      loan_purpose: document.getElementById('loanPurpose').value || "general",
+      public_records: parseInt(document.getElementById('publicRecords').value) || 0,
+      credit_inquiries_6mo: parseInt(document.getElementById('inquiries').value) || 0,
       documents_submitted: uploadedFiles
     };
 
@@ -1327,6 +1353,13 @@ async function executeStep() {
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify(applicant)
     });
+
+    if (!response.ok) {
+      const err = await response.json();
+      showToast(err.detail || 'Server error', 'error');
+      return;
+    }
+
     const result = await response.json();
     
     // START SEQUENTIAL UI UPDATE

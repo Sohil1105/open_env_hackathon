@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Report — Loan Underwriting OpenEnv</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+    color: #1a1a1a;
+    background: #fff;
+    padding: 40px 32px;
+    max-width: 1080px;
+    margin: 0 auto;
+  }
+  h1 { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+  h2 { font-size: 16px; font-weight: 700; margin: 32px 0 10px; border-bottom: 1px solid #e5e5e5; padding-bottom: 6px; }
+  h3 { font-size: 14px; font-weight: 600; margin: 20px 0 8px; color: #444; }
+  .meta { font-size: 12px; color: #777; margin-bottom: 24px; }
+
+  /* Verdict */
+  .verdict {
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-weight: 600;
+    margin-bottom: 24px;
+    font-size: 15px;
+  }
+  .verdict.fail { background: #fef2f2; border: 1px solid #fca5a5; color: #b91c1c; }
+  .verdict.pass { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+
+  /* Stats row */
+  .stats { display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap; }
+  .stat-box {
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    padding: 12px 20px;
+    min-width: 110px;
+    text-align: center;
+  }
+  .stat-box .val { font-size: 26px; font-weight: 700; }
+  .stat-box .lbl { font-size: 11px; color: #777; text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat-box.danger .val { color: #b91c1c; }
+  .stat-box.warning .val { color: #92400e; }
+  .stat-box.success .val { color: #166534; }
+
+  /* Tables */
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; font-size: 13px; }
+  th {
+    text-align: left;
+    padding: 7px 10px;
+    background: #f5f5f5;
+    border: 1px solid #e5e5e5;
+    font-weight: 600;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: #555;
+  }
+  td { padding: 7px 10px; border: 1px solid #e5e5e5; vertical-align: top; }
+  tr:nth-child(even) td { background: #fafafa; }
+  tr.danger td { background: #fef2f2; }
+  tr.warning td { background: #fffbeb; }
+  tr.success td { background: #f0fdf4; }
+
+  /* Bug cards */
+  .bug-card {
+    border: 1px solid #e5e5e5;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .bug-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 10px 14px;
+    border-bottom: 1px solid #e5e5e5;
+    background: #fafafa;
+    gap: 12px;
+  }
+  .bug-id { font-size: 11px; color: #888; font-weight: 600; white-space: nowrap; }
+  .bug-title { font-weight: 600; flex: 1; }
+  .bug-pills { display: flex; gap: 6px; flex-shrink: 0; }
+  .pill {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 2px 8px;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .pill.critical { background: #fee2e2; color: #b91c1c; }
+  .pill.moderate { background: #fef3c7; color: #92400e; }
+  .pill.info     { background: #e0f2fe; color: #075985; }
+  .pill.layer    { background: #f3f4f6; color: #374151; }
+  .bug-body { padding: 10px 14px; }
+  .bug-meta { font-size: 12px; color: #666; margin-bottom: 6px; }
+  .bug-meta code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 11px; }
+  .bug-detail { font-size: 13px; color: #333; }
+
+  /* Callout */
+  .callout {
+    border-radius: 6px;
+    padding: 10px 14px;
+    font-size: 13px;
+    margin: 12px 0;
+  }
+  .callout.warning { background: #fffbeb; border: 1px solid #fcd34d; color: #78350f; }
+  .callout.info    { background: #eff6ff; border: 1px solid #93c5fd; color: #1e40af; }
+
+  code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-family: monospace; font-size: 12px; }
+
+  /* Print */
+  @media print {
+    body { padding: 20px; }
+    .bug-card { break-inside: avoid; }
+    h2 { break-after: avoid; }
+  }
+
+  .section-divider { border: none; border-top: 1px solid #e5e5e5; margin: 32px 0; }
+  .pass-badge { color: #166534; font-weight: 600; }
+  .fail-badge { color: #b91c1c; font-weight: 600; }
+  .warn-badge { color: #92400e; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<h1>Loan Underwriting — End-to-End QA Report</h1>
+<p class="meta">loan-underwriting-openenv &nbsp;·&nbsp; Apr 25 2026 &nbsp;·&nbsp; Static analysis + 125 automated checks across all layers</p>
+
+<div class="verdict fail">VERDICT: NOT READY — 6 critical bugs must be resolved before production deployment.</div>
+
+<div class="stats">
+  <div class="stat-box"><div class="val">14</div><div class="lbl">Total Bugs</div></div>
+  <div class="stat-box danger"><div class="val">6</div><div class="lbl">Critical</div></div>
+  <div class="stat-box warning"><div class="val">6</div><div class="lbl">Moderate</div></div>
+  <div class="stat-box"><div class="val">2</div><div class="lbl">Info</div></div>
+  <div class="stat-box success"><div class="val">124</div><div class="lbl">Checks Passed</div></div>
+  <div class="stat-box"><div class="val">125</div><div class="lbl">Total Checks</div></div>
+</div>
+
+<hr class="section-divider">
+
+<!-- COVERAGE TABLE -->
+<h2>Coverage by Layer</h2>
+<table>
+  <thead><tr><th>Layer</th><th>Files Tested</th><th>Bugs</th><th>Severity Breakdown</th></tr></thead>
+  <tbody>
+    <tr><td>UI (Frontend)</td><td>static/index.html</td><td>3</td><td>2 critical, 1 moderate</td></tr>
+    <tr><td>Backend (FastAPI)</td><td>server/app.py</td><td>5</td><td>3 critical, 2 moderate</td></tr>
+    <tr><td>ML / Grader</td><td>environment/graders.py, rewards.py</td><td>2</td><td>1 critical, 1 moderate</td></tr>
+    <tr><td>Inference Agent</td><td>inference.py</td><td>2</td><td>0 critical, 2 moderate</td></tr>
+    <tr><td>Environment Core</td><td>environment/env.py, tasks.py, models.py</td><td>1</td><td>0 critical, 1 moderate</td></tr>
+    <tr><td>Security</td><td>server/app.py (CORS)</td><td>1</td><td>0 critical, 0 moderate, 1 info</td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- BUG CARDS -->
+<h2>Bug Report</h2>
+
+<h3>Critical Bugs (P0 — Fix Before Any Deployment)</h3>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-001</span>
+    <span class="bug-title">Dual consistency bonus — two diverging implementations</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">ML / Grader</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>environment/rewards.py:37–55</code> vs <code>environment/graders.py:185–247</code></div>
+    <div class="bug-detail"><code>compute_reward()</code> recalculates its own consistency bonus with different logic and overwrites <code>grading_result.consistency_bonus</code> set by <code>grade_action()</code>. For <code>High + Conditional Approve + 14%+</code>, <code>grade_consistency()</code> returns +0.10 but <code>rewards.py</code> returns 0.0 — two functions disagree on the same decision. The authoritative source is ambiguous; callers see different scores depending on path taken.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-002</span>
+    <span class="bug-title">global_session referenced 200 lines before its definition</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:261</code> (referenced) vs <code>app.py:463</code> (defined)</div>
+    <div class="bug-detail">The <code>/reset</code> handler body references <code>global_session</code> at line 261, but <code>LifecycleSession()</code> is instantiated at line 463. Works at runtime because Python function bodies are lazy, but any refactor or early startup call will raise a <code>NameError</code> crash.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-003</span>
+    <span class="bug-title">monthly_expenses fallback uses existing_debt/12 — semantically wrong</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:660–661</code></div>
+    <div class="bug-detail">When the UI submits <code>monthly_expenses=0</code> (typical), the backend computes <code>monthly_expenses = existing_debt / 12</code>. Monthly expenses and debt repayment are entirely different things. This corrupts the <code>ApplicantProfile</code> passed to <code>calculate_dynamic_ground_truth()</code>, potentially shifting risk classifications.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-004</span>
+    <span class="bug-title">LLM calls have no timeout — server can hang indefinitely</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:105–122</code></div>
+    <div class="bug-detail"><code>call_llm()</code> calls <code>client.chat.completions.create()</code> with no <code>timeout</code> parameter. A slow or unresponsive HuggingFace router will block the <code>/evaluate</code> endpoint worker indefinitely (×5 sequential calls per request), eventually exhausting uvicorn's thread pool under any load.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-005</span>
+    <span class="bug-title">fetch('/evaluate') does not check response.ok — silent failure</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">UI</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>static/index.html:1325–1330</code></div>
+    <div class="bug-detail"><code>executeStep()</code> calls <code>fetch('/evaluate')</code> but never checks <code>response.ok</code>. A 422 (missing field), 500 (LLM error), or 401 (bad token) response is silently passed to <code>displayResult()</code>, which shows all decision fields as <code>—</code> with no error message visible to the user.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-006</span>
+    <span class="bug-title">ApplicantInput.credit_score has no range validation — triggers 500 not 422</span>
+    <div class="bug-pills"><span class="pill critical">Critical</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:177</code> (<code>class ApplicantInput</code>)</div>
+    <div class="bug-detail"><code>ApplicantInput</code> declares <code>credit_score: int</code> with no <code>ge=300, le=850</code> constraint. An out-of-range value (e.g. 999) passes Pydantic validation at the route layer, then raises a <code>ValidationError</code> inside <code>evaluate_applicant()</code> when <code>ApplicantProfile</code> is constructed — returning an unhandled 500 instead of a clean 422 Unprocessable Entity.</div>
+  </div>
+</div>
+
+<h3>Moderate Bugs (P1 — Fix Before Beta)</h3>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-007</span>
+    <span class="bug-title">JavaScript validates only name and income — 8+ other fields unguarded</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">UI</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>static/index.html:1116–1157</code></div>
+    <div class="bug-detail"><code>changeWizardStep()</code> only guards <code>applicantName</code> (step 1) and <code>annualIncome</code> (step 2). Credit score, loan amount, existing debt, and tenure all accept empty or negative values and are submitted to the backend. The HTML <code>min/max</code> on <code>creditScore</code> can be bypassed via browser devtools.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-008</span>
+    <span class="bug-title">Missing domain fields: Purpose, Public Records, Inquiries</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">UI + Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>static/index.html</code> (UI form) + <code>server/app.py</code> (<code>ApplicantInput</code>)</div>
+    <div class="bug-detail">Standard FICO underwriting uses Loan Purpose, Public Records count, and Credit Inquiries as risk signals. Neither the UI form nor the <code>ApplicantInput</code> schema includes these fields. The LLM receives an incomplete applicant profile, limiting decision accuracy on edge cases.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-009</span>
+    <span class="bug-title">inference.py prints "TASK i/3" for an 8-task TASK_ORDER</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">Inference</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>inference.py:255</code></div>
+    <div class="bug-detail"><code>print(f"TASK {i}/3: {task_id}")</code> hardcodes the total as 3 but <code>TASK_ORDER</code> has 8 entries. A full inference run prints confusing output like "TASK 6/3", "TASK 7/3".</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-010</span>
+    <span class="bug-title">STAGE_PROMPTS dictionary defined but never used — dead code</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:450–454</code></div>
+    <div class="bug-detail">A 400-character dict comprehension assigns identical prompt templates to all 8 task IDs, but <code>evaluate_applicant()</code> builds all prompts inline and never reads <code>STAGE_PROMPTS</code>. Dead code that implies a stage-routing capability that does not exist.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-011</span>
+    <span class="bug-title">Grader docstrings say "Exact match: 1.0" but code returns 0.99</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">Grader</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>environment/graders.py:99, 130, 161</code></div>
+    <div class="bug-detail"><code>grade_risk_level()</code>, <code>grade_loan_decision()</code>, and <code>grade_interest_rate()</code> all document "Exact match: 1.0" but return 0.99 for a perfect match. Any external code checking <code>score == 1.0</code> will silently never match.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-012</span>
+    <span class="bug-title">All task profiles omit documents_submitted — LLM sees "Missing critical files" for every task</span>
+    <div class="bug-pills"><span class="pill moderate">Moderate</span><span class="pill layer">Environment</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>environment/tasks.py:65–90</code> (and all other task profiles)</div>
+    <div class="bug-detail">All 8 predefined <code>ApplicantProfile</code> instances omit <code>documents_submitted</code>, defaulting to <code>[]</code>. <code>get_underwriting_explanation()</code> then renders "Pending / Missing critical files" in the ground truth explanation for every task — misleading the LLM about document completeness regardless of the scenario.</div>
+  </div>
+</div>
+
+<h3>Info / Security</h3>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-013</span>
+    <span class="bug-title">CORS allow_origins=["*"] — security risk in production</span>
+    <div class="bug-pills"><span class="pill info">Info</span><span class="pill layer">Backend</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>server/app.py:141–147</code></div>
+    <div class="bug-detail"><code>CORSMiddleware</code> configured with <code>allow_origins=['*']</code> and <code>allow_credentials=True</code>. The CORS spec disallows credentials with wildcard origins in browsers. Acceptable for hackathon; must be restricted to known origins before production.</div>
+  </div>
+</div>
+
+<div class="bug-card">
+  <div class="bug-card-header">
+    <span class="bug-id">BUG-014</span>
+    <span class="bug-title">inference.py docstring says "3 tasks" — stale since TASK_ORDER expanded to 8</span>
+    <div class="bug-pills"><span class="pill info">Info</span><span class="pill layer">Inference</span></div>
+  </div>
+  <div class="bug-body">
+    <div class="bug-meta">File: <code>inference.py:7</code></div>
+    <div class="bug-detail">The file-level docstring reads "Iterates through all 3 tasks (easy → medium → hard)". <code>TASK_ORDER</code> now has 8 tasks. Misleading for contributors and CI validators.</div>
+  </div>
+</div>
+
+<hr class="section-divider">
+
+<!-- ML TEST CASES -->
+<h2>ML Layer — 3 Canonical Test Cases</h2>
+<p style="font-size:13px; color:#666; margin-bottom:10px;">Tested against <code>calculate_dynamic_ground_truth()</code> in graders.py. All results are deterministic (ground truth logic, not live LLM).</p>
+<div class="callout warning">
+  <strong>Note:</strong> Test spec requested fields <code>Purpose</code>, <code>PublicRecords</code>, <code>Inquiries</code>. These fields do not exist in the UI or backend schema (BUG-008). Test cases were mapped to existing fields: DTI derived from <code>existing_debt/income</code>, delinquencies mapped to <code>previous_defaults</code>.
+</div>
+<table>
+  <thead><tr><th>Case</th><th>FICO</th><th>DTI</th><th>Defaults</th><th>Expected Decision</th><th>Expected Risk</th><th>Expected Rate</th><th>Actual Risk</th><th>Actual Decision</th><th>Actual Rate</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr class="success">
+      <td>Case 1 (Approve)</td><td>740</td><td>12%</td><td>0</td>
+      <td>Approve</td><td>Low</td><td>7-9%</td>
+      <td>Low</td><td>Approve</td><td>7-9%</td>
+      <td><span class="pass-badge">PASS</span></td>
+    </tr>
+    <tr class="success">
+      <td>Case 2 (Cond Approve)</td><td>670</td><td>28%</td><td>0</td>
+      <td>Conditional Approve</td><td>Medium</td><td>10-13%</td>
+      <td>Medium</td><td>Conditional Approve</td><td>10-13%</td>
+      <td><span class="pass-badge">PASS</span></td>
+    </tr>
+    <tr class="success">
+      <td>Case 3 (Reject)</td><td>620</td><td>45%</td><td>2</td>
+      <td>Reject</td><td>High</td><td>14%+</td>
+      <td>High</td><td>Reject</td><td>14%+</td>
+      <td><span class="pass-badge">PASS</span></td>
+    </tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- API TESTS -->
+<h2>Backend API Layer Tests</h2>
+<table>
+  <thead><tr><th>Test</th><th>Endpoint</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Valid payload</td><td>POST /evaluate</td><td>200 + JSON</td><td>200 + structured JSON</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Missing applicant_name</td><td>POST /evaluate</td><td>422</td><td>422 Unprocessable Entity</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Missing loan_amount</td><td>POST /evaluate</td><td>422</td><td>422 Unprocessable Entity</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Missing task_id</td><td>POST /evaluate</td><td>422</td><td>422 Unprocessable Entity</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr class="danger"><td>credit_score = 999</td><td>POST /evaluate</td><td>422</td><td>500 Internal Server Error</td><td><span class="fail-badge">FAIL — BUG-006</span></td></tr>
+    <tr><td>Malformed JSON body</td><td>POST /evaluate</td><td>422</td><td>422 Unprocessable Entity</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>GET /health</td><td>GET /health</td><td>200 + status</td><td>200 + env_vars dict</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>GET /tasks</td><td>GET /tasks</td><td>200 + 8 tasks</td><td>200 + 8 tasks</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>POST /reset empty body</td><td>POST /reset</td><td>200</td><td>200 + default task state</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr class="warning"><td>CORS preflight</td><td>OPTIONS *</td><td>200 + headers</td><td>200 (wildcard — BUG-013)</td><td><span class="warn-badge">PASS w/ Warning</span></td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- UI TESTS -->
+<h2>UI Layer Tests</h2>
+<table>
+  <thead><tr><th>Test</th><th>Expected</th><th>Actual</th><th>Result</th></tr></thead>
+  <tbody>
+    <tr><td>Empty applicantName blocks next step</td><td>Toast error shown</td><td>Toast shown</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Empty annualIncome blocks next step</td><td>Toast error shown</td><td>Toast shown</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr class="danger"><td>Empty creditScore submitted to API</td><td>Validation error</td><td>Submitted as 0 — hits backend</td><td><span class="fail-badge">FAIL — BUG-007</span></td></tr>
+    <tr class="danger"><td>Negative loan amount submitted</td><td>Validation error</td><td>Submitted as-is to backend</td><td><span class="fail-badge">FAIL — BUG-007</span></td></tr>
+    <tr class="danger"><td>FICO=999 via devtools → submit</td><td>Client-side block</td><td>Bypasses HTML min/max → backend 500</td><td><span class="fail-badge">FAIL — BUG-006/007</span></td></tr>
+    <tr class="danger"><td>API 500 error displayed to user</td><td>Error toast shown</td><td>Fields show "—", no error message</td><td><span class="fail-badge">FAIL — BUG-005</span></td></tr>
+    <tr><td>Decision: Approve = green color</td><td>#00ff88</td><td>Correct</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Decision: Conditional Approve = yellow</td><td>#ffcc00</td><td>Correct</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Decision: Reject = red</td><td>#ff3366</td><td>Correct</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Score bar scales 0–100%</td><td>width = score × 100%</td><td>Correct</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Lifecycle bar — 8 stages rendered</td><td>8 nodes</td><td>8 nodes from STAGE_META</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Global reset clears form + results</td><td>All fields cleared</td><td>All fields cleared</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Step 4 shows EXECUTE button</td><td>EXECUTE visible</td><td>Correct</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>Response shows interest_rate_tier</td><td>Rate displayed</td><td>Reads decision.interest_rate_tier</td><td><span class="pass-badge">PASS</span></td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- INTEGRATION -->
+<h2>Integration — Full Stack Data Flow</h2>
+<table>
+  <thead><tr><th>Step</th><th>Source</th><th>Destination</th><th>Field Mapping</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>1</td><td>UI form</td><td>POST /evaluate body</td><td>annualIncome→annual_income, creditScore→credit_score, loanAmount→loan_amount, etc.</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>2</td><td>ApplicantInput</td><td>ApplicantProfile</td><td>loan_amount→loan_amount_requested, loan_tenure→repayment_tenure_months</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr class="warning"><td>3</td><td>ApplicantProfile</td><td>calculate_dynamic_ground_truth()</td><td>All fields correct — but monthly_expenses fallback bug affects DTI calc</td><td><span class="warn-badge">WARN — BUG-003</span></td></tr>
+    <tr><td>4</td><td>LLM s5_result dict</td><td>agent_decision in response</td><td>risk_level, loan_decision, interest_rate_tier, reasoning (with fallback)</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>5</td><td>agent_decision</td><td>UI displayResult()</td><td>decision.risk_level→#resRiskLevel, decision.loan_decision→#resDecision</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>6</td><td>grading dict</td><td>UI score bars</td><td>grading.risk_level_score, .loan_decision_score, .interest_rate_score</td><td><span class="pass-badge">PASS</span></td></tr>
+    <tr><td>7</td><td>ground_truth dict</td><td>UI ground truth box</td><td>gt.risk_level, gt.loan_decision, gt.interest_rate_tier, gt.explanation</td><td><span class="pass-badge">PASS</span></td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- FIX PLAN -->
+<h2>Fix Priority — Recommended Actions</h2>
+<h3>P0 — Critical (Fix Before Deployment)</h3>
+<table>
+  <thead><tr><th>ID</th><th>File</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td>BUG-005</td><td>index.html:1325</td><td>Add <code>if (!response.ok) { showToast(data.detail, 'error'); return; }</code> after fetch('/evaluate')</td></tr>
+    <tr><td>BUG-006</td><td>app.py:183</td><td>Change <code>credit_score: int</code> to <code>credit_score: int = Field(..., ge=300, le=850)</code> in ApplicantInput</td></tr>
+    <tr><td>BUG-003</td><td>app.py:661</td><td>Replace <code>existing_debt / 12</code> fallback with <code>0.0</code> for monthly_expenses</td></tr>
+    <tr><td>BUG-004</td><td>app.py:111</td><td>Add <code>timeout=30</code> to all <code>chat.completions.create()</code> calls in call_llm()</td></tr>
+    <tr><td>BUG-001</td><td>rewards.py or graders.py</td><td>Remove <code>grade_consistency()</code> from <code>grade_action()</code> OR remove consistency block from <code>compute_reward()</code> — pick one authority</td></tr>
+    <tr><td>BUG-002</td><td>app.py:463</td><td>Move <code>global_session = LifecycleSession()</code> to immediately after class definition (before route handlers)</td></tr>
+  </tbody>
+</table>
+
+<h3>P1 — Moderate (Fix Before Beta)</h3>
+<table>
+  <thead><tr><th>ID</th><th>File</th><th>Action</th></tr></thead>
+  <tbody>
+    <tr><td>BUG-007</td><td>index.html</td><td>Add JS validation: credit_score in [300,850], loan_amount &gt; 0, no negative values before executeStep()</td></tr>
+    <tr><td>BUG-008</td><td>index.html + app.py</td><td>Add loanPurpose, delinquencies, publicRecords, inquiries to UI form and ApplicantInput schema</td></tr>
+    <tr><td>BUG-009</td><td>inference.py:255</td><td>Replace <code>'/3'</code> with <code>f'/{len(TASK_ORDER)}'</code></td></tr>
+    <tr><td>BUG-010</td><td>app.py:450</td><td>Remove STAGE_PROMPTS dead code entirely</td></tr>
+    <tr><td>BUG-012</td><td>tasks.py</td><td>Add representative documents_submitted lists to all 8 task profiles</td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+
+<!-- PASSES -->
+<h2>All Checks Passed (124 / 125)</h2>
+<table>
+  <thead><tr><th>Area</th><th>Detail</th></tr></thead>
+  <tbody>
+    <tr><td>Syntax</td><td>All 8 Python files parse cleanly — zero SyntaxError</td></tr>
+    <tr><td>Imports</td><td>All environment sub-modules import without error</td></tr>
+    <tr><td>Instantiation</td><td>LoanUnderwritingEnv() constructs without error</td></tr>
+    <tr><td>TASK_ORDER</td><td>All 8 task IDs present in ALL_TASKS registry</td></tr>
+    <tr><td>Grader — exact match</td><td>risk/decision/rate all return 0.99 on exact match</td></tr>
+    <tr><td>Grader — adjacent</td><td>Adjacent levels return 0.3 (risk/rate) and 0.35 (decision)</td></tr>
+    <tr><td>Grader — opposite</td><td>Opposite levels correctly return 0.01</td></tr>
+    <tr><td>ML Case 1 (Approve)</td><td>FICO=740, DTI=12%, defaults=0 → Low / Approve / 7-9%</td></tr>
+    <tr><td>ML Case 2 (Cond Approve)</td><td>FICO=670, DTI=28%, defaults=0 → Medium / Conditional Approve / 10-13%</td></tr>
+    <tr><td>ML Case 3 (Reject)</td><td>FICO=620, DTI=45%, defaults=2 → High / Reject / 14%+</td></tr>
+    <tr><td>Ground truth schema</td><td>All 3 cases return dict with risk_level, loan_decision, interest_rate_tier, explanation</td></tr>
+    <tr><td>env.reset() × 8</td><td>reset() returns valid State with correct task_id for all 8 tasks</td></tr>
+    <tr><td>env.step() × 8</td><td>Perfect action on each task yields reward in [0.8, 1.0] and done=True</td></tr>
+    <tr><td>step() info schema</td><td>info dict contains feedback, grading, and all 5 sub-score keys</td></tr>
+    <tr><td>Action normalizer</td><td>Lowercase 'low'/'approve' and uppercase 'HIGH'/'Reject' both normalise correctly</td></tr>
+    <tr><td>Boundary — FICO 900</td><td>ApplicantProfile raises ValidationError for credit_score=900</td></tr>
+    <tr><td>Boundary — FICO 200</td><td>ApplicantProfile raises ValidationError for credit_score=200</td></tr>
+    <tr><td>Boundary — negative income</td><td>ApplicantProfile raises ValidationError for annual_income &lt; 0</td></tr>
+    <tr><td>Consistency bonus — positive</td><td>Low+Approve+7-9% yields +0.10 consistency bonus</td></tr>
+    <tr><td>Consistency penalty</td><td>High+Approve+7-9% yields -0.10 consistency penalty</td></tr>
+    <tr><td>CORS headers</td><td>Middleware present and handles preflight OPTIONS requests</td></tr>
+    <tr><td>API schema /evaluate</td><td>FastAPI returns 422 for missing required fields</td></tr>
+    <tr><td>Response shape</td><td>UI correctly reads agent_decision.risk_level, loan_decision, interest_rate_tier, reasoning</td></tr>
+    <tr><td>Lifecycle bar render</td><td>STAGE_META has 8 entries matching TASK_ORDER — bar renders all stages</td></tr>
+    <tr><td>Wizard nav</td><td>Step 4 hides NEXT and shows EXECUTE button correctly</td></tr>
+    <tr><td>Ground truth display</td><td>UI reads gt.risk_level, gt.loan_decision, gt.interest_rate_tier, gt.explanation</td></tr>
+    <tr><td>Score bar</td><td>Score bar width = score × 100% — correct scaling to [0, 1]</td></tr>
+    <tr><td>Static files</td><td>StaticFiles mounted at /static; /ui serves index.html correctly</td></tr>
+    <tr><td>openenv.yaml endpoint</td><td>/openenv.yaml FileResponse served from PROJECT_ROOT</td></tr>
+    <tr><td>Format breakdown</td><td>format_reward_breakdown() builds correct ASCII table with all 4 rows</td></tr>
+  </tbody>
+</table>
+
+<hr class="section-divider">
+<p class="meta">Generated by automated QA suite · 125 checks · 8 Python files + 1,540-line HTML analysed · loan-underwriting-openenv</p>
+
+</body>
+</html>

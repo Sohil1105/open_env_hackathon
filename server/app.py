@@ -29,7 +29,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # ─── Path Setup ──────────────────────────────────────────────────────────────
 # Ensure the project root is on sys.path so `environment` package can be found
@@ -112,7 +112,8 @@ def call_llm(prompt: str, max_tokens: int = 300) -> dict:
             model=local_model_name,
             messages=[{"role": "user", "content": prompt}],
             max_tokens=max_tokens,
-            temperature=0.2
+            temperature=0.2,
+            timeout=30
         )
         raw = response.choices[0].message.content
         logger.info(f"Chain Stage: Received response ({len(raw)} chars)")
@@ -151,6 +152,15 @@ app.add_middleware(
 env = LoanUnderwritingEnv()
 logger.info("LoanUnderwritingEnv initialized successfully.")
 
+class LifecycleSession:
+    current_stage: int = 0
+    completed_stages: list = []
+    stage_scores: dict = {}
+    applicant_profile: dict = {}
+    total_score: float = 0.0
+
+global_session = LifecycleSession()
+
 # ─── Request/Response Models ─────────────────────────────────────────────────
 
 
@@ -178,7 +188,7 @@ class ApplicantInput(BaseModel):
     """Request body for the /evaluate endpoint — applicant details only."""
     applicant_name: str
     annual_income: float
-    credit_score: int
+    credit_score: int = Field(..., ge=300, le=850)
     existing_debt: float
     loan_amount: float
     employment_type: str
@@ -191,6 +201,9 @@ class ApplicantInput(BaseModel):
     has_collateral: bool = False
     previous_defaults: int = 0
     past_defaults: int = 0
+    loan_purpose: str = "general"
+    public_records: int = Field(0, ge=0)
+    credit_inquiries_6mo: int = Field(0, ge=0)
     documents_submitted: Optional[List[str]] = None
     payment_history: Optional[List[str]] = None
 
@@ -447,20 +460,9 @@ async def grade_response(request: GradeRequest):
 import json
 import re
 
-STAGE_PROMPTS = { k: '\nYou are an Advanced Autonomous Bank Underwriting Agent. Your mission is to replace the manual, multi-department loan approval process with a high-speed AI pipeline.\n\nPerform the full evaluation by processing the applicant through these 5 professional banking stages:\n\nSTAGE 1: DOCUMENTATION & IDENTITY VERIFICATION\n- Review the applicant\'s profile for completeness.\n- The applicant has submitted: {documents_submitted}.\n- Confirm if these documents satisfy requirements for this profile.\n\nSTAGE 2: CREDIT CHARACTER ASSESSMENT\n- Evaluate the Credit Score ({credit_score}) and Past Defaults ({past_defaults}). \n- Analyze their reliability as a borrower.\n\nSTAGE 3: CAPACITY & CAPITAL ANALYSIS\n- Calculate the Debt-to-Income (DTI) ratio (Existing Debt: {existing_debt} / Annual Income: {annual_income}).\n- Assess if their income provides enough "Capacity" to repay the requested Loan Amount ({loan_amount}).\n- Consider their "Capital" (employment stability and years of experience).\n\nSTAGE 4: COLLATERAL & CONDITIONS\n- Evaluate if "Collateral" ({has_collateral}) is provided to secure the loan.\n- Check "Conditions": Is the loan tenure ({loan_tenure} months) and interest rate tier appropriate for current market conditions?\n\nSTAGE 5: FINAL UNDERWRITING DECISION\n- Synthesize all findings into a final Risk Level and Loan Decision.\n\nApplicant Profile:\n{profile}\n\nRespond STRICTLY in JSON format with this structure:\n{{\n    "risk_level": "Low" | "Medium" | "High",\n    "loan_decision": "Approve" | "Conditional Approve" | "Reject",\n    "interest_rate_tier": "7-9%" | "10-13%" | "14%+",\n    "requested_documents": ["list", "of", "required", "docs"],\n    "reasoning": "A comprehensive report covering all 5 stages in detail."\n}}\n' for k in [
-    "lead_qualification_sales", "document_verification_hr", "easy_salaried_high_credit",
-    "medium_self_employed_moderate", "hard_freelancer_complex", "customer_onboarding_pm",
-    "bankruptcy_recovery_edge1", "joint_applicants_edge2"
-] }
 
-class LifecycleSession:
-    current_stage: int = 0
-    completed_stages: list = []
-    stage_scores: dict = {}
-    applicant_profile: dict = {}
-    total_score: float = 0.0
 
-global_session = LifecycleSession()
+
 
 def get_stage_number(task_id):
     try:
@@ -658,7 +660,7 @@ async def evaluate_applicant(applicant: ApplicantInput):
         employment_years=applicant.employment_years,
         repayment_tenure_months=applicant.loan_tenure,
         age=applicant.age,
-        monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else (applicant.existing_debt / 12),
+        monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else 0.0,
         has_collateral=applicant.has_collateral,
         previous_defaults=applicant.previous_defaults,
         documents_submitted=applicant.documents_submitted or []

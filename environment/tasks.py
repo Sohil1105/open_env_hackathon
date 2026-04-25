@@ -75,6 +75,7 @@ EASY_TASK = TaskDefinition(
         monthly_expenses=45_000.0,        # Manageable expenses
         has_collateral=True,              # Has collateral
         previous_defaults=0,             # No defaults
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.LOW,
@@ -122,6 +123,7 @@ MEDIUM_TASK = TaskDefinition(
         monthly_expenses=38_000.0,         # Significant expenses
         has_collateral=True,               # Has collateral (mitigating factor)
         previous_defaults=1,              # One previous default (red flag)
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.MEDIUM,
@@ -173,6 +175,7 @@ HARD_TASK = TaskDefinition(
         monthly_expenses=32_000.0,          # Expenses eating into income
         has_collateral=False,               # No collateral
         previous_defaults=2,               # Multiple previous defaults
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.HIGH,
@@ -218,6 +221,7 @@ BANKRUPTCY_TASK = TaskDefinition(
         monthly_expenses=2_500.0,
         has_collateral=False,
         previous_defaults=1,
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.MEDIUM,
@@ -259,6 +263,7 @@ JOINT_APP_TASK = TaskDefinition(
         monthly_expenses=4_000.0,
         has_collateral=True,
         previous_defaults=0,
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.LOW,
@@ -308,6 +313,7 @@ LEAD_QUALIFICATION_TASK = TaskDefinition(
         monthly_expenses=35_000.0,
         has_collateral=True,
         previous_defaults=0,
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.LOW,
@@ -357,6 +363,7 @@ DOCUMENT_VERIFICATION_TASK = TaskDefinition(
         monthly_expenses=30_000.0,
         has_collateral=False,              # No collateral docs
         previous_defaults=1,              # Past default
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.MEDIUM,
@@ -408,6 +415,7 @@ CUSTOMER_ONBOARDING_TASK = TaskDefinition(
         monthly_expenses=42_000.0,
         has_collateral=True,
         previous_defaults=0,
+        documents_submitted=["pay_stub", "bank_statement", "id_proof"],
     ),
     ground_truth=GroundTruth(
         risk_level=RiskLevel.LOW,

@@ -251,7 +251,7 @@ def main():
     # Iterate through all tasks in order
     for i, task_id in enumerate(TASK_ORDER, 1):
         print(f"{'─' * 70}")
-        print(f"📋 TASK {i}/3: {task_id}")
+        print(f"📋 TASK {i}/{len(TASK_ORDER)}: {task_id}")
         print(f"{'─' * 70}")
 
         task_start_time = time.time()

@@ -34,25 +34,7 @@ def compute_reward(action: Action, ground_truth: GroundTruth) -> tuple[float, Gr
     )
 
     # Consistency modifier
-    consistency_bonus = 0.0
-    if action is not None:
-        risk = action.risk_level
-        decision = action.loan_decision
-        rate = action.interest_rate_tier
-
-        # Consistent combinations
-        if risk == RiskLevel.LOW and decision == LoanDecision.APPROVE and rate == InterestRateTier.LOW:
-            consistency_bonus = 0.1
-        elif risk == RiskLevel.MEDIUM and decision == LoanDecision.CONDITIONAL_APPROVE and rate == InterestRateTier.MEDIUM:
-            consistency_bonus = 0.1
-        elif risk == RiskLevel.HIGH and decision == LoanDecision.REJECT and rate == InterestRateTier.HIGH:
-            consistency_bonus = 0.1
-
-        # Contradictory combinations
-        if (risk == RiskLevel.LOW and decision == LoanDecision.REJECT) or \
-           (risk == RiskLevel.HIGH and decision == LoanDecision.APPROVE) or \
-           (risk == RiskLevel.HIGH and rate == InterestRateTier.LOW):
-            consistency_bonus = -0.1
+    consistency_bonus = grading_result.consistency_bonus
 
     # Clamp final score strictly between 0 and 1
     reward = max(0.01, min(0.99, base_score + consistency_bonus))

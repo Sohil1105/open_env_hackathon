@@ -115,7 +115,7 @@ def grade_risk_level(predicted: RiskLevel, expected: RiskLevel) -> float:
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 0.99
+        return 1.0
     elif distance == 1:
         return 0.3  # Partial credit for adjacent classification
     else:
@@ -145,7 +145,7 @@ def grade_loan_decision(predicted: LoanDecision, expected: LoanDecision) -> floa
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 0.99
+        return 1.0
     elif distance == 1:
         return 0.35  # Partial credit — at least in the right direction
     else:
@@ -175,7 +175,7 @@ def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier)
     distance = abs(pred_ord - exp_ord)
 
     if distance == 0:
-        return 0.99
+        return 1.0
     elif distance == 1:
         return 0.3  # Partial credit for adjacent tier
     else:
