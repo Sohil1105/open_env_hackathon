@@ -13,6 +13,9 @@ uvicorn[standard]>=0.24.0,<1.0.0
 # OpenAI client for the inference script (LLM agent)
 openai>=2.7.2
 
+# Environment variable management
+python-dotenv>=1.0.0
+
 # PyYAML for loading openenv.yaml
 pyyaml>=6.0,<7.0
 

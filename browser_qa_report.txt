@@ -1,0 +1,179 @@
+NEXUS BANK — Browser QA Report
+Generated: 2026-04-25 20:39:16
+Target: http://localhost:8000/ui
+======================================================================
+
+
+----------------------------------------------------------------------
+  SUITE 1 — Initial Load & Visual Checks
+----------------------------------------------------------------------
+           [SCREENSHOT] screenshot_load.png
+[20:38:34.615] [PASS]     [VIS-01] Page title contains 'NEXUS BANK'
+           └─ Title: 'NEXUS BANK // Loan Lifecycle Command Center'
+[20:38:34.625] [PASS]     [VIS-02-1] Wizard step indicator 1 is visible
+[20:38:34.630] [PASS]     [VIS-02-2] Wizard step indicator 2 is visible
+[20:38:34.637] [PASS]     [VIS-02-3] Wizard step indicator 3 is visible
+[20:38:34.640] [PASS]     [VIS-02-4] Wizard step indicator 4 is visible
+[20:38:34.647] [PASS]     [VIS-03] Step 1 field visible: Applicant Name input
+[20:38:34.652] [PASS]     [VIS-03] Step 1 field visible: Age input
+[20:38:34.655] [PASS]     [VIS-03] Step 1 field visible: Employment select
+[20:38:34.660] [PASS]     [VIS-03] Step 1 field visible: Job History input
+[20:38:34.665] [PASS]     [VIS-03] Step 1 field visible: Loan Purpose input
+[20:38:34.670] [PASS]     [VIS-04] Step 1 labels present: 5 found
+[20:38:34.675] [PASS]     [VIS-05] EXECUTE (START UNDERWRITING) button hidden on Step 1
+[20:38:34.681] [PASS]     [VIS-06] NEXT button visible on Step 1
+[20:38:34.688] [PASS]     [VIS-07] BACK button disabled on Step 1
+[20:38:34.697] [PASS]     [VIS-08] Dark background (#0a0a0f) confirmed
+           └─ Got: rgb(10, 10, 15)
+[20:38:34.700] [PASS]     [VIS-09] Neon primary accent #00ff88 confirmed on status dot
+           └─ Got: rgb(0, 255, 136)
+[20:38:34.703] [PASS]     [VIS-10] No <img> tags found (icons are CSS/emoji, no broken images)
+[20:38:34.708] [PASS]     [VIS-11] Particle canvas (#particleCanvas) is present in DOM
+[20:38:34.713] [PASS]     [VIS-12] Lifecycle bar has 8 stages as expected
+[20:38:34.718] [PASS]     [VIS-13] System status reads 'SYSTEM ONLINE'
+[20:38:34.725] [PASS]     [VIS-14] NEXUS BANK glitch title rendered
+[20:38:34.738] [PASS]     [VIS-15] Global RESET button visible in top bar
+[20:38:34.745] [PASS]     [VIS-16] Terminal Input panel visible
+[20:38:34.749] [PASS]     [VIS-16] Decision Display panel visible
+
+----------------------------------------------------------------------
+  SUITE 2 — Form Interaction: Happy Path (Full Underwriting Flow)
+----------------------------------------------------------------------
+[20:38:35.131] [PASS]     [FORM-01] Step 1 filled: name=John Doe, age=35, employment=salaried, purpose=home improvement
+[20:38:35.693] [PASS]     [FORM-02] Advanced from Step 1 to Step 2
+[20:38:36.146] [PASS]     [FORM-03] Step 2 filled: income=85000, credit=740, debt=30000, defaults=0, records=0, inquiries=0
+[20:38:36.710] [PASS]     [FORM-04] Advanced from Step 2 to Step 3
+[20:38:36.847] [PASS]     [FORM-05] Step 3 filled: loan_amount=250000, tenure=36
+[20:38:37.435] [PASS]     [FORM-06] Advanced from Step 3 to Step 4 (Document Upload)
+[20:38:37.440] [PASS]     [FORM-07] EXECUTE (START UNDERWRITING) button visible on Step 4
+[20:38:37.444] [PASS]     [FORM-08] NEXT button correctly hidden on Step 4
+[20:38:37.444] [INFO]     [FORM-09] Clicking START UNDERWRITING - this may take 10-30s for LLM response...
+           [SCREENSHOT] screenshot_result.png
+[20:38:53.423] [PASS]     [FORM-09] Result panel became visible after EXECUTE
+[20:38:53.425] [FAIL]     [FORM-10] Result field 'risk_level' is empty or default
+           └─ Got: '—'
+[20:38:53.429] [FAIL]     [FORM-10] Result field 'loan_decision' is empty or default
+           └─ Got: '—'
+[20:38:53.434] [FAIL]     [FORM-10] Result field 'interest_rate_tier' is empty or default
+           └─ Got: '—'
+[20:38:53.437] [PASS]     [FORM-10] Result field 'reasoning' populated
+           └─ Value: 'Stage failed: Error code: 401 - {'error': 'Invalid username or password.'}'
+[20:38:53.446] [WARN]     [FORM-11] Unexpected decision text: '—'
+[20:38:53.450] [PASS]     [FORM-12] Score bar has width > 0%
+           └─ Width: 99.0%
+[20:38:53.456] [PASS]     [FORM-13] Lifecycle bar shows 8 stages after execution
+[20:38:53.460] [PASS]     [FORM-14] Lifecycle bar shows 5 completed stages
+[20:38:53.464] [PASS]     [FORM-15] Ground Truth box is visible
+
+----------------------------------------------------------------------
+  SUITE 3 — Validation & Negative Tests
+----------------------------------------------------------------------
+           [SCREENSHOT] screenshot_validation_1.png
+[20:38:55.320] [PASS]     [VAL-01] Empty name → toast error appears
+           └─ Toast: 'Please enter Applicant Name'
+           [SCREENSHOT] screenshot_validation_2.png
+[20:38:56.949] [PASS]     [VAL-02] FICO=999 → toast error appears
+           └─ Toast: 'FICO must be 300–850'
+           [SCREENSHOT] screenshot_validation_3.png
+[20:38:58.325] [PASS]     [VAL-03] loan_amount=0 → toast error appears
+           └─ Toast: 'Loan amount must be greater than 0'
+           [SCREENSHOT] screenshot_validation_4.png
+[20:39:03.687] [WARN]     [VAL-04] Negative debt blocked navigation but no toast detected
+
+----------------------------------------------------------------------
+  SUITE 4 — Global Reset Check
+----------------------------------------------------------------------
+[20:39:07.346] [PASS]     [RST-01] applicantName cleared after global reset
+[20:39:07.346] [PASS]     [RST-02] annualIncome cleared after global reset
+[20:39:07.357] [PASS]     [RST-03] Wizard returned to Step 1 after global reset
+[20:39:07.363] [PASS]     [RST-04] Waiting state shown after reset (result panel cleared)
+[20:39:07.367] [PASS]     [RST-05] Result content hidden after reset
+[20:39:07.369] [PASS]     [RST-06] EXECUTE button hidden after reset (on step 1)
+           [SCREENSHOT] screenshot_reset.png
+
+----------------------------------------------------------------------
+  SUITE 5 — Accessibility Checks
+----------------------------------------------------------------------
+[20:39:07.617] [PASS]     [ACC-01] All 12 inputs have labels or placeholders
+[20:39:07.632] [PASS]     [ACC-02] All 4 buttons have readable text
+[20:39:07.634] [PASS]     [ACC-03] No accidental password-type inputs found
+[20:39:07.651] [PASS]     [ACC-04] Tab key navigates between focusable elements
+           └─ First: #applicantName, Second: #applicantAge
+[20:39:07.666] [PASS]     [ACC-05] Navigation button 'BACK' has readable text: 'BACK'
+[20:39:07.666] [PASS]     [ACC-05] Navigation button 'NEXT' has readable text: 'NEXT'
+[20:39:07.666] [PASS]     [ACC-05] Navigation button 'EXECUTE' has readable text: '▶ START UNDERWRITING'
+
+----------------------------------------------------------------------
+  SUITE 6 — Console Error / Warning Summary
+----------------------------------------------------------------------
+[20:39:07.666] [PASS]     [CON-01] No JS console errors or warnings detected during session
+
+----------------------------------------------------------------------
+  SUITE 7 — Network Request Summary
+----------------------------------------------------------------------
+[20:39:07.666] [INFO]     [NET-01] Total network requests captured: 12
+[20:39:07.666] [INFO]     [NET-01] API (server) requests: 8
+[20:39:07.666] [PASS]     [NET-02] No 4xx/5xx HTTP errors in any network request
+[20:39:07.666] [PASS]     [NET-03] No requests exceeded 20 000ms timeout
+[20:39:07.666] [INFO]     [NET-04] GET http://localhost:8000/ui → 200 (321ms)
+[20:39:07.666] [INFO]     [NET-04] GET http://localhost:8000/tasks → 200 (12ms)
+[20:39:07.666] [INFO]     [NET-04] GET http://localhost:8000/health → 200 (7ms)
+[20:39:07.666] [INFO]     [NET-04] POST http://localhost:8000/evaluate → 200 (4718ms)
+[20:39:07.666] [INFO]     [NET-04] POST http://localhost:8000/reset → 200 (1005ms)
+[20:39:07.666] [INFO]     [NET-04] POST http://localhost:8000/reset → 200 (805ms)
+[20:39:07.666] [INFO]     [NET-04] POST http://localhost:8000/reset → 200 (802ms)
+[20:39:07.666] [INFO]     [NET-04] POST http://localhost:8000/reset → 200 (1002ms)
+
+----------------------------------------------------------------------
+  SUITE 8 — Additional UI & Edge Checks
+----------------------------------------------------------------------
+[20:39:08.178] [PASS]     [RESP-01] No horizontal overflow on mobile viewport (375px)
+[20:39:11.115] [PASS]     [UI-01] File upload zone is visible on Step 4
+[20:39:14.705] [PASS]     [UI-02] File upload simulation works — file item appeared
+           └─ Toast: ''
+[20:39:15.274] [PASS]     [UI-03] Step 1 indicator is active after reset
+[20:39:16.070] [PASS]     [UI-04] Step 1 indicator marked 'completed' after advancing to Step 2
+[20:39:16.070] [PASS]     [UI-05] Step 2 indicator marked 'active' after advancing
+[20:39:16.073] [PASS]     [UI-06] Lifecycle bar has 7 connectors (correct for 8 stages)
+[20:39:16.625] [PASS]     [UI-07] Score bar correctly shows 0% after reset
+[20:39:16.632] [PASS]     [UI-08] ENV label present in top bar: 'ENV: loan-lifecycle-v2.0'
+[20:39:16.637] [PASS]     [UI-09] Subtitle text present: 'LONG-HORIZON LOAN LIFECYCLE COMMAND CENTER'
+
+======================================================================
+  FINAL SUMMARY
+======================================================================
+  Total Checks : 72
+  [PASS]       : 67
+  [FAIL]       : 3
+  [WARN]       : 2
+
+  Screenshots:
+    - screenshot_load.png
+    - screenshot_result.png
+    - screenshot_validation_1.png
+    - screenshot_validation_2.png
+    - screenshot_validation_3.png
+    - screenshot_validation_4.png
+    - screenshot_reset.png
+
+  Console Errors / Warnings: 0
+
+  Network Requests (15 total):
+    GET    200      321ms  http://localhost:8000/ui
+    GET    200     3024ms  https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap
+    GET    200       12ms  http://localhost:8000/tasks
+    GET    200        7ms  http://localhost:8000/health
+    GET    200      233ms  https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD7OwE.woff2
+    GET    200      233ms  https://fonts.gstatic.com/s/orbitron/v35/yMJRMIlzdpvBhQQL_Qq7dy0.woff2
+    GET    200      507ms  https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbV2o-flEEny0FZhsfKu5WU4xD1OwG_TA.woff2
+    POST   200     4718ms  http://localhost:8000/evaluate
+    POST   200     1005ms  http://localhost:8000/reset
+    POST   200      805ms  http://localhost:8000/reset
+    POST   200      802ms  http://localhost:8000/reset
+    POST   200     1002ms  http://localhost:8000/reset
+    POST   200      503ms  http://localhost:8000/reset
+    POST   200      506ms  http://localhost:8000/reset
+    POST   200      506ms  http://localhost:8000/reset
+
+  FINAL VERDICT: FAIL
+======================================================================

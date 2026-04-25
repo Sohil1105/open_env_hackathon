@@ -1149,7 +1149,10 @@ function changeWizardStep(delta) {
       }
       const cs = parseInt(document.getElementById('creditScore').value);
       if (isNaN(cs) || cs < 300 || cs > 850) { showToast('FICO must be 300–850', 'error'); return; }
-      if (parseFloat(document.getElementById('existingDebt').value) < 0) { showToast('Debt cannot be negative', 'error'); return; }
+      if (parseFloat(document.getElementById('existingDebt').value) < 0) {
+        showToast('Debt cannot be negative', 'error');
+        return;
+      }
     } else if (currentWizardStep === 3) {
       if (parseFloat(document.getElementById('loanAmount').value) <= 0) { showToast('Loan amount must be greater than 0', 'error'); return; }
     }

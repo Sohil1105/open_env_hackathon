@@ -15,12 +15,18 @@ It wraps the existing app.py logic, providing all endpoints:
 - POST /grade         -> Grade a response for a given task_id
 """
 
+import asyncio
+from functools import partial
 import os
 import sys
 import json
 import logging
 import re
 from typing import Optional, List
+
+from dotenv import load_dotenv
+load_dotenv()
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 from openai import OpenAI
 
@@ -29,7 +35,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 # ─── Path Setup ──────────────────────────────────────────────────────────────
 # Ensure the project root is on sys.path so `environment` package can be found
@@ -79,6 +85,9 @@ for var, st in env_status.items():
     level = logging.INFO if "SET" in st and "NOT" not in st else logging.WARNING
     logger.log(level, f"  {var}: {st}")
 
+if not HF_TOKEN:
+    print("WARNING: HF_TOKEN not set — LLM calls will fail with 401")
+
 def _get_api_client():
     """
     Helper to initialize OpenAI client with correct Hugging Face pathing.
@@ -97,23 +106,28 @@ def _get_api_client():
         logger.warning("⚠️ HF_TOKEN is empty. AI Agent will likely fail with 401 Unauthorized.")
 
     # Create client
-    return OpenAI(base_url=base_url, api_key=key if key else "missing-token"), model
+    return OpenAI(base_url=base_url, api_key=HF_TOKEN if HF_TOKEN else "missing-token"), model
 
 
 client, MODEL_NAME = _get_api_client()
 
-def call_llm(prompt: str, max_tokens: int = 300) -> dict:
+async def call_llm(prompt: str, max_tokens: int = 300) -> dict:
     """Single LLM call with robust parsing for multi-stage chains."""
     try:
         local_client, local_model_name = _get_api_client()
         logger.info(f"Chain Stage: Calling {local_model_name}")
         
-        response = local_client.chat.completions.create(
-            model=local_model_name,
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=max_tokens,
-            temperature=0.2,
-            timeout=30
+        loop = asyncio.get_event_loop()
+        response = await loop.run_in_executor(
+            None,
+            partial(
+                local_client.chat.completions.create,
+                model=local_model_name,
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=max_tokens,
+                temperature=0.2,
+                timeout=30
+            )
         )
         raw = response.choices[0].message.content
         logger.info(f"Chain Stage: Received response ({len(raw)} chars)")
@@ -124,6 +138,8 @@ def call_llm(prompt: str, max_tokens: int = 300) -> dict:
 
 
 
+
+evaluate_semaphore = asyncio.Semaphore(3)
 
 # ─── FastAPI Application ─────────────────────────────────────────────────────
 
@@ -141,7 +157,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://localhost:8000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -153,11 +169,12 @@ env = LoanUnderwritingEnv()
 logger.info("LoanUnderwritingEnv initialized successfully.")
 
 class LifecycleSession:
-    current_stage: int = 0
-    completed_stages: list = []
-    stage_scores: dict = {}
-    applicant_profile: dict = {}
-    total_score: float = 0.0
+    def __init__(self):
+        self.current_stage = 0
+        self.completed_stages = []
+        self.stage_scores = {}
+        self.applicant_profile = {}
+        self.total_score = 0.0
 
 global_session = LifecycleSession()
 
@@ -186,11 +203,11 @@ class GradeRequest(BaseModel):
 
 class ApplicantInput(BaseModel):
     """Request body for the /evaluate endpoint — applicant details only."""
-    applicant_name: str
-    annual_income: float
+    applicant_name: str = Field(..., min_length=1)
+    annual_income: float = Field(..., gt=0, description="Annual income must be greater than 0")
     credit_score: int = Field(..., ge=300, le=850)
     existing_debt: float
-    loan_amount: float
+    loan_amount: float = Field(..., gt=0, description="Loan amount must be greater than 0")
     employment_type: str
     employment_years: float = 0.0
     job_history_years: float = 0.0
@@ -206,6 +223,14 @@ class ApplicantInput(BaseModel):
     credit_inquiries_6mo: int = Field(0, ge=0)
     documents_submitted: Optional[List[str]] = None
     payment_history: Optional[List[str]] = None
+
+    @field_validator("applicant_name")
+    @classmethod
+    def strip_name(cls, v):
+        stripped = v.strip()
+        if not stripped:
+            raise ValueError("applicant_name cannot be empty or whitespace")
+        return stripped
 
 
 # ─── Health Check Endpoints ──────────────────────────────────────────────────
@@ -270,10 +295,11 @@ async def reset_environment(request: Request):
                 if isinstance(body, dict):
                     task_id = body.get("task_id", None)
                     
-                    if task_id == TASK_ORDER[0]:
-                        global_session.applicant_profile = {}
-                        global_session.completed_stages = []
-                        global_session.stage_scores = {}
+                    global_session.completed_stages = []
+                    global_session.stage_scores = {}
+                    global_session.applicant_profile = {}
+                    global_session.total_score = 0.0
+                    global_session.current_stage = 0
                         
                     custom_profile_data = body.get("custom_profile", None)
                     if custom_profile_data:
@@ -557,96 +583,97 @@ async def evaluate_applicant(applicant: ApplicantInput):
     history = []
     stage_results = []
 
-    # ── STAGE 1: Identity & Documentation ──
-    s1_prompt = f"""
-    You are a bank compliance officer. Review applicant identity and documents.
-    APPLICANT: {profile}
-    DOCUMENTS: {", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"}
+    async with evaluate_semaphore:
+        # ── STAGE 1: Identity & Documentation ──
+        s1_prompt = f"""
+        You are a bank compliance officer. Review applicant identity and documents.
+        APPLICANT: {profile}
+        DOCUMENTS: {", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"}
 
-    Respond ONLY in JSON:
-    {{
-      "document_status": "Complete" | "Incomplete" | "Suspicious",
-      "flags": ["list any red flags"],
-      "confidence": 0.0-1.0,
-      "reasoning": "one sentence summary"
-    }}
-    """
-    s1_result = call_llm(s1_prompt)
-    history.append(f"STAGE 1 (Docs): {s1_result.get('document_status', 'N/A')} - {s1_result.get('reasoning', '')}")
-    stage_results.append({"stage": 1, "name": "Documentation", "result": s1_result})
+        Respond ONLY in JSON:
+        {{
+          "document_status": "Complete" | "Incomplete" | "Suspicious",
+          "flags": ["list any red flags"],
+          "confidence": 0.0-1.0,
+          "reasoning": "one sentence summary"
+        }}
+        """
+        s1_result = await call_llm(s1_prompt)
+        history.append(f"STAGE 1 (Docs): {s1_result.get('document_status', 'N/A')} - {s1_result.get('reasoning', '')}")
+        stage_results.append({"stage": 1, "name": "Documentation", "result": s1_result})
 
-    # ── STAGE 2: Credit Character ──
-    s2_prompt = f"""
-    You are a credit analyst. Previous check: {history[-1]}
-    Analyze borrower reliability and character.
-    APPLICANT: {profile}
+        # ── STAGE 2: Credit Character ──
+        s2_prompt = f"""
+        You are a credit analyst. Previous check: {history[-1]}
+        Analyze borrower reliability and character.
+        APPLICANT: {profile}
 
-    Respond ONLY in JSON:
-    {{
-      "credit_character": "Strong" | "Average" | "Weak",
-      "credit_score_assessment": "one sentence",
-      "risk_indicator": "Low" | "Medium" | "High",
-      "reasoning": "one sentence"
-    }}
-    """
-    s2_result = call_llm(s2_prompt)
-    history.append(f"STAGE 2 (Credit): {s2_result.get('credit_character', 'N/A')} - {s2_result.get('reasoning', '')}")
-    stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_result})
+        Respond ONLY in JSON:
+        {{
+          "credit_character": "Strong" | "Average" | "Weak",
+          "credit_score_assessment": "one sentence",
+          "risk_indicator": "Low" | "Medium" | "High",
+          "reasoning": "one sentence"
+        }}
+        """
+        s2_result = await call_llm(s2_prompt)
+        history.append(f"STAGE 2 (Credit): {s2_result.get('credit_character', 'N/A')} - {s2_result.get('reasoning', '')}")
+        stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_result})
 
-    # ── STAGE 3: Capacity & DTI ──
-    s3_prompt = f"""
-    You are a financial analyst. Previous: {' | '.join(history)}
-    Analyze repayment capacity and DTI.
-    APPLICANT: {profile}
+        # ── STAGE 3: Capacity & DTI ──
+        s3_prompt = f"""
+        You are a financial analyst. Previous: {' | '.join(history)}
+        Analyze repayment capacity and DTI.
+        APPLICANT: {profile}
 
-    Respond ONLY in JSON:
-    {{
-      "dti_assessment": "Healthy" | "Borderline" | "Overextended",
-      "monthly_emi_feasible": true | false,
-      "capacity_score": 0.0-1.0,
-      "reasoning": "one sentence"
-    }}
-    """
-    s3_result = call_llm(s3_prompt)
-    history.append(f"STAGE 3 (Capacity): {s3_result.get('dti_assessment', 'N/A')} - {s3_result.get('reasoning', '')}")
-    stage_results.append({"stage": 3, "name": "Capacity & DTI", "result": s3_result})
+        Respond ONLY in JSON:
+        {{
+          "dti_assessment": "Healthy" | "Borderline" | "Overextended",
+          "monthly_emi_feasible": true | false,
+          "capacity_score": 0.0-1.0,
+          "reasoning": "one sentence"
+        }}
+        """
+        s3_result = await call_llm(s3_prompt)
+        history.append(f"STAGE 3 (Capacity): {s3_result.get('dti_assessment', 'N/A')} - {s3_result.get('reasoning', '')}")
+        stage_results.append({"stage": 3, "name": "Capacity & DTI", "result": s3_result})
 
-    # ── STAGE 4: Collateral & Conditions ──
-    s4_prompt = f"""
-    You are a senior loan officer. Previous: {' | '.join(history)}
-    Assess collateral and loan conditions.
-    APPLICANT: {profile}
+        # ── STAGE 4: Collateral & Conditions ──
+        s4_prompt = f"""
+        You are a senior loan officer. Previous: {' | '.join(history)}
+        Assess collateral and loan conditions.
+        APPLICANT: {profile}
 
-    Respond ONLY in JSON:
-    {{
-      "collateral_status": "Strong" | "Adequate" | "Insufficient",
-      "market_conditions": "Favorable" | "Neutral" | "Unfavorable",
-      "preliminary_decision": "Approve" | "Conditional Approve" | "Reject",
-      "reasoning": "one sentence"
-    }}
-    """
-    s4_result = call_llm(s4_prompt)
-    history.append(f"STAGE 4 (Collateral): {s4_result.get('collateral_status', 'N/A')} - {s4_result.get('reasoning', '')}")
-    stage_results.append({"stage": 4, "name": "Collateral", "result": s4_result})
+        Respond ONLY in JSON:
+        {{
+          "collateral_status": "Strong" | "Adequate" | "Insufficient",
+          "market_conditions": "Favorable" | "Neutral" | "Unfavorable",
+          "preliminary_decision": "Approve" | "Conditional Approve" | "Reject",
+          "reasoning": "one sentence"
+        }}
+        """
+        s4_result = await call_llm(s4_prompt)
+        history.append(f"STAGE 4 (Collateral): {s4_result.get('collateral_status', 'N/A')} - {s4_result.get('reasoning', '')}")
+        stage_results.append({"stage": 4, "name": "Collateral", "result": s4_result})
 
-    # ── STAGE 5: Final Underwriting Verdict ──
-    s5_prompt = f"""
-    You are the Chief Credit Officer. Complete analysis from all 4 previous stages:
-    {chr(10).join(history)}
+        # ── STAGE 5: Final Underwriting Verdict ──
+        s5_prompt = f"""
+        You are the Chief Credit Officer. Complete analysis from all 4 previous stages:
+        {chr(10).join(history)}
 
-    APPLICANT: {profile}
-    Make the FINAL decision.
+        APPLICANT: {profile}
+        Make the FINAL decision.
 
-    Respond ONLY in JSON:
-    {{
-      "risk_level": "Low" | "Medium" | "High",
-      "loan_decision": "Approve" | "Conditional Approve" | "Reject",
-      "interest_rate_tier": "7-9%" | "10-13%" | "14%+",
-      "reasoning": "Comprehensive 2-3 sentence final report referencing key stage findings."
-    }}
-    """
-    s5_result = call_llm(s5_prompt, max_tokens=500)
-    stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_result})
+        Respond ONLY in JSON:
+        {{
+          "risk_level": "Low" | "Medium" | "High",
+          "loan_decision": "Approve" | "Conditional Approve" | "Reject",
+          "interest_rate_tier": "7-9%" | "10-13%" | "14%+",
+          "reasoning": "Comprehensive 2-3 sentence final report referencing key stage findings."
+        }}
+        """
+        s5_result = await call_llm(s5_prompt, max_tokens=500)
+        stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_result})
 
     # ── Grading Logic ──
     # Build profile for grading

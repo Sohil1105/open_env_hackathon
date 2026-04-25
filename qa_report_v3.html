@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QA Report v3 — Nexus Bank Advanced Stress, Load &amp; Live Deployment</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#0a0a0f;--surface:#0f1923;--surface-alt:#141e2b;
+  --primary:#00ff88;--secondary:#7b2fff;--accent:#ff6b35;
+  --danger:#ff3366;--gold:#ffcc00;--border:#1a2a3a;
+  --text:#e0e0ff;--text-dim:#6a7a8a;
+  --mono:'JetBrains Mono','Fira Code',monospace
+}
+body{background:var(--bg);color:var(--text);font-family:var(--mono);padding:2rem;line-height:1.5}
+h1{font-size:1.6rem;color:var(--primary);letter-spacing:4px;text-transform:uppercase;margin-bottom:.25rem}
+.sub{color:var(--text-dim);font-size:.78rem;letter-spacing:2px;margin-bottom:1.5rem}
+.verdict-box{padding:1rem 2rem;border-radius:8px;font-size:1.1rem;font-weight:700;letter-spacing:3px;
+  text-align:center;margin-bottom:1.5rem;text-transform:uppercase;
+  background:rgba(255,204,0,.1);color:#ffcc00;border:2px solid #ffcc00}
+.meta{display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.mbox{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:.8rem 1.2rem;text-align:center;min-width:85px}
+.mnum{font-size:1.9rem;font-weight:700}
+.mlabel{font-size:.6rem;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-top:.2rem}
+.pc{color:var(--primary)}.fc{color:var(--danger)}.wc{color:var(--gold)}.sc{color:var(--secondary)}
+.sec{font-size:.8rem;color:var(--secondary);letter-spacing:3px;text-transform:uppercase;
+  margin:2rem 0 .8rem;padding-bottom:.4rem;border-bottom:1px solid var(--border)}
+table{width:100%;border-collapse:collapse;margin-bottom:1.5rem;font-size:.76rem}
+th{background:var(--surface-alt);color:var(--text-dim);padding:.55rem .75rem;text-align:left;
+  font-size:.62rem;letter-spacing:2px;text-transform:uppercase;border-bottom:2px solid var(--border)}
+td{padding:.48rem .75rem;border-bottom:1px solid var(--border);vertical-align:top}
+.pass-row{background:rgba(0,255,136,.02)}.fail-row{background:rgba(255,51,102,.05)}
+.pass{color:var(--primary);font-weight:700}.fail{color:var(--danger);font-weight:700}
+.warn{color:var(--gold);font-weight:700}
+.badge{padding:.15rem .5rem;border-radius:3px;font-size:.62rem;font-weight:700;letter-spacing:1px}
+.ba{background:rgba(123,47,255,.25);color:#b08fff}
+.bb{background:rgba(255,107,53,.25);color:#ff9a76}
+.bc{background:rgba(0,255,136,.25);color:#00ff88}
+code{background:rgba(255,255,255,.06);padding:.1rem .3rem;border-radius:3px;font-family:var(--mono);font-size:.85em}
+.note{color:#7a8a9a;font-size:.7rem;font-style:italic}
+.sev-high{color:#ff3366;font-weight:700}.sev-med{color:#ffcc00;font-weight:700}.sev-low{color:#7b7b9a;font-weight:700}
+.pill{display:inline-block;padding:.15rem .6rem;border-radius:20px;font-size:.65rem;font-weight:700;letter-spacing:1px}
+.pill-pass{background:rgba(0,255,136,.15);color:#00ff88;border:1px solid rgba(0,255,136,.3)}
+.pill-fail{background:rgba(255,51,102,.15);color:#ff3366;border:1px solid rgba(255,51,102,.3)}
+.pill-warn{background:rgba(255,204,0,.15);color:#ffcc00;border:1px solid rgba(255,204,0,.3)}
+.section-summary{display:flex;gap:.5rem;align-items:center;margin-bottom:.6rem;flex-wrap:wrap}
+.section-summary .label{font-size:.7rem;color:var(--text-dim);letter-spacing:1px}
+footer{margin-top:3rem;color:var(--text-dim);font-size:.65rem;text-align:center;letter-spacing:2px;padding-top:1rem;border-top:1px solid var(--border)}
+.toc{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:1rem 1.5rem;margin-bottom:1.5rem;font-size:.78rem}
+.toc a{color:var(--primary);text-decoration:none;margin-right:1.5rem}
+.toc a:hover{text-decoration:underline}
+h2{font-size:1rem;color:var(--gold);letter-spacing:2px;text-transform:uppercase;margin:1.5rem 0 .5rem}
+</style>
+</head>
+<body>
+
+<h1>&#9670; NEXUS BANK QA REPORT v3</h1>
+<p class="sub">Advanced Stress &middot; Load &middot; Live Deployment &mdash; 2026-04-25 14:14:16</p>
+
+<div class="verdict-box">&#9888; FINAL VERDICT: READY WITH WARNINGS</div>
+
+<!-- ── Meta Stats ── -->
+<div class="meta">
+  <div class="mbox"><div class="mnum pc">88</div><div class="mlabel">Passed</div></div>
+  <div class="mbox"><div class="mnum fc">17</div><div class="mlabel">Failed</div></div>
+  <div class="mbox"><div class="mnum">105</div><div class="mlabel">Total Tests</div></div>
+  <div class="mbox"><div class="mnum wc">84%</div><div class="mlabel">Pass Rate</div></div>
+  <div class="mbox"><div class="mnum fc">11</div><div class="mlabel">Bugs Found</div></div>
+  <div class="mbox"><div class="mnum sc">v3</div><div class="mlabel">Report</div></div>
+</div>
+
+<!-- ── TOC ── -->
+<div class="toc">
+  <strong style="color:var(--text-dim);font-size:.7rem;letter-spacing:2px;text-transform:uppercase">JUMP TO:</strong>&nbsp;&nbsp;
+  <a href="#perf">Performance</a>
+  <a href="#suite-a">Suite A &ndash; Edge Cases</a>
+  <a href="#suite-b">Suite B &ndash; Load</a>
+  <a href="#suite-c">Suite C &ndash; Deployment</a>
+  <a href="#bugs">Bugs</a>
+  <a href="#remediation">Remediation</a>
+</div>
+
+<!-- ── Performance Table ── -->
+<div class="sec" id="perf">&#9889; Performance Table</div>
+<table>
+  <tr><th>Endpoint / Test</th><th>Avg Latency</th><th>Max Latency</th><th>Success Rate</th><th>Threshold</th><th>Status</th></tr>
+  <tr class="pass-row">
+    <td>/evaluate &mdash; concurrent &times;10</td><td>31,155ms</td><td>42,067ms</td><td>6/10</td><td>&lt;30,000ms avg</td>
+    <td><span class="pill pill-fail">FAIL</span></td>
+  </tr>
+  <tr class="pass-row">
+    <td>/evaluate &mdash; sequential &times;15</td><td>10,940ms</td><td>42,100ms</td><td>14/15</td><td>&lt;30,000ms avg</td>
+    <td><span class="pill pill-pass">PASS</span></td>
+  </tr>
+  <tr class="fail-row">
+    <td>/health &mdash; concurrent &times;50</td><td>2,049ms</td><td>&mdash;</td><td>50/50</td><td>&lt;100ms avg</td>
+    <td><span class="pill pill-fail">FAIL</span></td>
+  </tr>
+  <tr class="fail-row">
+    <td>/tasks &mdash; concurrent &times;50</td><td>2,064ms</td><td>&mdash;</td><td>50/50</td><td>&lt;100ms avg</td>
+    <td><span class="pill pill-fail">FAIL</span></td>
+  </tr>
+  <tr class="pass-row">
+    <td>C3 Case 1 (FICO=740, DTI=12%)</td><td>15,959ms</td><td>15,959ms</td><td>1/1</td><td>&lt;30,000ms</td>
+    <td><span class="pill pill-pass">PASS</span></td>
+  </tr>
+  <tr class="pass-row">
+    <td>C3 Case 2 (FICO=670, DTI=28%)</td><td>14,380ms</td><td>14,380ms</td><td>1/1</td><td>&lt;30,000ms</td>
+    <td><span class="pill pill-pass">PASS</span></td>
+  </tr>
+  <tr class="pass-row">
+    <td>C3 Case 3 (FICO=580, DTI=90%)</td><td>10,272ms</td><td>10,272ms</td><td>1/1</td><td>&lt;30,000ms</td>
+    <td><span class="pill pill-pass">PASS</span></td>
+  </tr>
+</table>
+<p class="note" style="margin-top:-.8rem;margin-bottom:1rem">
+  &nbsp;&nbsp;<strong>Note on /health &amp; /tasks latency:</strong> 2049ms avg is caused by uvicorn running in single-process mode with synchronous <code>call_llm()</code> blocking the event loop during concurrent /evaluate requests.
+  When server is idle, /health returns in &lt;5ms. Root cause: BUG-PERF-1 (synchronous LLM calls inside async endpoints).
+</p>
+
+<!-- ── SUITE A ── -->
+<div class="sec" id="suite-a">&#129514; Suite A &ndash; Edge Case Stress Tests</div>
+<div class="section-summary">
+  <span class="label">PASS/FAIL:</span>
+  <span class="pill pill-pass">A1: 4/4</span>
+  <span class="pill pill-fail">A2: 4/5</span>
+  <span class="pill pill-fail">A3: 2/4</span>
+  <span class="pill pill-fail">A4: 3/4</span>
+  <span class="pill pill-pass">A5: 4/4</span>
+  <span class="pill pill-pass">A6: 4/4</span>
+  <span class="pill pill-pass">A7: 24/24</span>
+  <span class="pill pill-pass">A8: 6/6</span>
+  <span class="pill pill-fail">STATIC: 0/5</span>
+</div>
+<table>
+  <tr><th>Suite</th><th>ID</th><th>Test Name</th><th>Result</th><th>Actual</th><th>Expected</th><th>Notes</th></tr>
+
+  <!-- STATIC -->
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>STATIC-1</code></td><td>LifecycleSession uses instance-level mutable attrs</td><td class="fail">FAIL</td><td>class-level list/dict</td><td>__init__ instance vars</td><td class="note">Design flaw — latent shared-state bug</td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>STATIC-2</code></td><td>/reset always clears global_session</td><td class="fail">FAIL</td><td>partial reset for task1 only</td><td>unconditional reset</td><td class="note">State leak if /reset called without task_id</td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>STATIC-3</code></td><td>loan_amount has gt=0 backend constraint</td><td class="fail">FAIL</td><td>no gt/ge constraint</td><td>Field(..., gt=0)</td><td class="note">JS-only guard — bypassed by direct API</td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>STATIC-4</code></td><td>annual_income has gt=0 backend constraint</td><td class="fail">FAIL</td><td>no gt/ge constraint</td><td>Field(..., gt=0)</td><td class="note">Returns 500 not 422 on income=0</td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>STATIC-5</code></td><td>applicant_name has min_length=1 constraint</td><td class="fail">FAIL</td><td>no min_length constraint</td><td>Field(..., min_length=1)</td><td class="note">Empty names silently accepted</td></tr>
+
+  <!-- A1 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.1</code></td><td>FICO=300 &rarr; 200 OK</td><td class="pass">PASS [6067ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.1b</code></td><td>FICO=300 &rarr; High/Reject ground truth</td><td class="pass">PASS</td><td>High/Reject</td><td>High/Reject</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.2</code></td><td>FICO=850 &rarr; 200 OK</td><td class="pass">PASS [6160ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.2b</code></td><td>FICO=850 &rarr; Low/Approve ground truth</td><td class="pass">PASS</td><td>Low/Approve</td><td>Low/Approve</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.3</code></td><td>FICO=299 &rarr; 422</td><td class="pass">PASS [2041ms]</td><td>422</td><td>422</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A1.4</code></td><td>FICO=851 &rarr; 422</td><td class="pass">PASS [2068ms]</td><td>422</td><td>422</td><td></td></tr>
+
+  <!-- A2 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A2.1</code></td><td>DTI&gt;100% (income=1, debt=999999) &rarr; no crash</td><td class="pass">PASS [9160ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A2.1b</code></td><td>DTI&gt;100% &rarr; Reject ground truth</td><td class="pass">PASS</td><td>Reject</td><td>Reject</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>A2.2</code></td><td>annual_income=0 &rarr; 422</td><td class="fail">FAIL [7649ms]</td><td><strong>500</strong></td><td>422</td><td class="note">BUG-A2: returns 500 instead of clean 422 — unhandled ZeroDivisionError</td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A2.3</code></td><td>DTI=0% (income=999999999, debt=0) &rarr; 200 OK</td><td class="pass">PASS [6102ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A2.3b</code></td><td>DTI=0% &rarr; Approve ground truth</td><td class="pass">PASS</td><td>Approve</td><td>Approve</td><td></td></tr>
+
+  <!-- A3 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A3.1</code></td><td>loan_amount=1 &rarr; 200 OK</td><td class="pass">PASS [6176ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A3.2</code></td><td>loan_amount=999999999 &rarr; 200 (no overflow)</td><td class="pass">PASS [6783ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>A3.3</code></td><td>loan_amount=0 &rarr; 422</td><td class="fail">FAIL [9746ms]</td><td><strong>500</strong></td><td>422</td><td class="note">BUG-A3a: backend returns 500 — only JS-side guard exists</td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>A3.4</code></td><td>loan_amount=-1 &rarr; 422</td><td class="fail">FAIL [6663ms]</td><td><strong>500</strong></td><td>422</td><td class="note">BUG-A3b: negative loan amounts not blocked by backend</td></tr>
+
+  <!-- A4 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A4.1</code></td><td>XSS in applicant_name &rarr; no crash</td><td class="pass">PASS [7122ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A4.1b</code></td><td>XSS stored as plain text (not executed)</td><td class="pass">PASS</td><td>&lt;script&gt; in JSON text</td><td>plain text OK</td><td class="note">Stored safely as string, not eval'd</td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A4.2</code></td><td>SQL injection in loan_purpose &rarr; no crash</td><td class="pass">PASS [8806ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge ba">A</span></td><td><code>A4.3</code></td><td>applicant_name='' &rarr; 422</td><td class="fail">FAIL [6985ms]</td><td><strong>200</strong></td><td>422</td><td class="note">BUG-A4a: empty name accepted — no min_length constraint</td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A4.4</code></td><td>applicant_name=' ' (whitespace-only)</td><td class="warn">WARN [7765ms]</td><td>200 (accepted)</td><td>422 or sanitized</td><td class="note">BUG-A4b: whitespace passes — no strip/min_length check (LOW severity)</td></tr>
+
+  <!-- A5 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A5.1</code></td><td>public_records=-1 &rarr; 422</td><td class="pass">PASS [2016ms]</td><td>422</td><td>422</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A5.2</code></td><td>credit_inquiries_6mo=-1 &rarr; 422</td><td class="pass">PASS [2066ms]</td><td>422</td><td>422</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A5.3</code></td><td>public_records=999 &rarr; 200 (no crash)</td><td class="pass">PASS [8049ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A5.4</code></td><td>loan_purpose='' &rarr; 200 (default 'general')</td><td class="pass">PASS [7117ms]</td><td>200</td><td>200</td><td></td></tr>
+
+  <!-- A6 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A6.1</code></td><td>Consistency: Low+Approve+7-9% &rarr; bonus=+0.10</td><td class="pass">PASS</td><td>+0.10</td><td>+0.10</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A6.2</code></td><td>Consistency: High+Approve+7-9% &rarr; bonus=-0.10</td><td class="pass">PASS</td><td>-0.10</td><td>-0.10</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A6.3</code></td><td>Consistency: Med+CondApprove+10-13% &rarr; bonus=+0.10</td><td class="pass">PASS</td><td>+0.10</td><td>+0.10</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A6.4</code></td><td>Consistency: High+Reject+7-9% &rarr; bonus=0.00</td><td class="pass">PASS</td><td>0.00</td><td>0.00</td><td class="note">+0.05 (Reject) + -0.05 (low rate) = 0</td></tr>
+
+  <!-- A7 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.1</code></td><td>Task 1: lead_qualification_sales &rarr; 200</td><td class="pass">PASS [7686ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.2</code></td><td>Task 2: document_verification_hr &rarr; 200</td><td class="pass">PASS [7495ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.3</code></td><td>Task 3: easy_salaried_high_credit &rarr; 200</td><td class="pass">PASS [6084ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.4</code></td><td>Task 4: medium_self_employed_moderate &rarr; 200</td><td class="pass">PASS [7251ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.5</code></td><td>Task 5: hard_freelancer_complex &rarr; 200</td><td class="pass">PASS [8071ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.6</code></td><td>Task 6: customer_onboarding_pm &rarr; 200</td><td class="pass">PASS [9260ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.7</code></td><td>Task 7: bankruptcy_recovery_edge1 &rarr; 200</td><td class="pass">PASS [8437ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.8</code></td><td>Task 8: joint_applicants_edge2 &rarr; 200</td><td class="pass">PASS [7867ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.1-8b</code></td><td>All 8 tasks: documents_submitted non-empty</td><td class="pass">PASS (8/8)</td><td>8/8</td><td>8/8</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A7.1-8c</code></td><td>All 8 tasks: valid response schema</td><td class="pass">PASS (8/8)</td><td>8/8</td><td>8/8</td><td></td></tr>
+
+  <!-- A8 -->
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.1</code></td><td>Submit task 1 &rarr; 200</td><td class="pass">PASS [7837ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.2</code></td><td>POST /reset &rarr; 200</td><td class="pass">PASS [2042ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.3</code></td><td>POST /reset &rarr; status=reset_complete</td><td class="pass">PASS</td><td>reset_complete</td><td>reset_complete</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.4</code></td><td>Submit task 2 after reset &rarr; 200</td><td class="pass">PASS [6670ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.5</code></td><td>Task 2 has valid agent_decision (no bleed)</td><td class="pass">PASS</td><td>True</td><td>True</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge ba">A</span></td><td><code>A8.6</code></td><td>/health still 200 after reset cycle</td><td class="pass">PASS</td><td>200</td><td>200</td><td></td></tr>
+</table>
+
+<!-- ── SUITE B ── -->
+<div class="sec" id="suite-b">&#9889; Suite B &ndash; Load &amp; Performance Tests</div>
+<div class="section-summary">
+  <span class="label">PASS/FAIL:</span>
+  <span class="pill pill-fail">B1: 0/2</span>
+  <span class="pill pill-warn">B2: 2/3</span>
+  <span class="pill pill-pass">B3: 4/4</span>
+  <span class="pill pill-warn">B4: 1/3</span>
+  <span class="pill pill-fail">B5: 2/4</span>
+</div>
+<table>
+  <tr><th>Suite</th><th>ID</th><th>Test Name</th><th>Result</th><th>Actual</th><th>Expected</th><th>Notes</th></tr>
+
+  <!-- B1 -->
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B1.1</code></td><td>10 concurrent /evaluate &rarr; all 200</td><td class="fail">FAIL</td><td>6/10 (4 TIMEOUT)</td><td>10/10</td><td class="note">BUG-PERF-2: concurrent 5-stage LLM chains overload HF router (30s timeout fires)</td></tr>
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B1.2</code></td><td>Avg response &lt;30000ms</td><td class="fail">FAIL</td><td>avg=31155ms min=7021ms max=42067ms</td><td>&lt;30000ms</td><td class="note">Timeout contaminated avg; 6 successes averaged ~9800ms</td></tr>
+
+  <!-- B2 -->
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B2.1</code></td><td>15 sequential /evaluate &rarr; all succeed</td><td class="fail">FAIL</td><td>14/15 (req1 TIMEOUT 42100ms)</td><td>15/15</td><td class="note">First req hit timeout from B1 congestion; reqs 2-15 all 200</td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B2.2</code></td><td>All responses have valid schema</td><td class="pass">PASS</td><td>True</td><td>True</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B2.3</code></td><td>Avg sequential response &lt;30000ms</td><td class="pass">PASS</td><td>avg=10940ms</td><td>&lt;30000ms</td><td></td></tr>
+
+  <!-- B3 -->
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B3.1</code></td><td>call_llm() has timeout=30 parameter</td><td class="pass">PASS</td><td>True</td><td>True</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B3.2</code></td><td>call_llm() has try/except error handler</td><td class="pass">PASS</td><td>True</td><td>True</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B3.3</code></td><td>Request completes within 35s</td><td class="pass">PASS</td><td>&lt;36s</td><td>&lt;36s</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B3.4</code></td><td>Response is clean JSON (not traceback)</td><td class="pass">PASS</td><td>clean JSON</td><td>no traceback</td><td></td></tr>
+
+  <!-- B4 -->
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B4.1</code></td><td>No 500 errors in evaluate under concurrent load</td><td class="pass">PASS</td><td>no 500s</td><td>no 500s</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B4.2</code></td><td>No 500 errors in reset under concurrent load</td><td class="fail">FAIL</td><td>['ERROR', 'ERROR']</td><td>no 500s</td><td class="note">BUG-PERF-3: /reset connection refused when server event loop blocked by concurrent LLM tasks</td></tr>
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B4.3</code></td><td>Reset responses are 200</td><td class="fail">FAIL</td><td>['ERROR', 'ERROR']</td><td>[200]&times;2</td><td class="note">Same root cause as B4.2</td></tr>
+
+  <!-- B5 -->
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B5.1</code></td><td>50 concurrent /health &rarr; all 200</td><td class="pass">PASS</td><td>50/50</td><td>50/50</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B5.2</code></td><td>/health avg response &lt;100ms</td><td class="fail">FAIL</td><td>avg=2049ms</td><td>&lt;100ms</td><td class="note">BUG-PERF-1: synchronous LLM calls block uvicorn event loop. Idle /health is &lt;5ms.</td></tr>
+  <tr class="pass-row"><td><span class="badge bb">B</span></td><td><code>B5.3</code></td><td>50 concurrent /tasks &rarr; all 200</td><td class="pass">PASS</td><td>50/50</td><td>50/50</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge bb">B</span></td><td><code>B5.4</code></td><td>/tasks avg response &lt;100ms</td><td class="fail">FAIL</td><td>avg=2064ms</td><td>&lt;100ms</td><td class="note">Same root cause as B5.2 — event loop starvation</td></tr>
+</table>
+
+<!-- ── SUITE C ── -->
+<div class="sec" id="suite-c">&#127968; Suite C &ndash; Live Deployment Tests</div>
+<div class="section-summary">
+  <span class="label">PASS/FAIL:</span>
+  <span class="pill pill-pass">C1: 3/3</span>
+  <span class="pill pill-pass">C2: 4/4</span>
+  <span class="pill pill-pass">C3: 6/6</span>
+  <span class="pill pill-pass">C4: 4/4</span>
+  <span class="pill pill-fail">C5: 3/4</span>
+  <span class="pill pill-pass">C6: 5/5</span>
+</div>
+<table>
+  <tr><th>Suite</th><th>ID</th><th>Test Name</th><th>Result</th><th>Actual</th><th>Expected</th><th>Notes</th></tr>
+
+  <!-- C1 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C1.1</code></td><td>Server up &mdash; /health returns 200</td><td class="pass">PASS</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C1.2</code></td><td>/health has status='ok'</td><td class="pass">PASS</td><td>ok</td><td>ok</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C1.3</code></td><td>/health lists 8 available tasks</td><td class="pass">PASS</td><td>8</td><td>8</td><td></td></tr>
+
+  <!-- C2 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C2.1</code></td><td>GET /ui &rarr; 200 HTML</td><td class="pass">PASS</td><td>200 text/html</td><td>200 HTML</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C2.2</code></td><td>GET /static/index.html &rarr; 200</td><td class="pass">PASS</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C2.3</code></td><td>GET /openenv.yaml &rarr; 200 YAML</td><td class="pass">PASS</td><td>200 text/yaml</td><td>200 text/yaml</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C2.4</code></td><td>GET /nonexistent &rarr; 404 (not 500)</td><td class="pass">PASS</td><td>404</td><td>404</td><td></td></tr>
+
+  <!-- C3 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.1</code></td><td>Case 1: FICO=740, DTI=12% &rarr; 200</td><td class="pass">PASS [15959ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.1b</code></td><td>Case 1 ground truth: Low/Approve/7-9%</td><td class="pass">PASS</td><td>Low/Approve/7-9%</td><td>Low/Approve/7-9%</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.2</code></td><td>Case 2: FICO=670, DTI=28% &rarr; 200</td><td class="pass">PASS [14380ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.2b</code></td><td>Case 2 ground truth: Medium risk</td><td class="pass">PASS</td><td>Medium/*/10-13%</td><td>Medium</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.3</code></td><td>Case 3: FICO=580, DTI=90%, 2 defaults &rarr; 200</td><td class="pass">PASS [10272ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C3.3b</code></td><td>Case 3 ground truth: High/Reject/14%+</td><td class="pass">PASS</td><td>High/Reject/14%+</td><td>High/Reject/14%+</td><td></td></tr>
+
+  <!-- C4 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C4.1</code></td><td>HF_TOKEN visible in /health (masked)</td><td class="pass">PASS</td><td>NOT SET (reported)</td><td>SET or NOT SET</td><td class="note">HF_TOKEN not configured — LLM calls fail gracefully</td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C4.2</code></td><td>No raw secrets in /health response</td><td class="pass">PASS</td><td>len=7 &lt;50</td><td>&lt;50 chars</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C4.3</code></td><td>MODEL_NAME reported in /health</td><td class="pass">PASS</td><td>NOT SET (reported)</td><td>present</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C4.4</code></td><td>API_BASE_URL or fallback reported</td><td class="pass">PASS</td><td>fallback used</td><td>present</td><td class="note">Default HF router URL applied when not set</td></tr>
+
+  <!-- C5 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C5.1</code></td><td>OPTIONS preflight &rarr; 200 or 204</td><td class="pass">PASS</td><td>200</td><td>200 or 204</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C5.2</code></td><td>CORS Access-Control-Allow-Origin present</td><td class="pass">PASS</td><td>*</td><td>*</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C5.3</code></td><td>CORS Allow-Methods present</td><td class="pass">PASS</td><td>*</td><td>includes POST</td><td></td></tr>
+  <tr class="fail-row"><td><span class="badge bc">C</span></td><td><code>C5.4</code></td><td>WARN: allow_origins=* + allow_credentials=True</td><td class="fail">FAIL</td><td>wildcard+creds=True</td><td>False</td><td class="note">BUG-C5: browsers reject credentialed requests to wildcard origins per CORS spec</td></tr>
+
+  <!-- C6 -->
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C6.1</code></td><td>Initial evaluate succeeds</td><td class="pass">PASS [8955ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C6.2</code></td><td>POST /reset &rarr; 200</td><td class="pass">PASS [2052ms]</td><td>200</td><td>200</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C6.3</code></td><td>Reset returns status=reset_complete</td><td class="pass">PASS</td><td>reset_complete</td><td>reset_complete</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C6.4</code></td><td>Reset returns state with observation</td><td class="pass">PASS</td><td>True</td><td>True</td><td></td></tr>
+  <tr class="pass-row"><td><span class="badge bc">C</span></td><td><code>C6.5</code></td><td>Post-reset evaluate succeeds (no state bleed)</td><td class="pass">PASS [8593ms]</td><td>200</td><td>200</td><td></td></tr>
+</table>
+
+<!-- ── Bugs ── -->
+<div class="sec" id="bugs">&#128027; Bugs Found (11 Total)</div>
+<table>
+  <tr><th>ID</th><th>File</th><th>Line/Location</th><th>Severity</th><th>Description</th><th>Triggered By</th></tr>
+
+  <tr class="fail-row">
+    <td><code>BUG-STATIC-3</code></td><td>server/app.py</td><td>ApplicantInput.loan_amount ~L192</td>
+    <td><span class="sev-high">HIGH</span></td>
+    <td>loan_amount has no <code>gt=0</code> backend constraint. Backend accepts 0 and negative values &mdash; JS-only guard is trivially bypassed by direct API calls. Returns 500 instead of clean 422.</td>
+    <td>A3.3, A3.4</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-STATIC-4</code></td><td>server/app.py</td><td>ApplicantInput.annual_income ~L188</td>
+    <td><span class="sev-high">HIGH</span></td>
+    <td>annual_income has no <code>gt=0</code> backend constraint. income=0 causes ZeroDivisionError path in grader returning 500 instead of 422. graders.py has a guard but the error surfaces before it.</td>
+    <td>A2.2</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-PERF-1</code></td><td>server/app.py</td><td>evaluate_applicant() ~L543</td>
+    <td><span class="sev-high">HIGH</span></td>
+    <td>Synchronous <code>call_llm()</code> called 5&times; inside an async FastAPI endpoint. This blocks uvicorn's event loop during each LLM call, starving /health, /tasks, and /reset. /health latency degrades from &lt;5ms idle to 2049ms under load.</td>
+    <td>B5.2, B5.4, B4.2</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-PERF-2</code></td><td>server/app.py</td><td>call_llm() + evaluate_applicant()</td>
+    <td><span class="sev-high">HIGH</span></td>
+    <td>10 concurrent /evaluate requests trigger 50 simultaneous LLM API calls. HF router rate-limits or times out 4 of 10. Root cause: no request queuing or concurrency limiting on /evaluate.</td>
+    <td>B1.1, B1.2</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-STATIC-2</code></td><td>server/app.py</td><td>reset_environment() ~L272-276</td>
+    <td><span class="sev-med">MEDIUM</span></td>
+    <td>global_session is only cleared when <code>task_id == TASK_ORDER[0]</code>. POST /reset with empty body does NOT reset global_session &mdash; completed_stages, stage_scores, and applicant_profile can leak between sessions.</td>
+    <td>A8 (masked), STATIC-2</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-STATIC-1</code></td><td>server/app.py</td><td>LifecycleSession class ~L155-162</td>
+    <td><span class="sev-med">MEDIUM</span></td>
+    <td>LifecycleSession declares mutable <code>completed_stages: list = []</code> and <code>stage_scores: dict = {}</code> as class-level attributes. These are shared across all instances. While one global instance exists now, this is a latent shared-state bug.</td>
+    <td>STATIC-1</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-C5</code></td><td>server/app.py</td><td>CORSMiddleware ~L142-148</td>
+    <td><span class="sev-med">MEDIUM</span></td>
+    <td><code>allow_origins=["*"]</code> combined with <code>allow_credentials=True</code> violates CORS spec. Browsers reject credentialed requests (cookies, auth headers) to wildcard origins. All credentialed cross-origin requests silently fail in browsers.</td>
+    <td>C5.4</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-STATIC-5</code></td><td>server/app.py</td><td>ApplicantInput.applicant_name ~L188</td>
+    <td><span class="sev-med">MEDIUM</span></td>
+    <td>applicant_name has no <code>min_length</code> constraint. Empty strings (<code>""</code>) are accepted, processed, and passed to LLM prompt, resulting in a nonsensical applicant named "". Should return 422.</td>
+    <td>A4.3</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-PERF-3</code></td><td>server/app.py</td><td>uvicorn config</td>
+    <td><span class="sev-med">MEDIUM</span></td>
+    <td>Under concurrent evaluate load, /reset returns connection errors. Root cause: single-worker uvicorn + blocked event loop from synchronous LLM calls causes new connections to be refused when the connection queue is full.</td>
+    <td>B4.2, B4.3</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-A2</code></td><td>server/app.py</td><td>evaluate_applicant() + ApplicantInput</td>
+    <td><span class="sev-high">HIGH</span></td>
+    <td>annual_income=0 reaches grader with income=0. Despite grader guard <code>dti = (debt/income) if income&gt;0 else 1.0</code>, the 500 fires due to ApplicantProfile validation (annual_income: float = Field(..., gt=0) in ApplicantProfile but not in ApplicantInput).</td>
+    <td>A2.2</td>
+  </tr>
+  <tr class="fail-row">
+    <td><code>BUG-A4b</code></td><td>server/app.py</td><td>ApplicantInput.applicant_name</td>
+    <td><span class="sev-low">LOW</span></td>
+    <td>Whitespace-only applicant_name (<code>"   "</code>) passes validation and is used in LLM prompt. No strip() or min_length check applied. Degrades LLM context quality.</td>
+    <td>A4.4</td>
+  </tr>
+</table>
+
+<!-- ── Remediation ── -->
+<div class="sec" id="remediation">&#128203; Remediation Guide (Priority Order)</div>
+<table>
+  <tr><th>#</th><th>Bug ID</th><th>Priority</th><th>File</th><th>Fix</th></tr>
+  <tr>
+    <td>1</td><td><code>BUG-PERF-1</code></td><td><span class="sev-high">HIGH</span></td><td>server/app.py</td>
+    <td>Wrap <code>call_llm()</code> with <code>asyncio.get_event_loop().run_in_executor(None, ...)</code> or use <code>httpx</code> async client. Prevents event loop blocking.</td>
+  </tr>
+  <tr>
+    <td>2</td><td><code>BUG-STATIC-3 + BUG-A3</code></td><td><span class="sev-high">HIGH</span></td><td>server/app.py L192</td>
+    <td>Change <code>loan_amount: float</code> to <code>loan_amount: float = Field(..., gt=0, description="...")</code> in ApplicantInput. Returns 422 with detail instead of 500.</td>
+  </tr>
+  <tr>
+    <td>3</td><td><code>BUG-STATIC-4 + BUG-A2</code></td><td><span class="sev-high">HIGH</span></td><td>server/app.py L188</td>
+    <td>Change <code>annual_income: float</code> to <code>annual_income: float = Field(..., gt=0, description="...")</code> in ApplicantInput. Matches the constraint already on ApplicantProfile.</td>
+  </tr>
+  <tr>
+    <td>4</td><td><code>BUG-PERF-2</code></td><td><span class="sev-high">HIGH</span></td><td>server/app.py</td>
+    <td>Add request queue or semaphore: <code>semaphore = asyncio.Semaphore(3)</code> in evaluate_applicant. Or run uvicorn with <code>--workers 4</code> for multi-process mode.</td>
+  </tr>
+  <tr>
+    <td>5</td><td><code>BUG-C5</code></td><td><span class="sev-med">MEDIUM</span></td><td>server/app.py L142</td>
+    <td>Replace <code>allow_origins=["*"]</code> with <code>allow_origins=["http://localhost:3000", "http://localhost:8000"]</code>, or set <code>allow_credentials=False</code>.</td>
+  </tr>
+  <tr>
+    <td>6</td><td><code>BUG-STATIC-2</code></td><td><span class="sev-med">MEDIUM</span></td><td>server/app.py L272</td>
+    <td>Move the 3 global_session reset lines <em>outside</em> the <code>if task_id == TASK_ORDER[0]:</code> guard — reset on every /reset call regardless of task_id.</td>
+  </tr>
+  <tr>
+    <td>7</td><td><code>BUG-STATIC-5 + BUG-A4a</code></td><td><span class="sev-med">MEDIUM</span></td><td>server/app.py L188</td>
+    <td>Add <code>min_length=1</code>: <code>applicant_name: str = Field(..., min_length=1)</code>. Optionally add a validator to strip and re-check: <code>@field_validator("applicant_name") def strip_name(cls, v): return v.strip() or raise ValueError</code>.</td>
+  </tr>
+  <tr>
+    <td>8</td><td><code>BUG-STATIC-1</code></td><td><span class="sev-med">MEDIUM</span></td><td>server/app.py L155</td>
+    <td>Add <code>__init__</code> to LifecycleSession: <code>def __init__(self): self.current_stage=0; self.completed_stages=[]; self.stage_scores={}; self.applicant_profile={}; self.total_score=0.0</code></td>
+  </tr>
+</table>
+
+<!-- ── Footer ── -->
+<footer>
+  NEXUS BANK QA SUITE v3 &middot; 105 Tests &middot; 88 PASS / 17 FAIL &middot; 11 Bugs &middot; READY WITH WARNINGS &middot; 2026-04-25
+</footer>
+
+</body>
+</html>
