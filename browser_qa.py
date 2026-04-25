@@ -19,7 +19,7 @@ sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="repla
 BASE_URL = "http://localhost:8000/ui"
 SERVER_BASE = "http://localhost:8000"
 SCREENSHOT_DIR = Path(".")
-REPORT_PATH = Path("browser_qa_report.txt")
+REPORT_PATH = Path("browser_qa_report_v3.txt")
 
 # ─── Report Builder ──────────────────────────────────────────────────────────
 

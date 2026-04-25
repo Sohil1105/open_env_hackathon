@@ -250,10 +250,12 @@ async def root():
 @app.get("/health")
 async def health_check():
     """Detailed health check with environment status and env var availability."""
+    _, active_model = _get_api_client()
     return {
         "status": "ok",
         "environment": "loan-underwriting-risk-assessment",
         "version": "1.0.0",
+        "model_name": active_model,
         "current_task": env.current_task_id,
         "is_done": env.is_done,
         "available_tasks": len(env.get_available_tasks()),
