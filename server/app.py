@@ -88,50 +88,40 @@ for var, st in env_status.items():
 if not HF_TOKEN:
     print("WARNING: HF_TOKEN not set — LLM calls will fail with 401")
 
+from huggingface_hub import InferenceClient
+
 def _get_api_client():
     """
-    Helper to initialize OpenAI client with correct Hugging Face pathing.
-    Forces the use of the reliable global 'v1' endpoint.
+    Helper to initialize Hugging Face InferenceClient.
     """
-    base_url = os.environ.get("API_BASE_URL", "").strip()
+    base_url = os.environ.get("API_BASE_URL", "https://hk2xnlsbxcn57ef2.us-east4.gcp.endpoints.huggingface.cloud").strip()
     key = os.environ.get("HF_TOKEN", "").strip()
     model = os.getenv("MODEL_NAME", "Sourav0511/loan-underwriting-merged-v2").strip()
 
-    # Default to public router if not provided
-    if not base_url:
-        base_url = "https://router.huggingface.co/hf-inference/v1"
-
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
-    if not key:
-        logger.warning("⚠️ HF_TOKEN is empty. AI Agent will likely fail with 401 Unauthorized.")
-
-    # Create client
-    return OpenAI(base_url=base_url, api_key=HF_TOKEN if HF_TOKEN else "missing-token"), model
-
+    
+    # Use InferenceClient which is more robust for HF Endpoints
+    return InferenceClient(model=base_url if "endpoints.huggingface.cloud" in base_url else model, token=key), model
 
 client, MODEL_NAME = _get_api_client()
 
 async def call_llm(prompt: str, max_tokens: int = 300) -> dict:
-    """Single LLM call with robust parsing for multi-stage chains."""
+    """Single LLM call using Hugging Face InferenceClient."""
     try:
-        local_client, local_model_name = _get_api_client()
-        logger.info(f"Chain Stage: Calling {local_model_name}")
+        local_client, _ = _get_api_client()
         
         loop = asyncio.get_event_loop()
         response = await loop.run_in_executor(
             None,
             partial(
-                local_client.chat.completions.create,
-                model=local_model_name,
-                messages=[{"role": "user", "content": prompt}],
-                max_tokens=max_tokens,
+                local_client.text_generation,
+                prompt,
+                max_new_tokens=max_tokens,
                 temperature=0.2,
-                timeout=30
             )
         )
-        raw = response.choices[0].message.content
-        logger.info(f"Chain Stage: Received response ({len(raw)} chars)")
-        return parse_llm_response(raw)
+        logger.info(f"Chain Stage: Received response ({len(response)} chars)")
+        return parse_llm_response(response)
     except Exception as e:
         err_msg = str(e)
         logger.error(f"Chain Stage Error: {err_msg}")
