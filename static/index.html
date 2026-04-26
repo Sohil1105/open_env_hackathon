@@ -565,6 +565,46 @@
       border-top: 1px solid var(--border);
     }
 
+    /* ─── Buttons ───────────────────────────────────────────── */
+    .btn {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.5rem 1.2rem;
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.3s;
+      border: 1px solid transparent;
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .btn-reset {
+      background: transparent;
+      color: var(--text-dim);
+      border-color: var(--border);
+    }
+
+    .btn-reset:hover:not(:disabled) {
+      color: var(--text);
+      border-color: var(--text-dim);
+    }
+
+    .btn-execute {
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--primary);
+      border-color: rgba(0, 255, 136, 0.4);
+    }
+
+    .btn-execute:hover:not(:disabled) {
+      background: rgba(0, 255, 136, 0.2);
+      box-shadow: var(--glow-primary);
+    }
+
     /* ─── Right Panel — Result ──────────────────────────────── */
     .result-box {
       border: 1px solid var(--border);
@@ -973,6 +1013,67 @@
       color: var(--secondary);
     }
 
+    /* ─── Footer Styles ───────────────────────────────────────── */
+    .system-footer {
+      position: relative;
+      z-index: 10;
+      margin-top: 1rem;
+      padding: 1.5rem 1.5rem;
+      background: linear-gradient(0deg, rgba(10, 10, 15, 0.95) 0%, rgba(15, 25, 35, 0.8) 100%);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+
+    .footer-content {
+      max-width: 1400px;
+      margin: 0 auto;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .footer-left {
+      display: flex;
+      align-items: center;
+      gap: 1.5rem;
+    }
+
+    .copyright {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+
+    .version-tag {
+      font-size: 0.6rem;
+      color: var(--secondary);
+      border: 1px solid rgba(123, 47, 255, 0.3);
+      padding: 0.1rem 0.5rem;
+      border-radius: 3px;
+      letter-spacing: 1px;
+    }
+
+    .footer-links {
+      display: flex;
+      gap: 2rem;
+    }
+
+    .footer-link {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      text-decoration: none;
+      letter-spacing: 2px;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .footer-link:hover {
+      color: var(--primary);
+      text-shadow: 0 0 8px var(--primary);
+    }
+
     /* ─── Responsive ────────────────────────────────────────── */
     @media (max-width: 900px) {
       .main-container {
@@ -988,71 +1089,17 @@
         flex-wrap: wrap;
         gap: 0.3rem;
       }
-      .stage-connector {
-        display: none;
-      }
-    }
-
-    /* ─── Footer Styles ───────────────────────────────────────── */
-    .system-footer {
-        position: relative;
-        z-index: 10;
-        margin-top: 1rem;
-        padding: 1.5rem 1.5rem;
-        background: linear-gradient(0deg, rgba(10, 10, 15, 0.95) 0%, rgba(15, 25, 35, 0.8) 100%);
-        border-top: 1px solid var(--border);
-        backdrop-filter: blur(10px);
-      }
 
       .footer-content {
-        max-width: 1400px;
-        margin: 0 auto;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-
-      .footer-left {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-      }
-
-      .copyright {
-        font-size: 0.65rem;
-        color: var(--text-dim);
-        letter-spacing: 2px;
-      }
-
-      .version-tag {
-        font-size: 0.6rem;
-        color: var(--secondary);
-        border: 1px solid rgba(123, 47, 255, 0.3);
-        padding: 0.1rem 0.5rem;
-        border-radius: 3px;
-        letter-spacing: 1px;
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
       }
 
       .footer-links {
-        display: flex;
-        gap: 2rem;
+        gap: 1rem;
       }
-
-      .footer-link {
-        font-size: 0.7rem;
-        color: var(--text-dim);
-        text-decoration: none;
-        letter-spacing: 2px;
-        transition: all 0.3s;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-      }
-
-      .footer-link:hover {
-        color: var(--primary);
-        text-shadow: 0 0 8px var(--primary);
-      }
+    }
   </style>
 </head>
 
@@ -1102,7 +1149,7 @@
 
         <!-- Step 1: Basic Profile -->
         <div class="wizard-content-step active" id="wizardStep-1">
-          <div class="section-label">Step 1: Identity & Profile</div>
+          <div class="section-label">Step 1: Identity &amp; Profile</div>
           <div class="input-row">
             <label class="input-label" for="applicantName">
               <span class="prompt-char">›</span> Applicant Name
@@ -1306,8 +1353,6 @@
             </div>
           </div>
 
-
-
           <div class="ground-truth-box" id="groundTruthBox">
             <div class="result-header">╔═══ GROUND TRUTH ═══╗</div>
             <div class="result-row">
@@ -1347,15 +1392,10 @@
         <span class="version-tag">v1.0.0-STABLE</span>
       </div>
       <div class="footer-links">
-        <a href="https://github.com/Sohil1105/open_env_hackathon" target="_blank" class="footer-link">
-          GITHUB
-        </a>
-        <a href="https://huggingface.co/spaces/Sourav0511/open-env-hackathon" target="_blank" class="footer-link">
-          HF SPACE
-        </a>
-        <a href="/openenv.yaml" target="_blank" class="footer-link">
-          OPENENV SPEC
-        </a>
+        <a href="https://github.com/Sohil1105/open_env_hackathon" target="_blank" class="footer-link">GITHUB</a>
+        <a href="https://huggingface.co/spaces/Sourav0511/open-env-hackathon" target="_blank" class="footer-link">HF
+          SPACE</a>
+        <a href="/openenv.yaml" target="_blank" class="footer-link">OPENENV SPEC</a>
       </div>
     </div>
   </footer>
@@ -1394,7 +1434,6 @@
       const nextStep = currentWizardStep + delta;
       if (nextStep < 1 || nextStep > 4) return;
 
-      // Validation before moving forward
       if (delta > 0) {
         if (currentWizardStep === 1) {
           if (!document.getElementById('applicantName').value) {
@@ -1417,18 +1456,15 @@
         }
       }
 
-      // Hide current
       document.getElementById(`wizardStep-${currentWizardStep}`).classList.remove('active');
       document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('active');
       if (currentWizardStep < nextStep) document.getElementById(`stepInd-${currentWizardStep}`).classList.add('completed');
 
-      // Show next
       currentWizardStep = nextStep;
       document.getElementById(`wizardStep-${currentWizardStep}`).classList.add('active');
       document.getElementById(`stepInd-${currentWizardStep}`).classList.add('active');
       document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('completed');
 
-      // Update buttons
       document.getElementById('prevBtn').disabled = currentWizardStep === 1;
       if (currentWizardStep === 4) {
         document.getElementById('nextBtn').style.display = 'none';
@@ -1459,9 +1495,9 @@
       const div = document.createElement('div');
       div.className = 'file-item';
       div.innerHTML = `
-    <span>📄 ${randomFile}</span>
-    <span class="remove-file" onclick="removeFile('${randomFile}', this)">✕</span>
-  `;
+        <span>📄 ${randomFile}</span>
+        <span class="remove-file" onclick="removeFile('${randomFile}', this)">✕</span>
+      `;
       fileList.appendChild(div);
       showToast(`Uploaded: ${randomFile}`, 'success');
     }
@@ -1509,14 +1545,14 @@
     // ─── Health Check ───────────────────────────────────────
     async function healthCheck() {
       try {
-        const data = await apiFetch('/health');
+        await apiFetch('/health');
         showToast(`NEXUS Bank Server Online`, 'success');
       } catch (e) {
         showToast('Backend not reachable', 'error');
       }
     }
 
-    // ─── Stage Select Handler (Internal) ────────────────────
+    // ─── Stage Select Handler ────────────────────────────────
     async function onStageSelect() {
       const taskId = document.getElementById('stageSelect').value;
       if (!taskId) return;
@@ -1624,19 +1660,15 @@
 
         const result = await response.json();
 
-        // START SEQUENTIAL UI UPDATE
         const stageResults = result.stage_results || [];
         for (let i = 0; i < stageResults.length; i++) {
           const stage = stageResults[i];
           btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
           showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
-
-          // Update the lifecycle bar for each stage
-          activeStageId = STAGE_META[i].id; // Map stage index to STAGE_META
+          activeStageId = STAGE_META[i].id;
           completedStages.add(activeStageId);
           updateLifecycleBar();
-
-          await new Promise(r => setTimeout(r, 1000)); // 1s delay per real stage
+          await new Promise(r => setTimeout(r, 1000));
         }
 
         displayResult(result);
@@ -1735,9 +1767,9 @@
         const stageEl = document.createElement('div');
         stageEl.className = 'lifecycle-stage';
         stageEl.innerHTML = `
-      <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
-      <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
-    `;
+          <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
+          <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
+        `;
         container.appendChild(stageEl);
       });
     }
@@ -1813,15 +1845,35 @@
       const ctx = canvas.getContext('2d');
       let particles = [];
       const PARTICLE_COUNT = 40;
+
       function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
       resize();
       window.addEventListener('resize', resize);
+
       class Particle {
-        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3; this.size = Math.random() * 1.5; }
-        update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvas.width) this.vx *= -1; if (this.y < 0 || this.y > canvas.height) this.vy *= -1; }
-        draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,255,136,0.3)'; ctx.fill(); }
+        constructor() {
+          this.x = Math.random() * canvas.width;
+          this.y = Math.random() * canvas.height;
+          this.vx = (Math.random() - 0.5) * 0.3;
+          this.vy = (Math.random() - 0.5) * 0.3;
+          this.size = Math.random() * 1.5;
+        }
+        update() {
+          this.x += this.vx;
+          this.y += this.vy;
+          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+        }
+        draw() {
+          ctx.beginPath();
+          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0,255,136,0.3)';
+          ctx.fill();
+        }
       }
+
       for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
       function animate() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         particles.forEach(p => { p.update(); p.draw(); });
