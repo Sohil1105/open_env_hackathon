@@ -40,3 +40,6 @@ test_*.py
 # Binary plots (allow specific plots for README)
 !reward_plot.png
 !training_loss.png
+
+.env
+*.env

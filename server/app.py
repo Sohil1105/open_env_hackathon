@@ -97,9 +97,9 @@ def _get_api_client():
     key = os.environ.get("HF_TOKEN", "").strip()
     model = os.getenv("MODEL_NAME", "Sourav0511/loan-underwriting-merged-v2").strip()
 
-    # Use the reliable GLOBAL endpoint by default
-    if not base_url or "api-inference.huggingface.co" in base_url:
-        base_url = "https://hk2xnlsbxcn57ef2.us-east4.gcp.endpoints.huggingface.cloud/v1"
+    # Default to public router if not provided
+    if not base_url:
+        base_url = "https://api-inference.huggingface.co/v1"
 
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
     if not key:
