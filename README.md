@@ -7,6 +7,8 @@ sdk: docker
 pinned: false
 ---
 
+![NEXUS BANK Banner](nexus_banner.png)
+
 # 🏦 Loan Underwriting & Risk Assessment — OpenEnv
 
 An **OpenEnv-compliant** reinforcement learning environment that simulates a bank's loan underwriting desk. AI agents evaluate applicant financial profiles and make multi-component lending decisions with partial credit scoring.
