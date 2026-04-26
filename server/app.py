@@ -233,8 +233,12 @@ class ApplicantInput(BaseModel):
 
 @app.get("/")
 async def root():
-    """Root endpoint. Redirects to the blog for human visitors."""
-    return RedirectResponse(url="/blog")
+    """Root endpoint. Returns a basic health check for OpenEnv validation."""
+    return {
+        "status": "ok",
+        "message": "Loan Underwriting OpenEnv server is running.",
+        "version": "1.0.0"
+    }
 
 
 @app.get("/health")
@@ -555,8 +559,6 @@ def parse_llm_response(response_text: str) -> dict:
         result["loan_decision"] = "Approve"
     elif "reject" in response_text.lower():
         result["loan_decision"] = "Reject"
-
-    return result
 
     return result
 
