@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -1290,7 +1290,7 @@
             <label class="input-label" for="loanTenure">
               <span class="prompt-char">›</span> Tenure (Months)
             </label>
-            <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36">
+            <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" oninput="onTenureInput()">
           </div>
           <div class="input-row">
             <label class="input-label">
@@ -1677,8 +1677,6 @@
         activeStageId = taskId;
         updateLifecycleBar();
       } catch (e) { }
-    }
-
     // ─── Auto-Select Stage Based on Employment ──────────────
     function onEmploymentChange() {
       const emp = document.getElementById('employmentType').value;
@@ -1690,15 +1688,28 @@
       if (targetTaskId) select.value = targetTaskId;
     }
 
+    let tenureManuallySet = false;
+    function onTenureInput() {
+      tenureManuallySet = true;
+    }
+
     function onAmountChange() {
+      if (tenureManuallySet) return;
+      
       const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
       const tenure = document.getElementById('loanTenure');
-      if (amt <= 0) return;
+      if (amt <= 0) {
+        tenure.value = '';
+        return;
+      }
+      
       let suggestedTenure = 12;
       if (amt > 100000) suggestedTenure = 84;
       else if (amt > 50000) suggestedTenure = 60;
       else if (amt > 25000) suggestedTenure = 48;
-      else suggestedTenure = 36;
+      else if (amt > 10000) suggestedTenure = 36;
+      else suggestedTenure = 24;
+      
       tenure.value = suggestedTenure;
     }
 
@@ -1932,6 +1943,7 @@
 
     function resetForm() {
       console.log('[UI] Resetting form fields...');
+      tenureManuallySet = false;
       document.getElementById('applicantName').value = '';
       document.getElementById('applicantAge').value = '30';
       document.getElementById('annualIncome').value = '';
