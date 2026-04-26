@@ -573,11 +573,45 @@ def parse_llm_response(response_text: str) -> dict:
 
     return result
 
+    return result
+
+def stage_result_to_action(res: dict) -> Action:
+    """Map intermediate LLM stage results to structured environment Actions."""
+    # Attempt to extract fields if LLM returned them directly
+    risk = res.get("risk_indicator") or res.get("risk_level")
+    decision = res.get("preliminary_decision") or res.get("loan_decision")
+    rate = res.get("interest_rate_tier") or res.get("processing_tier")
+    
+    # Fallbacks based on descriptive qualitative fields
+    if not risk:
+        status = res.get("document_status") or res.get("credit_character") or res.get("dti_assessment") or res.get("collateral_status")
+        if status in ["Complete", "Strong", "Healthy", "Adequate"]: risk = "Low"
+        elif status in ["Incomplete", "Average", "Borderline"]: risk = "Medium"
+        else: risk = "High"
+    
+    if not decision:
+        if risk == "Low": decision = "Approve"
+        elif risk == "Medium": decision = "Conditional Approve"
+        else: decision = "Reject"
+        
+    if not rate:
+        if risk == "Low": rate = "7-9%"
+        elif risk == "Medium": rate = "10-13%"
+        else: rate = "14%+"
+        
+    return Action(
+        risk_level=risk,
+        loan_decision=decision,
+        interest_rate_tier=rate,
+        reasoning=res.get("reasoning", "Intermediate stage decision.")
+    )
+
 @app.post("/evaluate")
 async def evaluate_applicant(applicant: ApplicantInput):
-    task_id = applicant.task_id
+    # 1. Reset environment for a new full-lifecycle episode
+    env.reset() # This starts the TASK_ORDER sequence
     
-    # 1. Format profile for LLM context
+    # 2. Format profile for LLM context
     profile = f"""
     Applicant: {applicant.applicant_name} (Age: {getattr(applicant, 'age', 'N/A')})
     Employment: {applicant.employment_type} ({getattr(applicant, 'employment_years', 'N/A')} years)
@@ -589,167 +623,50 @@ async def evaluate_applicant(applicant: ApplicantInput):
     
     history = []
     stage_results = []
+    total_env_reward = 0
 
     async with evaluate_semaphore:
-        # ── STAGE 1: Identity & Documentation ──
-        s1_prompt = f"""
-        You are a bank compliance officer. Review applicant identity and documents.
-        APPLICANT: {profile}
-        DOCUMENTS: {", ".join(applicant.documents_submitted) if applicant.documents_submitted else "None"}
+        # ── STAGE 1: Documentation ──
+        s1_prompt = f"Review identity and documents for: {profile}"
+        s1_res = await call_llm(s1_prompt)
+        # Convert LLM analysis to a real environment action
+        action1 = stage_result_to_action(s1_res)
+        _, r1, _, _ = env.step(action1)
+        total_env_reward += r1
+        stage_results.append({"stage": 1, "name": "Documentation", "result": s1_res, "reward": r1})
+        history.append(f"Stage 1: {s1_res.get('reasoning', '')}")
 
-        Respond ONLY in JSON:
-        {{
-          "document_status": "Complete" | "Incomplete" | "Suspicious",
-          "flags": ["list any red flags"],
-          "confidence": 0.0-1.0,
-          "reasoning": "one sentence summary"
-        }}
-        """
-        s1_result = await call_llm(s1_prompt)
-        history.append(f"STAGE 1 (Docs): {s1_result.get('document_status', 'N/A')} - {s1_result.get('reasoning', '')}")
-        stage_results.append({"stage": 1, "name": "Documentation", "result": s1_result})
+        # ── STAGE 2: Credit ──
+        s2_prompt = f"Analyze credit for: {profile}. Previous: {history[-1]}"
+        s2_res = await call_llm(s2_prompt)
+        action2 = stage_result_to_action(s2_res)
+        _, r2, _, _ = env.step(action2)
+        total_env_reward += r2
+        stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_res, "reward": r2})
+        history.append(f"Stage 2: {s2_res.get('reasoning', '')}")
 
-        # ── STAGE 2: Credit Character ──
-        s2_prompt = f"""
-UNDERWRITING THRESHOLDS (US Standard — apply exactly):
-FICO >= 720 AND DTI < 20% AND defaults = 0 → LOW risk
-FICO 660-719 AND DTI 20-35% AND defaults = 0 → MEDIUM risk
-FICO 620-659 AND DTI 35-45% AND defaults <= 1 → MEDIUM-HIGH risk
-FICO < 620 OR DTI > 45% OR defaults >= 2 → HIGH risk
+        # ── STAGE 3-4: Intermediate Processing ──
+        # Advance env through intermediate lifecycle stages using accumulated context
+        while env._current_step < 4:
+            # For these background stages, we use the best available context from Stage 2
+            env.step(action2)
 
-DTI OVERRIDE RULE (applies regardless of FICO):
-If DTI > 40% → risk cannot be LOW. Minimum = MEDIUM.
-If DTI > 55% → risk = HIGH. No exceptions.
+        # ── STAGE 5: Final Verdict ──
+        s5_prompt = f"Final verdict for: {profile}. History: {' | '.join(history)}"
+        s5_res = await call_llm(s5_prompt, max_tokens=500)
+        
+        action_final = Action(
+            risk_level=s5_res.get("risk_level", "Medium"),
+            loan_decision=s5_res.get("loan_decision", "Conditional Approve"),
+            interest_rate_tier=s5_res.get("interest_rate_tier", "10-13%"),
+            reasoning=s5_res.get("reasoning", "")
+        )
+        
+        state, r_final, done, info = env.step(action_final)
+        total_env_reward += r_final
+        stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_res, "reward": r_final})
 
-FICO FLOOR RULE:
-If FICO < 620 → risk cannot be LOW or MEDIUM. Minimum = HIGH.
-
-You MUST classify using these exact thresholds. Do not use qualitative language like "strong credit" or "healthy DTI" without first computing against these numbers.
-
-APPLICANT NUMERIC VALUES FOR THRESHOLD COMPUTATION:
-FICO = {applicant.credit_score}
-Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
-Previous Defaults = {applicant.previous_defaults}
-
-        You are a credit analyst. Previous check: {history[-1]}
-        Analyze borrower reliability and character.
-        APPLICANT: {profile}
-
-        Respond ONLY in JSON:
-        {{
-          "credit_character": "Strong" | "Average" | "Weak",
-          "credit_score_assessment": "one sentence",
-          "risk_indicator": "Low" | "Medium" | "High",
-          "reasoning": "one sentence"
-        }}
-        """
-        s2_result = await call_llm(s2_prompt)
-        history.append(f"STAGE 2 (Credit): {s2_result.get('credit_character', 'N/A')} - {s2_result.get('reasoning', '')}")
-        stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_result})
-
-        # ── STAGE 3: Capacity & DTI ──
-        s3_prompt = f"""
-DTI CLASSIFICATION (US Standard):
-DTI < 20% → Excellent. Supports LOW risk.
-DTI 20-35% → Acceptable. Supports MEDIUM risk.
-DTI 36-45% → Elevated. Supports MEDIUM-HIGH risk.
-DTI > 45% → Dangerous. Supports HIGH risk. Overrides strong FICO.
-DTI > 55% → Critical. AUTO HIGH risk. No approval possible.
-
-CRITICAL RULE: A high FICO score does NOT override a dangerous DTI.
-Example: FICO=750, DTI=48% → MEDIUM risk (DTI overrides FICO).
-Example: FICO=800, DTI=60% → HIGH risk (DTI critical override).
-
-State the exact DTI percentage and classify it against the above scale before drawing any conclusions.
-
-APPLICANT NUMERIC VALUES:
-FICO = {applicant.credit_score}
-Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
-Previous Defaults = {applicant.previous_defaults}
-
-        You are a financial analyst. Previous: {' | '.join(history)}
-        Analyze repayment capacity and DTI.
-        APPLICANT: {profile}
-
-        Respond ONLY in JSON:
-        {{
-          "dti_assessment": "Healthy" | "Borderline" | "Overextended",
-          "monthly_emi_feasible": true | false,
-          "capacity_score": 0.0-1.0,
-          "reasoning": "one sentence"
-        }}
-        """
-        s3_result = await call_llm(s3_prompt)
-        history.append(f"STAGE 3 (Capacity): {s3_result.get('dti_assessment', 'N/A')} - {s3_result.get('reasoning', '')}")
-        stage_results.append({"stage": 3, "name": "Capacity & DTI", "result": s3_result})
-
-        # ── STAGE 4: Collateral & Conditions ──
-        s4_prompt = f"""
-        You are a senior loan officer. Previous: {' | '.join(history)}
-        Assess collateral and loan conditions.
-        APPLICANT: {profile}
-
-        Respond ONLY in JSON:
-        {{
-          "collateral_status": "Strong" | "Adequate" | "Insufficient",
-          "market_conditions": "Favorable" | "Neutral" | "Unfavorable",
-          "preliminary_decision": "Approve" | "Conditional Approve" | "Reject",
-          "reasoning": "one sentence"
-        }}
-        """
-        s4_result = await call_llm(s4_prompt)
-        history.append(f"STAGE 4 (Collateral): {s4_result.get('collateral_status', 'N/A')} - {s4_result.get('reasoning', '')}")
-        stage_results.append({"stage": 4, "name": "Collateral", "result": s4_result})
-
-        # ── STAGE 5: Final Underwriting Verdict ──
-        s5_prompt = f"""
-HARD FALLBACK RULES (check first, before reading prior stages):
-If applicant FICO < 620 → FINAL DECISION = High / Reject / 14%+. No exceptions.
-If applicant DTI > 55% → FINAL DECISION = High / Reject / 14%+. No exceptions.
-If applicant defaults >= 2 → FINAL DECISION = High / Reject / 14%+. No exceptions.
-If any TWO of: FICO < 660, DTI > 40%, defaults >= 1 → FINAL DECISION = High / Reject / 14%+.
-
-Only proceed to stage synthesis below if NONE of the above rules triggered.
-
-APPLICANT NUMERIC VALUES:
-FICO = {applicant.credit_score}
-Computed DTI = {(applicant.existing_debt + applicant.loan_amount / applicant.loan_tenure) / (applicant.annual_income / 12) * 100:.1f}%
-Previous Defaults = {applicant.previous_defaults}
-
-CHAIN OF EVIDENCE REQUIREMENT:
-Before giving your final decision, you MUST explicitly state:
-- Stage 1 result: [quote the document/identity assessment]
-- Stage 2 result: [quote the risk classification and FICO/DTI values used]
-- Stage 3 result: [quote the DTI classification]
-- Stage 4 result: [quote the preliminary decision]
-Then and only then, give your FINAL DECISION.
-
-If Stage 4 result was "Conditional Approve", your final decision CANNOT be
-"Approve" unless ALL THREE of these are true:
-- FICO >= 720
-- DTI < 20%
-- defaults = 0
-Otherwise maintain "Conditional Approve" or downgrade. Never upgrade.
-
-        You are the Chief Credit Officer. Complete analysis from all 4 previous stages:
-        {chr(10).join(history)}
-
-        APPLICANT: {profile}
-        Make the FINAL decision.
-
-        Respond ONLY in JSON:
-        {{
-          "risk_level": "Low" | "Medium" | "High",
-          "loan_decision": "Approve" | "Conditional Approve" | "Reject",
-          "interest_rate_tier": "7-9%" | "10-13%" | "14%+",
-          "reasoning": "Comprehensive 2-3 sentence final report referencing key stage findings."
-        }}
-        """
-        s5_result = await call_llm(s5_prompt, max_tokens=500)
-        stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_result})
-
-    # ── Grading Logic ──
-    # Build profile for grading
+    # Final Grading against dynamic ground truth
     p_grade = ApplicantProfile(
         applicant_name=applicant.applicant_name,
         annual_income=applicant.annual_income,
@@ -762,41 +679,22 @@ Otherwise maintain "Conditional Approve" or downgrade. Never upgrade.
         age=applicant.age,
         monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else 0.0,
         has_collateral=applicant.has_collateral,
-        previous_defaults=applicant.previous_defaults,
-        documents_submitted=applicant.documents_submitted or []
+        previous_defaults=applicant.previous_defaults
     )
-    ground_truth = calculate_dynamic_ground_truth(p_grade)
-    
-    action = Action(
-        risk_level=s5_result.get("risk_level", "Medium"),
-        loan_decision=s5_result.get("loan_decision", "Conditional Approve"),
-        interest_rate_tier=s5_result.get("interest_rate_tier", "10-13%"),
-        reasoning=s5_result.get("reasoning", "")
-    )
-    
-    grader = get_grader_for_stage(task_id)
-    grading_result = grader(action, ground_truth)
+    gt = calculate_dynamic_ground_truth(p_grade)
     
     return {
-        "agent_decision": s5_result,
+        "agent_decision": s5_res,
         "stage_results": stage_results,
-        "score": grading_result.total_score,
+        "score": total_env_reward / 3, # Average of the 3 main stages
         "ground_truth": {
-            "risk_level": ground_truth.risk_level.value,
-            "loan_decision": ground_truth.loan_decision.value,
-            "interest_rate_tier": ground_truth.interest_rate_tier.value,
-            "explanation": ground_truth.explanation
+            "risk_level": gt.risk_level.value,
+            "loan_decision": gt.loan_decision.value,
+            "interest_rate_tier": gt.interest_rate_tier.value,
+            "explanation": gt.explanation
         },
-        "reasoning": s5_result.get("reasoning", ""),
         "status": "success",
-        "stages_completed": 5,
-        "grading": {
-            "risk_level_score": grading_result.risk_level_score,
-            "loan_decision_score": grading_result.loan_decision_score,
-            "interest_rate_score": grading_result.interest_rate_score,
-            "consistency_bonus": grading_result.consistency_bonus,
-        },
-        "feedback": grading_result.feedback
+        "grading": info.get("grading", {})
     }
 
 

@@ -1,20 +1,10 @@
 """
-Baseline LLM Agent for the Loan Underwriting OpenEnv Environment.
+Baseline LLM agent for the Loan Underwriting OpenEnv environment.
 
-This script:
-1. Instantiates the LoanUnderwritingEnv environment
-2. Iterates through all 3 tasks (easy → medium → hard)
-3. For each task, sends the applicant profile to an LLM via OpenAI-compatible API
-4. Parses the LLM's response into a structured Action
-5. Steps the environment and collects scores
-6. Prints a detailed summary of scores per task
+Loops through all tasks in TASK_ORDER, calls an OpenAI-compatible API
+for each applicant profile, steps the environment, and prints per-task scores.
 
-Environment Variables Required:
-- API_BASE_URL: Base URL for the OpenAI-compatible API endpoint
-- MODEL_NAME: Name of the model to use for inference
-- HF_TOKEN: Hugging Face token used as the API key
-
-Designed to complete in under 20 minutes on 2 vCPU / 8 GB RAM.
+Required env vars: API_BASE_URL, MODEL_NAME, HF_TOKEN
 """
 
 import os
@@ -35,8 +25,6 @@ from environment import (
 )
 from environment.rewards import format_reward_breakdown
 
-# ─── Client Setup (exact spec from requirements) ─────────────────────────────
-
 client = OpenAI(
     base_url=os.environ.get("API_BASE_URL", "https://router.huggingface.co/hf-inference/v1"),
     api_key=os.environ.get("HF_TOKEN", ""),
@@ -44,10 +32,7 @@ client = OpenAI(
 MODEL_NAME = os.environ.get("MODEL_NAME", "meta-llama/Llama-3.2-3B-Instruct")
 
 
-# ─── Prompt Construction ─────────────────────────────────────────────────────
-
 def build_system_prompt() -> str:
-    """Build the system prompt that instructs the LLM on its role."""
     return """You are an expert bank loan underwriter with 20 years of experience in risk assessment.
 You evaluate loan applications by analyzing applicant profiles and making three key decisions:
 
@@ -72,8 +57,6 @@ Respond ONLY with the JSON object. No other text."""
 
 
 def build_user_prompt(observation: dict) -> str:
-    """Build the user prompt containing the applicant profile."""
-    # Calculate key ratios for the agent
     annual_income = observation["annual_income"]
     existing_debt = observation["existing_debt"]
     loan_amount = observation["loan_amount_requested"]
@@ -120,29 +103,19 @@ Please analyze this application and provide your underwriting decision as a JSON
     return prompt
 
 
-# ─── Response Parsing ─────────────────────────────────────────────────────────
-
 def parse_llm_response(response_text: str) -> Action:
     """
-    Parse the LLM's response text into a structured Action.
-
-    Handles various response formats:
-    - Clean JSON
-    - JSON wrapped in markdown code blocks
-    - JSON with extra text before/after
-
-    Falls back to regex extraction if JSON parsing fails.
+    Parse LLM response into an Action. Tries JSON, then regex fallback.
+    Handles markdown code-fenced JSON and extra surrounding text.
     """
-    # Try to extract JSON from the response
     text = response_text.strip()
 
-    # Remove markdown code block wrappers if present
+    # Strip markdown code fences if present
     if "```json" in text:
         text = text.split("```json")[1].split("```")[0].strip()
     elif "```" in text:
         text = text.split("```")[1].split("```")[0].strip()
 
-    # Try direct JSON parsing
     try:
         data = json.loads(text)
         return Action(
@@ -154,7 +127,6 @@ def parse_llm_response(response_text: str) -> Action:
     except (json.JSONDecodeError, KeyError):
         pass
 
-    # Try to find a JSON object within the text using regex
     json_match = re.search(r'\{[^{}]*\}', text, re.DOTALL)
     if json_match:
         try:
@@ -168,7 +140,7 @@ def parse_llm_response(response_text: str) -> Action:
         except (json.JSONDecodeError, KeyError):
             pass
 
-    # Last resort: try to extract individual fields via regex
+    # Last resort: field-by-field regex
     risk_match = re.search(r'"risk_level"\s*:\s*"(Low|Medium|High)"', text, re.IGNORECASE)
     decision_match = re.search(
         r'"loan_decision"\s*:\s*"(Approve|Conditional Approve|Reject)"', text, re.IGNORECASE
@@ -185,18 +157,8 @@ def parse_llm_response(response_text: str) -> Action:
     )
 
 
-# ─── LLM Agent ───────────────────────────────────────────────────────────────
-
 def run_agent(observation: dict) -> Action:
-    """
-    Send the observation to the LLM and get an underwriting decision.
-
-    Args:
-        observation: Dictionary representation of the Observation
-
-    Returns:
-        Parsed Action from the LLM's response
-    """
+    """Call the LLM with the applicant profile and return a parsed Action."""
     system_prompt = build_system_prompt()
     user_prompt = build_user_prompt(observation)
 
@@ -218,7 +180,6 @@ def run_agent(observation: dict) -> Action:
     except Exception as e:
         print(f"  ⚠️ LLM API error: {e}")
         traceback.print_exc()
-        # Return a safe default action on API failure
         return Action(
             risk_level=RiskLevel.MEDIUM,
             loan_decision=LoanDecision.CONDITIONAL_APPROVE,
@@ -227,12 +188,7 @@ def run_agent(observation: dict) -> Action:
         )
 
 
-# ─── Main Execution ──────────────────────────────────────────────────────────
-
 def main():
-    """
-    Main entry point: runs the agent through all 3 tasks and prints scores.
-    """
     print("=" * 70)
     print("🏦 LOAN UNDERWRITING OPENENV — BASELINE LLM AGENT")
     print("=" * 70)
@@ -240,15 +196,11 @@ def main():
     print(f"API Base: {os.environ.get('API_BASE_URL', 'NOT SET')}")
     print()
 
-    # Initialize the environment
     env = LoanUnderwritingEnv()
     total_start_time = time.time()
-
-    # Track scores across all tasks
     task_scores = {}
     total_score = 0.0
 
-    # Iterate through all tasks in order
     for i, task_id in enumerate(TASK_ORDER, 1):
         print(f"{'─' * 70}")
         print(f"📋 TASK {i}/{len(TASK_ORDER)}: {task_id}")
@@ -256,7 +208,6 @@ def main():
 
         task_start_time = time.time()
 
-        # Reset environment for this task
         print(f"[START] task={task_id}", flush=True)
         state = env.reset(task_id)
         observation = state.observation
@@ -268,7 +219,6 @@ def main():
         print(f"  Loan Request: ₹{observation.loan_amount_requested:,.2f}")
         print()
 
-        # Get the agent's decision from the LLM
         print("  🤖 Querying LLM for underwriting decision...")
         observation_dict = observation.model_dump()
         action = run_agent(observation_dict)
@@ -282,11 +232,9 @@ def main():
             print(f"    Reasoning: {reasoning_preview}...")
         print()
 
-        # Step the environment
         state, reward, done, info = env.step(action)
         print(f"[STEP] step=1 reward={reward}", flush=True)
 
-        # Display results
         print(f"  📊 GRADING RESULTS:")
         print(f"  {info['reward_breakdown']}")
         print(f"\n  {info['feedback']}")
@@ -295,7 +243,6 @@ def main():
         print(f"[END] task={task_id} score={reward} steps=1", flush=True)
         print(f"\n  ⏱️ Task completed in {task_duration:.1f}s")
 
-        # Store scores
         task_scores[task_id] = {
             "score": reward,
             "grading": info["grading"],
@@ -303,8 +250,6 @@ def main():
         }
         total_score += reward
         print()
-
-    # ─── Final Summary ────────────────────────────────────────────────────
 
     total_duration = time.time() - total_start_time
 
@@ -333,7 +278,6 @@ def main():
     print(f"Total Time:    {total_duration:.1f} seconds")
     print("============================================")
 
-    # Validate all scores are in [0.0, 1.0]
     all_valid = all(
         0.0 <= result["score"] <= 1.0 for result in task_scores.values()
     )

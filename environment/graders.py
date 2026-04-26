@@ -1,16 +1,9 @@
 """
-Automated graders for the Loan Underwriting OpenEnv environment.
+Graders for the Loan Underwriting OpenEnv environment.
 
-Each grader evaluates one component of the agent's decision and returns
-a float score in [0.0, 1.0] with partial credit:
-
-- Risk Level Grader: 0.4 weight — exact match or partial for adjacent level
-- Loan Decision Grader: 0.35 weight — exact match or partial for adjacent decision
-- Interest Rate Grader: 0.25 weight — exact match or partial for adjacent tier
-- Consistency Grader: bonus/penalty for logical alignment across all three decisions
-
-Edge-case safe: all graders handle None, empty strings, and invalid values
-by returning 0.0 instead of crashing.
+Each grader returns a float in [0.0, 1.0] using ordinal distance scoring:
+exact match → 1.0, off-by-one → partial credit, off-by-two → 0.01.
+All graders are None-safe and clamp output to [0.01, 0.99].
 """
 
 from .models import (
@@ -22,7 +15,6 @@ from .models import (
     InterestRateTier,
 )
 
-# Semantic similarity scoring maps
 RISK_SIMILARITY = {
     ("low", "low"): 0.99,
     ("low", "medium"): 0.3,
@@ -69,8 +61,6 @@ def get_similarity_score(actual: str, expected: str, similarity_map: dict) -> fl
     except Exception:
         return 0.01
 
-# ─── Ordinal mappings for computing distance between categories ──────────────
-
 RISK_LEVEL_ORDER = {
     RiskLevel.LOW: 0,
     RiskLevel.MEDIUM: 1,
@@ -90,21 +80,8 @@ INTEREST_RATE_ORDER = {
 }
 
 
-# ─── Component Graders ───────────────────────────────────────────────────────
-
 def grade_risk_level(predicted: RiskLevel, expected: RiskLevel) -> float:
-    """
-    Grade the risk level classification.
-
-    Scoring:
-    - Exact match: 1.0
-    - Off by one level (e.g., Low vs Medium): 0.3
-    - Off by two levels (e.g., Low vs High): 0.0
-    - Invalid/None input: 0.0
-
-    Returns: float in [0.0, 1.0]
-    """
-    # Edge-case: handle None or invalid enum values
+    """Score risk level: 1.0 exact, 0.3 adjacent, 0.01 two-levels off."""
     if predicted is None or expected is None:
         return 0.01
     if predicted not in RISK_LEVEL_ORDER or expected not in RISK_LEVEL_ORDER:
@@ -117,24 +94,13 @@ def grade_risk_level(predicted: RiskLevel, expected: RiskLevel) -> float:
     if distance == 0:
         return 1.0
     elif distance == 1:
-        return 0.3  # Partial credit for adjacent classification
+        return 0.3
     else:
-        return 0.01  # Completely wrong
+        return 0.01
 
 
 def grade_loan_decision(predicted: LoanDecision, expected: LoanDecision) -> float:
-    """
-    Grade the loan approval decision.
-
-    Scoring:
-    - Exact match: 1.0
-    - Off by one step (e.g., Approve vs Conditional): 0.35
-    - Off by two steps (e.g., Approve vs Reject): 0.0
-    - Invalid/None input: 0.0
-
-    Returns: float in [0.0, 1.0]
-    """
-    # Edge-case: handle None or invalid enum values
+    """Score loan decision: 1.0 exact, 0.35 adjacent, 0.01 two-steps off."""
     if predicted is None or expected is None:
         return 0.01
     if predicted not in LOAN_DECISION_ORDER or expected not in LOAN_DECISION_ORDER:
@@ -147,24 +113,13 @@ def grade_loan_decision(predicted: LoanDecision, expected: LoanDecision) -> floa
     if distance == 0:
         return 1.0
     elif distance == 1:
-        return 0.35  # Partial credit — at least in the right direction
+        return 0.35
     else:
-        return 0.01  # Completely wrong (approve when should reject, or vice versa)
+        return 0.01
 
 
 def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier) -> float:
-    """
-    Grade the interest rate tier recommendation.
-
-    Scoring:
-    - Exact match: 1.0
-    - Off by one tier (e.g., 7-9% vs 10-13%): 0.3
-    - Off by two tiers (e.g., 7-9% vs 14%+): 0.0
-    - Invalid/None input: 0.0
-
-    Returns: float in [0.0, 1.0]
-    """
-    # Edge-case: handle None or invalid enum values
+    """Score interest rate tier: 1.0 exact, 0.3 adjacent, 0.01 two-tiers off."""
     if predicted is None or expected is None:
         return 0.01
     if predicted not in INTEREST_RATE_ORDER or expected not in INTEREST_RATE_ORDER:
@@ -177,25 +132,16 @@ def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier)
     if distance == 0:
         return 1.0
     elif distance == 1:
-        return 0.3  # Partial credit for adjacent tier
+        return 0.3
     else:
-        return 0.01  # Completely wrong
+        return 0.01
 
 
 def grade_consistency(action: Action) -> float:
     """
-    Grade the logical consistency across all three decisions.
-
-    Rules for consistency:
-    - Low risk should pair with Approve and low interest rate
-    - Medium risk should pair with Conditional Approve and medium interest rate
-    - High risk should pair with Reject or Conditional Approve and high interest rate
-    - Contradictions (e.g., Low risk + Reject, or High risk + Approve at 7-9%)
-      incur a penalty
-
-    Returns: float in [-0.1, 0.1] as a bonus/penalty modifier
+    Bonus/penalty in [-0.1, 0.1] for logical alignment across the three decisions.
+    Contradictions (e.g., Low risk + Reject, or High risk + Approve at 7-9%) are penalised.
     """
-    # Edge-case: handle None fields
     if action is None:
         return 0.01
 
@@ -206,11 +152,9 @@ def grade_consistency(action: Action) -> float:
     if risk is None or decision is None or rate is None:
         return 0.01
 
-    # Define what's logically consistent for each risk level
     consistency_score = 0.0
 
     if risk == RiskLevel.LOW:
-        # Low risk: Approve at low rate is most consistent
         if decision == LoanDecision.APPROVE:
             consistency_score += 0.05
         elif decision == LoanDecision.REJECT:
@@ -222,7 +166,6 @@ def grade_consistency(action: Action) -> float:
             consistency_score -= 0.05  # Contradictory
 
     elif risk == RiskLevel.MEDIUM:
-        # Medium risk: Conditional approve at medium rate is most consistent
         if decision == LoanDecision.CONDITIONAL_APPROVE:
             consistency_score += 0.05
         elif decision == LoanDecision.APPROVE and rate == InterestRateTier.LOW:
@@ -232,7 +175,6 @@ def grade_consistency(action: Action) -> float:
             consistency_score += 0.05
 
     elif risk == RiskLevel.HIGH:
-        # High risk: Reject or Conditional at high rate is most consistent
         if decision in (LoanDecision.REJECT, LoanDecision.CONDITIONAL_APPROVE):
             consistency_score += 0.05
         elif decision == LoanDecision.APPROVE:
@@ -247,23 +189,12 @@ def grade_consistency(action: Action) -> float:
     return max(-0.1, min(0.1, consistency_score))
 
 
-# ─── Main Grading Function ───────────────────────────────────────────────────
-
 def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
     """
-    Grade a complete agent action against the ground truth.
-
-    Weights:
-    - Risk level:     0.40 (40% of total score)
-    - Loan decision:  0.35 (35% of total score)
-    - Interest rate:  0.25 (25% of total score)
-    - Consistency:    bonus/penalty modifier
-
-    Handles edge cases: if action or ground_truth is None, returns score 0.0.
-
-    Returns: GradingResult with detailed breakdown and total score in [0.0, 1.0]
+    Grade a complete action against ground truth.
+    Weights: Risk 0.40, Decision 0.35, Rate 0.25, Consistency ±0.10.
+    Returns GradingResult with per-component scores and total in [0.01, 0.99].
     """
-    # Edge-case: if action or ground_truth is None, return zero score
     if action is None or ground_truth is None:
         return GradingResult(
             risk_level_score=0.01,
@@ -274,13 +205,11 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
             feedback="❌ No valid action or ground truth provided.",
         )
 
-    # Grade each component
     risk_score = grade_risk_level(action.risk_level, ground_truth.risk_level)
     decision_score = grade_loan_decision(action.loan_decision, ground_truth.loan_decision)
     rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
     consistency = grade_consistency(action)
 
-    # Calculate weighted total
     weighted_total = (
         risk_score * 0.40 +
         decision_score * 0.35 +
@@ -288,13 +217,10 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         consistency
     )
 
-    # Clamp final score to [0.01, 0.99] — guarantees output is strictly between 0 and 1
     total_score = max(0.01, min(0.99, weighted_total))
 
-    # Generate human-readable feedback
     feedback_parts = []
 
-    # Risk level feedback
     if risk_score >= 0.95:
         feedback_parts.append(f"✅ Risk level: Correct ({action.risk_level.value})")
     elif risk_score > 0:
@@ -308,7 +234,6 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
             f"expected {ground_truth.risk_level.value}"
         )
 
-    # Loan decision feedback
     if decision_score >= 0.95:
         feedback_parts.append(f"✅ Loan decision: Correct ({action.loan_decision.value})")
     elif decision_score > 0:
@@ -322,7 +247,6 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
             f"expected {ground_truth.loan_decision.value}"
         )
 
-    # Interest rate feedback
     if rate_score >= 0.95:
         feedback_parts.append(
             f"✅ Interest rate: Correct ({action.interest_rate_tier.value})"
@@ -338,7 +262,6 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
             f"expected {ground_truth.interest_rate_tier.value}"
         )
 
-    # Consistency feedback
     if consistency > 0:
         feedback_parts.append(f"🔗 Consistency bonus: +{consistency:.2f}")
     elif consistency < 0:
@@ -356,20 +279,10 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
     )
 
 
-# ─── Stage-Specific Graders ─────────────────────────────────────────────────
-
-
 def grade_lead_qualification(action: Action, ground_truth: GroundTruth) -> GradingResult:
     """
-    Grade lead qualification decision for Stage 1 (Sales).
-
-    Evaluates whether the agent correctly identified lead strength:
-    - High income + stable job → Qualify (Low risk, Approve)
-    - Low income + unstable → Disqualify (High risk, Reject)
-    - Borderline → Request more info (Medium, Conditional Approve)
-
-    Weights: qualification decision (0.45), lead strength (0.35), priority (0.20).
-    Scores clamped to [0.01, 0.99].
+    Stage 1 grader (Sales). Decision weight raised to 0.45 because qualification
+    correctness matters more than rate tier at this early stage.
     """
     if action is None or ground_truth is None:
         return GradingResult(
@@ -386,7 +299,6 @@ def grade_lead_qualification(action: Action, ground_truth: GroundTruth) -> Gradi
     rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
     consistency = grade_consistency(action)
 
-    # Lead qualification: decision matters most
     weighted_total = (
         risk_score * 0.35 +
         decision_score * 0.45 +
@@ -455,15 +367,8 @@ def grade_lead_qualification(action: Action, ground_truth: GroundTruth) -> Gradi
 
 def grade_document_verification(action: Action, ground_truth: GroundTruth) -> GradingResult:
     """
-    Grade document verification assessment for Stage 2 (HR/IT).
-
-    Evaluates whether the agent correctly assessed document completeness:
-    - All docs present + consistent → Complete (Low risk, Approve)
-    - Missing docs → Request missing (Medium, Conditional Approve)
-    - Inconsistent details → Flag suspicious (High, Reject)
-
-    Weights: document risk (0.45), verification decision (0.35), processing tier (0.20).
-    Scores clamped to [0.01, 0.99].
+    Stage 2 grader (Document Verification). Risk weight raised to 0.45 because
+    assessing document completeness is the primary objective at this stage.
     """
     if action is None or ground_truth is None:
         return GradingResult(
@@ -480,7 +385,6 @@ def grade_document_verification(action: Action, ground_truth: GroundTruth) -> Gr
     rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
     consistency = grade_consistency(action)
 
-    # Document verification: risk assessment (completeness) matters most
     weighted_total = (
         risk_score * 0.45 +
         decision_score * 0.35 +
@@ -549,16 +453,8 @@ def grade_document_verification(action: Action, ground_truth: GroundTruth) -> Gr
 
 def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> GradingResult:
     """
-    Grade customer onboarding assessment for Stage 5 (Project Management).
-
-    Evaluates whether the agent correctly assessed onboarding completeness:
-    - All steps completed in order → Full score (Low risk, Approve)
-    - Steps skipped → Partial score (Medium, Conditional Approve)
-    - Wrong order or critical gaps → Penalty (High, Reject)
-
-    Weights: readiness (0.35), onboarding decision (0.35), disbursement priority (0.20),
-    consistency (0.10 bonus).
-    Scores clamped to [0.01, 0.99].
+    Stage 5 grader (Customer Onboarding). Risk and decision weighted equally (0.35 each).
+    +0.05 completeness bonus applied when all three components are exact matches.
     """
     if action is None or ground_truth is None:
         return GradingResult(
@@ -575,7 +471,6 @@ def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> Grad
     rate_score = grade_interest_rate(action.interest_rate_tier, ground_truth.interest_rate_tier)
     consistency = grade_consistency(action)
 
-    # Customer onboarding: readiness and decision equally important
     weighted_total = (
         risk_score * 0.35 +
         decision_score * 0.35 +
@@ -583,9 +478,8 @@ def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> Grad
         consistency
     )
 
-    # Additional onboarding-specific bonus: if all three match exactly, bonus for completeness
     if risk_score >= 0.95 and decision_score >= 0.95 and rate_score >= 0.95:
-        weighted_total += 0.05  # Onboarding completeness bonus
+        weighted_total += 0.05
 
     total_score = max(0.01, min(0.99, weighted_total))
 
@@ -634,7 +528,6 @@ def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> Grad
     elif consistency < 0:
         feedback_parts.append(f"⚠️ Consistency penalty: {consistency:.2f}")
 
-    # Onboarding completeness summary
     if risk_score >= 0.95 and decision_score >= 0.95 and rate_score >= 0.95:
         feedback_parts.append("🎯 All onboarding steps assessed correctly — completeness bonus applied!")
 
@@ -650,12 +543,7 @@ def grade_customer_onboarding(action: Action, ground_truth: GroundTruth) -> Grad
     )
 
 def calculate_dynamic_ground_truth(obs: "ApplicantProfile") -> GroundTruth:
-    """
-    Calculate the 'Correct' decision based on actual applicant data.
-    This allows the ground truth to adapt when the user provides custom details.
-    """
-    # 1. Determine Risk Level
-    # Score-based heuristics
+    """Derive ground truth from applicant data for custom profiles."""
     score = obs.credit_score
     income = obs.annual_income
     debt = obs.existing_debt
@@ -670,22 +558,19 @@ def calculate_dynamic_ground_truth(obs: "ApplicantProfile") -> GroundTruth:
         risk_level = RiskLevel.LOW
     elif score < 620 or dti > 0.60 or defaults > 1:
         risk_level = RiskLevel.HIGH
-        
-    # 2. Determine Loan Decision
+
     loan_decision = LoanDecision.CONDITIONAL_APPROVE
     if risk_level == RiskLevel.LOW and lti < 3.0:
         loan_decision = LoanDecision.APPROVE
     elif risk_level == RiskLevel.HIGH or lti > 5.0:
         loan_decision = LoanDecision.REJECT
-        
-    # 3. Determine Interest Rate
+
     interest_rate = InterestRateTier.MEDIUM
     if risk_level == RiskLevel.LOW:
         interest_rate = InterestRateTier.LOW
     elif risk_level == RiskLevel.HIGH:
         interest_rate = InterestRateTier.HIGH
-        
-    # 4. Generate Explanation
+
     explanation = get_underwriting_explanation(obs, risk_level, loan_decision, interest_rate)
     
     return GroundTruth(

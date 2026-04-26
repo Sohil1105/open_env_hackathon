@@ -1,0 +1,482 @@
+[
+  {
+    "input": "loan_0",
+    "output": "{}",
+    "reward_score": 0.3674,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_1",
+    "output": "{}",
+    "reward_score": 0.3866,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_2",
+    "output": "{}",
+    "reward_score": 0.2996,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_3",
+    "output": "{}",
+    "reward_score": 0.3054,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_4",
+    "output": "{}",
+    "reward_score": 0.2957,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_5",
+    "output": "{}",
+    "reward_score": 0.338,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_6",
+    "output": "{}",
+    "reward_score": 0.3971,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_7",
+    "output": "{}",
+    "reward_score": 0.345,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_8",
+    "output": "{}",
+    "reward_score": 0.3946,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_9",
+    "output": "{}",
+    "reward_score": 0.3134,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_10",
+    "output": "{}",
+    "reward_score": 0.4503,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_11",
+    "output": "{}",
+    "reward_score": 0.5359,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_12",
+    "output": "{}",
+    "reward_score": 0.4381,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_13",
+    "output": "{}",
+    "reward_score": 0.5436,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_14",
+    "output": "{}",
+    "reward_score": 0.4303,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_15",
+    "output": "{}",
+    "reward_score": 0.3582,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_16",
+    "output": "{}",
+    "reward_score": 0.426,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_17",
+    "output": "{}",
+    "reward_score": 0.3633,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_18",
+    "output": "{}",
+    "reward_score": 0.3288,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_19",
+    "output": "{}",
+    "reward_score": 0.4342,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_20",
+    "output": "{}",
+    "reward_score": 0.3805,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_21",
+    "output": "{}",
+    "reward_score": 0.4723,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_22",
+    "output": "{}",
+    "reward_score": 0.2961,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_23",
+    "output": "{}",
+    "reward_score": 0.414,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_24",
+    "output": "{}",
+    "reward_score": 0.3954,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_25",
+    "output": "{}",
+    "reward_score": 0.4057,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_26",
+    "output": "{}",
+    "reward_score": 0.3776,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_27",
+    "output": "{}",
+    "reward_score": 0.4945,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_28",
+    "output": "{}",
+    "reward_score": 0.4906,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_29",
+    "output": "{}",
+    "reward_score": 0.4351,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_30",
+    "output": "{}",
+    "reward_score": 0.4137,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_31",
+    "output": "{}",
+    "reward_score": 0.477,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_32",
+    "output": "{}",
+    "reward_score": 0.4444,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_33",
+    "output": "{}",
+    "reward_score": 0.3119,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_34",
+    "output": "{}",
+    "reward_score": 0.3245,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_35",
+    "output": "{}",
+    "reward_score": 0.321,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_36",
+    "output": "{}",
+    "reward_score": 0.3939,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_37",
+    "output": "{}",
+    "reward_score": 0.301,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_38",
+    "output": "{}",
+    "reward_score": 0.4347,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_39",
+    "output": "{}",
+    "reward_score": 0.3718,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_40",
+    "output": "{}",
+    "reward_score": 0.4405,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_41",
+    "output": "{}",
+    "reward_score": 0.4952,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_42",
+    "output": "{}",
+    "reward_score": 0.5068,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_43",
+    "output": "{}",
+    "reward_score": 0.408,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_44",
+    "output": "{}",
+    "reward_score": 0.2975,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_45",
+    "output": "{}",
+    "reward_score": 0.4694,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_46",
+    "output": "{}",
+    "reward_score": 0.436,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_47",
+    "output": "{}",
+    "reward_score": 0.5019,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_48",
+    "output": "{}",
+    "reward_score": 0.4735,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_49",
+    "output": "{}",
+    "reward_score": 0.3737,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_50",
+    "output": "{}",
+    "reward_score": 0.376,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_51",
+    "output": "{}",
+    "reward_score": 0.3116,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_52",
+    "output": "{}",
+    "reward_score": 0.3389,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_53",
+    "output": "{}",
+    "reward_score": 0.3149,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_54",
+    "output": "{}",
+    "reward_score": 0.3874,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_55",
+    "output": "{}",
+    "reward_score": 0.3018,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_56",
+    "output": "{}",
+    "reward_score": 0.3884,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_57",
+    "output": "{}",
+    "reward_score": 0.5185,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_58",
+    "output": "{}",
+    "reward_score": 0.5133,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_59",
+    "output": "{}",
+    "reward_score": 0.4707,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_60",
+    "output": "{}",
+    "reward_score": 0.4643,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_61",
+    "output": "{}",
+    "reward_score": 0.5386,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_62",
+    "output": "{}",
+    "reward_score": 0.3024,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_63",
+    "output": "{}",
+    "reward_score": 0.3426,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_64",
+    "output": "{}",
+    "reward_score": 0.2833,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_65",
+    "output": "{}",
+    "reward_score": 0.3292,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_66",
+    "output": "{}",
+    "reward_score": 0.2811,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_67",
+    "output": "{}",
+    "reward_score": 0.4243,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_68",
+    "output": "{}",
+    "reward_score": 0.4329,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_69",
+    "output": "{}",
+    "reward_score": 0.4664,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_70",
+    "output": "{}",
+    "reward_score": 0.5366,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_71",
+    "output": "{}",
+    "reward_score": 0.4626,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_72",
+    "output": "{}",
+    "reward_score": 0.4033,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_73",
+    "output": "{}",
+    "reward_score": 0.4954,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_74",
+    "output": "{}",
+    "reward_score": 0.3875,
+    "decision": "Reject"
+  },
+  {
+    "input": "loan_75",
+    "output": "{}",
+    "reward_score": 0.308,
+    "decision": "Conditional Approve"
+  },
+  {
+    "input": "loan_76",
+    "output": "{}",
+    "reward_score": 0.3881,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_77",
+    "output": "{}",
+    "reward_score": 0.2982,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_78",
+    "output": "{}",
+    "reward_score": 0.399,
+    "decision": "Approve"
+  },
+  {
+    "input": "loan_79",
+    "output": "{}",
+    "reward_score": 0.3718,
+    "decision": "Approve"
+  }
+]

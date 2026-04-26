@@ -25,10 +25,8 @@ from transformers import TrainingArguments, TextStreamer
 # --- 1. CONFIGURATION ---
 MODEL_NAME = "unsloth/llama-3-8b-Instruct-bnb-4bit"
 MAX_SEQ_LENGTH = 512
-# Fixed DTYPE for hardware optimization
 DTYPE = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
 LOAD_IN_4BIT = True
-# Fixed device selection
 device = "cuda" if torch.cuda.is_available() else "cpu"
 
 # --- 2. DATASET LOADING (Real World) ---
@@ -57,7 +55,6 @@ def get_training_data():
         inq = row["inq.last.6mths"]
         not_paid = row["not.fully.paid"]
 
-        # Compute monthly DTI properly
         monthly_income = income / 12
         installment = row.get("installment", 0)
         real_dti = (installment / monthly_income * 100) if monthly_income > 0 else dti
@@ -78,7 +75,6 @@ def get_training_data():
 
     print(f"📊 Extracted Categories — Low: {len(low_cases)}, Medium: {len(medium_cases)}, High: {len(high_cases)}")
 
-    # Balance to target ~1,400 per class for 4,200 total
     target_per_class = min(len(low_cases), len(medium_cases), len(high_cases), 1400)
     print(f"⚖️ Balancing to ~{target_per_class} per class...")
 
@@ -87,7 +83,15 @@ def get_training_data():
         random.sample(medium_cases, target_per_class) +
         random.sample(high_cases, target_per_class)
     )
-    random.shuffle(balanced)
+    # Curriculum: present easy cases first so the model builds a strong baseline
+    def difficulty_score(case):
+        risk = case[8]
+        if risk == "Low": return 0
+        if risk == "Medium": return 1
+        return 2
+
+    balanced.sort(key=difficulty_score)
+    print("🎓 Curriculum applied: Low → Medium → High")
 
     formatted = []
     for case in balanced:
@@ -98,7 +102,12 @@ def get_training_data():
         formatted.append({"text": text})
 
     full_ds = Dataset.from_list(formatted)
-    split_ds = full_ds.train_test_split(test_size=0.1, seed=42)
+    # Sequential split (not random) to preserve curriculum order in training
+    train_size = int(0.9 * len(full_ds))
+    train_ds = full_ds.select(range(train_size))
+    test_ds = full_ds.select(range(train_size, len(full_ds)))
+    
+    split_ds = {"train": train_ds, "test": test_ds}
     print(f"✅ Final Dataset — Train: {len(split_ds['train'])}, Validation: {len(split_ds['test'])}")
     return split_ds
 
@@ -220,21 +229,60 @@ if HF_TOKEN != "":
     )
     print("✅ Merged model uploaded to: https://huggingface.co/Sourav0511/loan-underwriting-merged-v2")
 
-# --- 7. VERIFICATION TEST ---
+# --- 7. ENVIRONMENT ROLLOUT VALIDATION (RL LOOP SIMULATION) ---
 print("\n" + "="*50)
-print("🔍 LIVE VERIFICATION (UNSEEN CASE)")
+print("🕹️ ENVIRONMENT ROLLOUT TEST (LONG-HORIZON)")
 print("="*50)
+
+from environment import LoanUnderwritingEnv, Action
+import json
+
+env = LoanUnderwritingEnv()
+state = env.reset() # Start full lifecycle episode
+total_reward = 0
+step_count = 0
 
 FastLanguageModel.for_inference(model)
-test_profile = "Income: $85,000, FICO: 740, DTI: 12.0%, Purpose: home improvement, Delinquencies: 0, Public Records: 0, Inquiries (6mo): 0"
-inputs = tokenizer([f"### Instruction:\nEvaluate this loan application: {test_profile}\n\n### Response:\n"], return_tensors = "pt").to(device)
 
-streamer = TextStreamer(tokenizer)
-_ = model.generate(**inputs, streamer = streamer, max_new_tokens = 256)
+while not state.done:
+    obs = state.observation
+    prompt = f"### Instruction:\nEvaluate this loan stage: {obs.task_description}\nApplicant: {obs.applicant_name}, FICO: {obs.credit_score}, DTI: {obs.debt_to_income_ratio:.1%}\n\n### Response:\n"
+    
+    inputs = tokenizer([prompt], return_tensors="pt").to("cuda")
+    outputs = model.generate(**inputs, max_new_tokens=128, use_cache=True)
+    response = tokenizer.batch_decode(outputs)[0].split("### Response:\n")[-1].strip()
+    
+    # Simple extraction for rollout
+    try:
+        # Try to find JSON in response
+        json_str = response.split('}')[0] + '}'
+        data = json.loads(json_str)
+        action = Action(
+            risk_level=data.get("risk_level", "Medium"),
+            loan_decision=data.get("decision", "Approve"),
+            interest_rate_tier=data.get("interest_rate", "10-13%")
+        )
+    except:
+        action = Action(risk_level="Medium", loan_decision="Approve", interest_rate_tier="10-13%")
 
-print("\n" + "="*50)
-print("SUCCESS: Pipeline is fully operational.")
+    state, reward, done, info = env.step(action)
+    total_reward += reward
+    step_count += 1
+    print(f"Step {step_count}: Stage={info['task_id']}, Reward={reward:.2f}")
+
+print(f"\n✅ Rollout Complete. Average Reward: {total_reward/step_count:.2f}")
 print("="*50)
+
+# --- LOG REWARDS TO CSV ---
+import csv
+log_file = "training_log.csv"
+file_exists = os.path.isfile(log_file)
+with open(log_file, mode='a', newline='') as f:
+    writer = csv.writer(f)
+    if not file_exists:
+        writer.writerow(["step", "loss", "reward"])
+    writer.writerow([trainer.state.global_step, loss[-1], total_reward/step_count])
+print(f"📊 Rewards logged to {log_file}")
 
 # --- 8. SAVE & UPLOAD TO HUGGING FACE ---
 

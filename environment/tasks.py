@@ -1,12 +1,8 @@
 """
 Task definitions for the Loan Underwriting OpenEnv environment.
 
-Defines 3 tasks with progressive difficulty:
-- Easy: Salaried employee, high credit score, low debt-to-income
-- Medium: Self-employed, average credit score, moderate debt
-- Hard: Freelancer, low credit score, high debt, large loan request
-
-Each task includes a full applicant profile and its ground truth answers.
+8 tasks ordered by loan lifecycle stage (TASK_ORDER), spanning Easy → Hard
+difficulty. Each task contains a full ApplicantProfile and its GroundTruth.
 """
 
 from .models import (

@@ -306,6 +306,6 @@ reward:
 
 # Runtime constraints
 runtime:
-  max_episode_steps: 1
+  max_episode_steps: 8
   max_episodes_per_task: 1
   timeout_seconds: 1200
