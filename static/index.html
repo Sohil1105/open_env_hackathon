@@ -1335,7 +1335,7 @@
       <div class="panel-body" id="resultBody">
         <div class="waiting-state" id="waitingState">
           <div class="waiting-icon">◇</div>
-          <div class="waiting-text">Select a stage and execute to view results</div>
+          <div class="waiting-text">Autonomous Underwriting</div>
         </div>
 
         <div id="resultContent" style="display:none;">
@@ -1426,7 +1426,7 @@
   <!-- ─── Lifecycle Progress Bar ───────────────────────────── -->
   <section class="lifecycle-bar">
     <div class="lifecycle-container">
-      <div class="lifecycle-title">Loan Lifecycle Pipeline</div>
+      <div class="lifecycle-title">Autonomous Underwriting Pipeline</div>
       <div class="lifecycle-stages" id="lifecycleStages">
         <!-- Populated by JS -->
       </div>
@@ -1453,14 +1453,9 @@
     // ─── Constants ──────────────────────────────────────────
     const BASE_URL = window.location.origin;
     const STAGE_META = [
-      { id: 'lead_qualification_sales', label: 'Sales', icon: '✅' },
-      { id: 'document_verification_hr', label: 'Docs', icon: '✅' },
-      { id: 'easy_salaried_high_credit', label: 'Risk I', icon: '✅' },
-      { id: 'medium_self_employed_moderate', label: 'Risk II', icon: '✅' },
-      { id: 'hard_freelancer_complex', label: 'Risk III', icon: '✅' },
-      { id: 'customer_onboarding_pm', label: 'Onboard', icon: '✅' },
-      { id: 'bankruptcy_recovery_edge1', label: 'Monitor', icon: '✅' },
-      { id: 'joint_applicants_edge2', label: 'Close', icon: '✅' },
+      { id: 'documentation', label: 'Documentation', icon: '📂' },
+      { id: 'credit_character', label: 'Credit Character', icon: '🔍' },
+      { id: 'final_verdict', label: 'Final Verdict', icon: '🏦' }
     ];
 
     let completedStages = new Set();
@@ -1607,17 +1602,23 @@
 
     // ─── API Helpers ────────────────────────────────────────
     async function apiFetch(path, options = {}) {
+      console.log(`[API] Request: ${path}`, options);
       try {
         const resp = await fetch(`${BASE_URL}${path}`, {
           headers: { 'Content-Type': 'application/json' },
           ...options,
         });
+        console.log(`[API] Response Status: ${resp.status}`);
         if (!resp.ok) {
           const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+          console.error('[API] Error details:', err);
           throw new Error(err.detail || `HTTP ${resp.status}`);
         }
-        return await resp.json();
+        const data = await resp.json();
+        console.log('[API] Data received:', data);
+        return data;
       } catch (e) {
+        console.error('[API] Fetch failed:', e);
         showToast(e.message, 'error');
         throw e;
       }
@@ -1705,6 +1706,7 @@
       const btn = document.getElementById('executeBtn');
       btn.disabled = true;
       btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
+      console.log('[UI] Initiating underwriting analysis...');
 
       try {
         const applicant = {
@@ -1725,6 +1727,8 @@
           documents_submitted: uploadedFiles
         };
 
+        console.log('[UI] Applicant data prepared:', applicant);
+
         let riskStage = 'easy_salaried_high_credit';
         if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
         else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
@@ -1741,28 +1745,34 @@
         for (const msg of stages) {
           btn.innerHTML = `<span class="spinner"></span>${msg}`;
           showToast(msg, 'info');
+          console.log(`[UI] Processing: ${msg}`);
           await new Promise(r => setTimeout(r, 700));
         }
 
+        console.log('[UI] Calling /evaluate endpoint...');
         const response = await fetch('/evaluate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(applicant)
         });
 
+        console.log(`[UI] /evaluate Status: ${response.status}`);
         if (!response.ok) {
-          const err = await response.json();
+          const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+          console.error('[UI] /evaluate failed:', err);
           showToast(err.detail || 'Server error', 'error');
           return;
         }
 
         const result = await response.json();
+        console.log('[UI] /evaluate Result:', result);
 
         const stageResults = result.stage_results || [];
         for (let i = 0; i < stageResults.length; i++) {
           const stage = stageResults[i];
           btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
           showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
+          console.log(`[UI] Displaying stage ${stage.stage}: ${stage.name}`);
           activeStageId = STAGE_META[i].id;
           completedStages.add(activeStageId);
           updateLifecycleBar();
@@ -1773,6 +1783,7 @@
         showToast('✨ Final Underwriting Decision Rendered', 'success');
 
       } catch (e) {
+        console.error('[UI] executeStep error:', e);
         showToast(e.message, 'error');
       } finally {
         btn.disabled = false;
@@ -1919,14 +1930,21 @@
     }
 
     function resetForm() {
+      console.log('[UI] Resetting form fields...');
       document.getElementById('applicantName').value = '';
+      document.getElementById('applicantAge').value = '30';
       document.getElementById('annualIncome').value = '';
       document.getElementById('creditScore').value = '';
       document.getElementById('existingDebt').value = '';
       document.getElementById('loanAmount').value = '';
       document.getElementById('employmentType').value = 'salaried';
+      document.getElementById('employmentYears').value = '2';
+      document.getElementById('prevDefaults').value = '0';
       document.getElementById('loanTenure').value = '36';
       document.getElementById('hasCollateral').checked = false;
+      document.getElementById('loanPurpose').value = '';
+      document.getElementById('publicRecords').value = '0';
+      document.getElementById('inquiries').value = '0';
       uploadedFiles = [];
       document.getElementById('fileList').innerHTML = '';
     }

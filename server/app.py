@@ -608,94 +608,99 @@ def stage_result_to_action(res: dict) -> Action:
 
 @app.post("/evaluate")
 async def evaluate_applicant(applicant: ApplicantInput):
-    # 1. Reset environment for a new full-lifecycle episode
-    env.reset() # This starts the TASK_ORDER sequence
-    
-    # 2. Format profile for LLM context
-    profile = f"""
-    Applicant: {applicant.applicant_name} (Age: {getattr(applicant, 'age', 'N/A')})
-    Employment: {applicant.employment_type} ({getattr(applicant, 'employment_years', 'N/A')} years)
-    Income: ₹{applicant.annual_income:,.0f} | Debt: ₹{applicant.existing_debt:,.0f}
-    Requested: ₹{applicant.loan_amount:,.0f} over {applicant.loan_tenure} months
-    Credit Score: {applicant.credit_score} | Defaults: {getattr(applicant, 'previous_defaults', 0)}
-    Collateral: {"Provided" if getattr(applicant, 'has_collateral', False) else "None"}
-    """
-    
-    history = []
-    stage_results = []
-    total_env_reward = 0
-
-    async with evaluate_semaphore:
-        # ── STAGE 1: Documentation ──
-        s1_prompt = f"Review identity and documents for: {profile}"
-        s1_res = await call_llm(s1_prompt)
-        # Convert LLM analysis to a real environment action
-        action1 = stage_result_to_action(s1_res)
-        _, r1, _, _ = env.step(action1)
-        total_env_reward += r1
-        stage_results.append({"stage": 1, "name": "Documentation", "result": s1_res, "reward": r1})
-        history.append(f"Stage 1: {s1_res.get('reasoning', '')}")
-
-        # ── STAGE 2: Credit ──
-        s2_prompt = f"Analyze credit for: {profile}. Previous: {history[-1]}"
-        s2_res = await call_llm(s2_prompt)
-        action2 = stage_result_to_action(s2_res)
-        _, r2, _, _ = env.step(action2)
-        total_env_reward += r2
-        stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_res, "reward": r2})
-        history.append(f"Stage 2: {s2_res.get('reasoning', '')}")
-
-        # ── STAGE 3-4: Intermediate Processing ──
-        # Advance env through intermediate lifecycle stages using accumulated context
-        while env._current_step < 4:
-            # For these background stages, we use the best available context from Stage 2
-            env.step(action2)
-
-        # ── STAGE 5: Final Verdict ──
-        s5_prompt = f"Final verdict for: {profile}. History: {' | '.join(history)}"
-        s5_res = await call_llm(s5_prompt, max_tokens=500)
+    try:
+        logger.info(f"Evaluating applicant: {applicant.applicant_name}")
+        # 1. Reset environment for a new full-lifecycle episode
+        env.reset() # This starts the TASK_ORDER sequence
         
-        action_final = Action(
-            risk_level=s5_res.get("risk_level", "Medium"),
-            loan_decision=s5_res.get("loan_decision", "Conditional Approve"),
-            interest_rate_tier=s5_res.get("interest_rate_tier", "10-13%"),
-            reasoning=s5_res.get("reasoning", "")
+        # 2. Format profile for LLM context
+        profile = f"""
+        Applicant: {applicant.applicant_name} (Age: {getattr(applicant, 'age', 'N/A')})
+        Employment: {applicant.employment_type} ({getattr(applicant, 'employment_years', 'N/A')} years)
+        Income: ₹{applicant.annual_income:,.0f} | Debt: ₹{applicant.existing_debt:,.0f}
+        Requested: ₹{applicant.loan_amount:,.0f} over {applicant.loan_tenure} months
+        Credit Score: {applicant.credit_score} | Defaults: {getattr(applicant, 'previous_defaults', 0)}
+        Collateral: {"Provided" if getattr(applicant, 'has_collateral', False) else "None"}
+        """
+        
+        history = []
+        stage_results = []
+        total_env_reward = 0
+
+        async with evaluate_semaphore:
+            # ── STAGE 1: Documentation ──
+            s1_prompt = f"Review identity and documents for: {profile}"
+            s1_res = await call_llm(s1_prompt)
+            # Convert LLM analysis to a real environment action
+            action1 = stage_result_to_action(s1_res)
+            _, r1, _, _ = env.step(action1)
+            total_env_reward += r1
+            stage_results.append({"stage": 1, "name": "Documentation", "result": s1_res, "reward": r1})
+            history.append(f"Stage 1: {s1_res.get('reasoning', '')}")
+
+            # ── STAGE 2: Credit ──
+            s2_prompt = f"Analyze credit for: {profile}. Previous: {history[-1]}"
+            s2_res = await call_llm(s2_prompt)
+            action2 = stage_result_to_action(s2_res)
+            _, r2, _, _ = env.step(action2)
+            total_env_reward += r2
+            stage_results.append({"stage": 2, "name": "Credit Character", "result": s2_res, "reward": r2})
+            history.append(f"Stage 2: {s2_res.get('reasoning', '')}")
+
+            # ── STAGE 3-4: Intermediate Processing ──
+            # Advance env through intermediate lifecycle stages using accumulated context
+            while env._current_step < 4:
+                # For these background stages, we use the best available context from Stage 2
+                env.step(action2)
+
+            # ── STAGE 5: Final Verdict ──
+            s5_prompt = f"Final verdict for: {profile}. History: {' | '.join(history)}"
+            s5_res = await call_llm(s5_prompt, max_tokens=500)
+            
+            action_final = Action(
+                risk_level=s5_res.get("risk_level", "Medium"),
+                loan_decision=s5_res.get("loan_decision", "Conditional Approve"),
+                interest_rate_tier=s5_res.get("interest_rate_tier", "10-13%"),
+                reasoning=s5_res.get("reasoning", "")
+            )
+            
+            state, r_final, done, info = env.step(action_final)
+            total_env_reward += r_final
+            stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_res, "reward": r_final})
+
+        # Final Grading against dynamic ground truth
+        p_grade = ApplicantProfile(
+            applicant_name=applicant.applicant_name,
+            annual_income=applicant.annual_income,
+            credit_score=applicant.credit_score,
+            existing_debt=applicant.existing_debt,
+            loan_amount_requested=applicant.loan_amount,
+            employment_type=applicant.employment_type,
+            employment_years=applicant.employment_years,
+            repayment_tenure_months=applicant.loan_tenure,
+            age=applicant.age,
+            monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else 0.0,
+            has_collateral=applicant.has_collateral,
+            previous_defaults=applicant.previous_defaults
         )
+        gt = calculate_dynamic_ground_truth(p_grade)
         
-        state, r_final, done, info = env.step(action_final)
-        total_env_reward += r_final
-        stage_results.append({"stage": 5, "name": "Final Verdict", "result": s5_res, "reward": r_final})
-
-    # Final Grading against dynamic ground truth
-    p_grade = ApplicantProfile(
-        applicant_name=applicant.applicant_name,
-        annual_income=applicant.annual_income,
-        credit_score=applicant.credit_score,
-        existing_debt=applicant.existing_debt,
-        loan_amount_requested=applicant.loan_amount,
-        employment_type=applicant.employment_type,
-        employment_years=applicant.employment_years,
-        repayment_tenure_months=applicant.loan_tenure,
-        age=applicant.age,
-        monthly_expenses=applicant.monthly_expenses if applicant.monthly_expenses > 0 else 0.0,
-        has_collateral=applicant.has_collateral,
-        previous_defaults=applicant.previous_defaults
-    )
-    gt = calculate_dynamic_ground_truth(p_grade)
-    
-    return {
-        "agent_decision": s5_res,
-        "stage_results": stage_results,
-        "score": total_env_reward / 3, # Average of the 3 main stages
-        "ground_truth": {
-            "risk_level": gt.risk_level.value,
-            "loan_decision": gt.loan_decision.value,
-            "interest_rate_tier": gt.interest_rate_tier.value,
-            "explanation": gt.explanation
-        },
-        "status": "success",
-        "grading": info.get("grading", {})
-    }
+        return {
+            "agent_decision": s5_res,
+            "stage_results": stage_results,
+            "score": total_env_reward / 3, # Average of the 3 main stages
+            "ground_truth": {
+                "risk_level": gt.risk_level.value,
+                "loan_decision": gt.loan_decision.value,
+                "interest_rate_tier": gt.interest_rate_tier.value,
+                "explanation": gt.explanation
+            },
+            "status": "success",
+            "grading": info.get("grading", {})
+        }
+    except Exception as e:
+        logger.exception(f"Evaluate failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 
 
