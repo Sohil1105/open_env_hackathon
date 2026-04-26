@@ -619,7 +619,12 @@ async def evaluate_applicant(applicant: ApplicantInput):
 
         async with evaluate_semaphore:
             # ── STAGE 1: Documentation ──
-            s1_prompt = f"Review identity and documents for: {profile}"
+            s1_prompt = f"""
+            ### ROLE: Senior Documentation Officer
+            ### TASK: Review identity and documents for: {profile}
+            ### PRINCIPLE: Flag any missing documents or age/income inconsistencies.
+            ### FORMAT: JSON {{ "risk_level": "...", "reasoning": "..." }}
+            """
             s1_res = await call_llm(s1_prompt)
             # Convert LLM analysis to a real environment action
             action1 = stage_result_to_action(s1_res)
@@ -629,7 +634,12 @@ async def evaluate_applicant(applicant: ApplicantInput):
             history.append(f"Stage 1: {s1_res.get('reasoning', '')}")
 
             # ── STAGE 2: Credit ──
-            s2_prompt = f"Analyze credit for: {profile}. Previous: {history[-1]}"
+            s2_prompt = f"""
+            ### ROLE: Credit Analyst
+            ### TASK: Analyze credit for: {profile}. Previous: {history[-1]}
+            ### PRINCIPLE: Debt-to-Income (DTI) over 50% is HIGH RISK. Multiple defaults are a REJECT.
+            ### FORMAT: JSON {{ "risk_level": "...", "reasoning": "..." }}
+            """
             s2_res = await call_llm(s2_prompt)
             action2 = stage_result_to_action(s2_res)
             _, r2, _, _ = env.step(action2)
@@ -644,7 +654,24 @@ async def evaluate_applicant(applicant: ApplicantInput):
                 env.step(action2)
 
             # ── STAGE 5: Final Verdict ──
-            s5_prompt = f"Final verdict for: {profile}. History: {' | '.join(history)}"
+            s5_prompt = f"""
+            ### ROLE: Chief Underwriting Officer
+            ### TASK: Final verdict for: {profile}. 
+            ### CONTEXT: History: {' | '.join(history)}
+            
+            ### CRITICAL UNDERWRITING RULES (REWARD SIGNALS):
+            1. IRRATIONAL PRICING: If you assess HIGH RISK but give 7-9% Interest, you will receive a SEVERE PENALTY (-20%).
+            2. CONSISTENCY: Your final decision must align with the documentation and credit analysis from previous stages.
+            3. RISK-ADJUSTED RETURN: High Risk requires High Interest (14%+) or Rejection.
+            
+            ### OUTPUT FORMAT:
+            {{
+              "risk_level": "Low/Medium/High",
+              "loan_decision": "Approve/Conditional Approve/Reject",
+              "interest_rate_tier": "7-9%/10-13%/14%+",
+              "reasoning": "Step-by-step logic including DTI and Risk-Rate alignment."
+            }}
+            """
             s5_res = await call_llm(s5_prompt, max_tokens=500)
             
             action_final = Action(

@@ -127,6 +127,9 @@ class LoanUnderwritingEnv(Environment):
         self._step_rewards.append(step_reward)
         self._episode_reward = sum(self._step_rewards) / len(self._step_rewards)
 
+        # Print the high-visibility audit log to the terminal (The Winning Tip: Signal Quality)
+        print(format_reward_breakdown(grading_result))
+
         self._current_step += 1
         if self._current_step >= self._max_steps:
             self._done = True

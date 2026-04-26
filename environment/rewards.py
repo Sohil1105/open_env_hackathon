@@ -53,20 +53,32 @@ def compute_component_rewards(action: Action, ground_truth: GroundTruth) -> dict
 
 
 def format_reward_breakdown(grading_result: GradingResult) -> str:
-    """Format a human-readable reward breakdown for logging."""
+    """Format a professional, high-visibility audit log for the terminal."""
+    consistency = grading_result.consistency_bonus
+    
+    # Visual cues for the terminal
+    status_icon = "🟢" if grading_result.total_score > 0.8 else "🟡" if grading_result.total_score > 0.5 else "🔴"
+    integrity_status = "STABLE" if consistency >= 0 else "COMPROMISED" if consistency <= -0.15 else "WARNING"
+    
     lines = [
-        "┌─────────────────────────────────────────────┐",
-        "│         REWARD BREAKDOWN                     │",
-        "├─────────────────────────────────────────────┤",
-        f"│ Risk Level:     {grading_result.risk_level_score:.2f} × 0.40 = "
-        f"{grading_result.risk_level_score * RISK_WEIGHT:.3f}  │",
-        f"│ Loan Decision:  {grading_result.loan_decision_score:.2f} × 0.35 = "
-        f"{grading_result.loan_decision_score * DECISION_WEIGHT:.3f}  │",
-        f"│ Interest Rate:  {grading_result.interest_rate_score:.2f} × 0.25 = "
-        f"{grading_result.interest_rate_score * RATE_WEIGHT:.3f}  │",
-        f"│ Consistency:    {grading_result.consistency_bonus:+.2f}             │",
-        "├─────────────────────────────────────────────┤",
-        f"│ TOTAL REWARD:   {grading_result.total_score:.3f}                    │",
-        "└─────────────────────────────────────────────┘",
+        "\n" + "="*60,
+        f" FINANCIAL AUDIT LOG | SCORE: {grading_result.total_score:.3f} {status_icon}",
+        "="*60,
+        f"  [COMPONENTS]",
+        f"  • Risk Assessment:    {grading_result.risk_level_score:.2f} (Weight: 40%)",
+        f"  • Loan Decision:      {grading_result.loan_decision_score:.2f} (Weight: 35%)",
+        f"  • Interest Rate:      {grading_result.interest_rate_score:.2f} (Weight: 25%)",
+        "",
+        f"  [INTEGRITY CHECK: {integrity_status}]",
+        f"  • Consistency Bonus:  {consistency:+.2f}",
     ]
+    
+    if consistency <= -0.15:
+        lines.append("  ! CRITICAL: Irrational Pricing detected (High Risk + Low Rate)")
+    elif consistency < 0:
+        lines.append("  ! WARNING: Minor logical contradiction in underwriting")
+    elif consistency > 0.10:
+        lines.append("  * EXCELLENT: Perfect risk-adjusted alignment")
+        
+    lines.append("="*60 + "\n")
     return "\n".join(lines)

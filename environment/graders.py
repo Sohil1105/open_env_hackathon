@@ -139,8 +139,8 @@ def grade_interest_rate(predicted: InterestRateTier, expected: InterestRateTier)
 
 def grade_consistency(action: Action) -> float:
     """
-    Bonus/penalty in [-0.1, 0.1] for logical alignment across the three decisions.
-    Contradictions (e.g., Low risk + Reject, or High risk + Approve at 7-9%) are penalised.
+    Bonus/penalty in [-0.2, 0.15] for logical alignment across the three decisions.
+    Contradictions are penalised based on 'Financial Integrity' standards.
     """
     if action is None:
         return 0.01
@@ -158,19 +158,17 @@ def grade_consistency(action: Action) -> float:
         if decision == LoanDecision.APPROVE:
             consistency_score += 0.05
         elif decision == LoanDecision.REJECT:
-            consistency_score -= 0.05  # Contradictory
-
+            consistency_score -= 0.05
         if rate == InterestRateTier.LOW:
             consistency_score += 0.05
         elif rate == InterestRateTier.HIGH:
-            consistency_score -= 0.05  # Contradictory
+            consistency_score -= 0.05
 
     elif risk == RiskLevel.MEDIUM:
         if decision == LoanDecision.CONDITIONAL_APPROVE:
             consistency_score += 0.05
         elif decision == LoanDecision.APPROVE and rate == InterestRateTier.LOW:
-            consistency_score -= 0.05  # Too generous for medium risk
-
+            consistency_score -= 0.05
         if rate == InterestRateTier.MEDIUM:
             consistency_score += 0.05
 
@@ -178,15 +176,36 @@ def grade_consistency(action: Action) -> float:
         if decision in (LoanDecision.REJECT, LoanDecision.CONDITIONAL_APPROVE):
             consistency_score += 0.05
         elif decision == LoanDecision.APPROVE:
-            consistency_score -= 0.05  # Approving a high-risk applicant
-
+            consistency_score -= 0.10 # Severe optimism penalty
         if rate == InterestRateTier.HIGH:
             consistency_score += 0.05
         elif rate == InterestRateTier.LOW:
-            consistency_score -= 0.05  # Low rate for high risk is contradictory
+            consistency_score -= 0.20 # The "Irrational Pricing" Penalty
 
-    # Clamp to [-0.1, 0.1]
-    return max(-0.1, min(0.1, consistency_score))
+    # --- NEW: FINANCIAL INTEGRITY CHECKS (The Winning Tip: Quality of Envs) ---
+    
+    # Penalty: "The Irrational Pricing Penalty"
+    # Giving a Low Rate to a High Risk applicant is a banking catastrophe.
+    if risk == RiskLevel.HIGH and rate == InterestRateTier.LOW:
+        consistency_score -= 0.20  # Severe penalty
+    
+    # Penalty: "The Optimism Trap"
+    # Approving a High Risk applicant without high interest rates to offset risk.
+    if risk == RiskLevel.HIGH and decision == LoanDecision.APPROVE and rate != InterestRateTier.HIGH:
+        consistency_score -= 0.10
+
+    # Bonus: "The Gold Standard Alignment"
+    # Perfect alignment of Low Risk, Approve, and Low Rate.
+    if risk == RiskLevel.LOW and decision == LoanDecision.APPROVE and rate == InterestRateTier.LOW:
+        consistency_score += 0.05
+
+    # Bonus: "Risk-Adjusted Pricing"
+    # High Risk correctly paired with High Rate.
+    if risk == RiskLevel.HIGH and rate == InterestRateTier.HIGH:
+        consistency_score += 0.05
+
+    # Clamp to [-0.2, 0.15] to allow for bigger penalties than bonuses
+    return max(-0.2, min(0.15, consistency_score))
 
 
 def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
@@ -263,11 +282,12 @@ def grade_action(action: Action, ground_truth: GroundTruth) -> GradingResult:
         )
 
     if consistency > 0:
-        feedback_parts.append(f"🔗 Consistency bonus: +{consistency:.2f}")
+        feedback_parts.append(f"🔗 Consistency Bonus: +{consistency:.2f} (Logical alignment confirmed)")
     elif consistency < 0:
-        feedback_parts.append(f"⚠️ Consistency penalty: {consistency:.2f} (decisions are logically contradictory)")
+        severity = "CRITICAL" if consistency <= -0.15 else "WARNING"
+        feedback_parts.append(f"⚠️ {severity} Consistency Penalty: {consistency:.2f} (Irrational/Contradictory logic detected)")
 
-    feedback = "\n".join(feedback_parts)
+    feedback = "📊 UNDERWRITING QUALITY AUDIT:\n" + "\n".join(feedback_parts)
 
     return GradingResult(
         risk_level_score=risk_score,
