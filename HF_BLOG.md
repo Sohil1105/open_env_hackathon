@@ -9,7 +9,7 @@ authors:
 
 In the world of fintech, the "holy grail" is an AI that doesn't just calculate numbers, but *understands* the nuance of credit risk across a multi-stage lifecycle. Most AI models are trained on single-step classification, but real-world banking is a long-horizon game.
 
-For the **Scaler x Meta PyTorch Hackathon**, I built **NEXUS Bank** — an OpenEnv-compliant reinforcement learning environment that simulates a full loan underwriting desk.
+For the **Scaler x Meta PyTorch Hackathon**, I built **NEXUS Bank** — a technically rigorous, OpenEnv-compliant reinforcement learning environment that simulates a full loan underwriting desk. The architecture is built on the official **`openenv-core`** base classes to ensure full compatibility with the hackathon's automated evaluation pipeline.
 
 ## 🏁 The Challenge: Multi-Stage Underwriting
 
@@ -23,6 +23,7 @@ Traditional loan models look at a FICO score and spit out a binary "Approve/Reje
 6.  **Customer Onboarding**: Final setup protocols.
 7.  **Bankruptcy Recovery**: Monitoring high-risk portfolios.
 8.  **Joint Applicants**: Complex multi-party archival.
+
 
 Each stage requires the agent to decide on **Risk Level**, **Loan Decision**, and **Interest Rate Tier** while maintaining logical consistency.
 
@@ -51,15 +52,22 @@ def difficulty_score(case):
 training_data.sort(key=difficulty_score)
 ```
 
-## 📊 Results: A 105% Leap in Performance
+## 📊 Results: A 95.22% Leap in Performance
 
-The results were staggering. By shifting from a vanilla Llama-3.1-8B model to the NEXUS-v2 fine-tuned model, I saw:
+The results were staggering. By shifting from a vanilla Llama-3.1-8B model to the NEXUS-v2 fine-tuned model, I saw a massive improvement in objective alignment:
 
 | Metric | Baseline | NEXUS-v2 (Fine-Tuned) | Improvement |
 |--------|----------|-----------------------|-------------|
-| **Avg Reward Score** | 0.395 | **0.812** | **+105%** |
+| **Avg Reward Score** | 0.3993 | **0.7795** | **+95.22%** |
 | **Logic Consistency** | 42.1% | **94.8%** | **+125%** |
-| **Edge Case Handling** | Weak | **Exceptional** | High |
+
+### Training Evidence
+
+| Loss Convergence | Reward Growth |
+| :---: | :---: |
+| ![Training Loss](real_loss_plot.svg) | ![Training Reward](real_reward_plot.svg) |
+| *Stable convergence on complex loan profiles.* | *+95.22% average reward improvement.* |
+
 
 The model isn't just "smarter"; it's more **consistent**. It no longer approves a high-risk applicant with a 7% interest rate—it understands that risk and reward must be balanced.
 

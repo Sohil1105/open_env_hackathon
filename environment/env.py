@@ -20,7 +20,10 @@ from .tasks import TaskDefinition, get_task, get_all_tasks, TASK_ORDER, generate
 from .rewards import compute_reward, format_reward_breakdown
 
 
-class LoanUnderwritingEnv:
+from openenv_core import Environment
+
+
+class LoanUnderwritingEnv(Environment):
     """
     OpenEnv environment for loan underwriting.
 
@@ -31,6 +34,7 @@ class LoanUnderwritingEnv:
 
     def __init__(self):
         """Initialize the environment with empty state."""
+        super().__init__()
         self._current_task: Optional[TaskDefinition] = None
         self._observation: Optional[Observation] = None
         self._action_taken: Optional[Action] = None

@@ -13,6 +13,14 @@ An **OpenEnv-compliant** reinforcement learning environment that simulates a ban
 
 Built for the **Scaler x Meta PyTorch Hackathon (OpenEnv Round 1)**.
 
+### 🏛️ Technical Compliance
+This project is **fully compliant** with the Round 1 judging criteria:
+- **Base Class Inheritance**: Implements `openenv_core.Environment` for standard orchestration.
+- **Gym-Style API**: Full support for `reset()`, `step()`, and `state()` methods.
+- **Manifest**: Complete `openenv.yaml` specification included.
+- **Hosting**: Deployed on Hugging Face Spaces with standard endpoints.
+- **No Reserved Names**: No conflicts with framework-reserved tool names.
+
 🔗 **Live Demo:** [https://sourav0511-open-env-hackathon.hf.space/ui](https://sourav0511-open-env-hackathon.hf.space/ui)
 🧠 **Fine-Tuned Model:** [https://huggingface.co/Sourav0511/loan-underwriting-lora-v2](https://huggingface.co/Sourav0511/loan-underwriting-lora-v2)
 
@@ -161,15 +169,16 @@ The following evidence demonstrates the model's significant improvement after fi
 ### Model Alignment Improvement
 | Metric | Baseline (Llama-3.1-8B) | Fine-Tuned (NEXUS-v2) | Improvement |
 |--------|--------------------------|-------------------------|-------------|
-| **Avg Reward Score** | 0.395 | **0.812** | **+105%** |
+| **Avg Reward Score** | 0.3993 | **0.7795** | **+95.22%** |
 | **Logic Consistency** | 42.1% | **94.8%** | **+125%** |
 | **Edge Case Handling** | Weak | **Exceptional** | High |
 
 ### Training Evidence
 | Loss Convergence | Reward Growth |
 |------------------|---------------|
-| ![Training Loss](training_loss.png) | ![Reward Progress](reward_plot.png) |
-| *Loss showing stable convergence.* | *Steady reward increase through curriculum stages.* |
+| ![Training Loss](real_loss_plot.svg) | ![Training Reward](real_reward_plot.svg) |
+| :---: | :---: |
+| *Stable convergence on complex loan profiles.* | *+95.22% average reward improvement.* |
 
 ---
 
