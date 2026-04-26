@@ -141,21 +141,30 @@
     .top-bar .btn-reset-global {
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      padding: 0.35rem 1rem;
-      background: transparent;
+      padding: 0.4rem 1.2rem;
+      background: rgba(255, 51, 102, 0.05);
       color: var(--danger);
       border: 1px solid rgba(255, 51, 102, 0.3);
       border-radius: 4px;
       cursor: pointer;
       letter-spacing: 2px;
       text-transform: uppercase;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
     }
 
     .top-bar .btn-reset-global:hover {
-      background: rgba(255, 51, 102, 0.1);
+      background: rgba(255, 51, 102, 0.15);
       border-color: var(--danger);
-      box-shadow: var(--glow-accent);
+      box-shadow: 0 0 15px rgba(255, 51, 102, 0.2);
+      transform: translateY(-1px);
+    }
+
+    .top-bar .btn-reset-global:active {
+      transform: scale(0.95);
     }
 
     /* ─── Title ─────────────────────────────────────────────── */
@@ -514,12 +523,20 @@
     .file-upload-zone {
       border: 1px dashed var(--border);
       border-radius: 8px;
-      padding: 1.5rem;
+      padding: 2rem 1.5rem;
       text-align: center;
       margin-bottom: 1rem;
       transition: all 0.3s;
       cursor: pointer;
       background: rgba(255, 255, 255, 0.02);
+      position: relative;
+    }
+
+    .file-upload-zone.dragover {
+      border-color: var(--primary);
+      background: rgba(0, 255, 136, 0.05);
+      transform: scale(1.02);
+      box-shadow: var(--glow-primary);
     }
 
     .file-upload-zone:hover {
@@ -569,22 +586,49 @@
     .btn {
       font-family: var(--font-mono);
       font-size: 0.75rem;
-      padding: 0.5rem 1.2rem;
+      padding: 0.6rem 1.5rem;
       border-radius: 4px;
       cursor: pointer;
       letter-spacing: 2px;
       text-transform: uppercase;
-      transition: all 0.3s;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
       border: 1px solid transparent;
+      position: relative;
+      overflow: hidden;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+      transition: 0.5s;
+    }
+
+    .btn:hover:not(:disabled)::after {
+      left: 100%;
+    }
+
+    .btn:active:not(:disabled) {
+      transform: scale(0.96);
     }
 
     .btn:disabled {
-      opacity: 0.4;
+      opacity: 0.3;
       cursor: not-allowed;
+      filter: grayscale(1);
     }
 
     .btn-reset {
-      background: transparent;
+      background: rgba(106, 122, 138, 0.1);
       color: var(--text-dim);
       border-color: var(--border);
     }
@@ -592,16 +636,19 @@
     .btn-reset:hover:not(:disabled) {
       color: var(--text);
       border-color: var(--text-dim);
+      background: rgba(106, 122, 138, 0.2);
     }
 
     .btn-execute {
       background: rgba(0, 255, 136, 0.1);
       color: var(--primary);
       border-color: rgba(0, 255, 136, 0.4);
+      text-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
     }
 
     .btn-execute:hover:not(:disabled) {
       background: rgba(0, 255, 136, 0.2);
+      border-color: var(--primary);
       box-shadow: var(--glow-primary);
     }
 
@@ -1258,10 +1305,11 @@
         <!-- Step 4: Documents -->
         <div class="wizard-content-step" id="wizardStep-4">
           <div class="section-label">Step 4: Document Upload</div>
-          <div class="file-upload-zone" onclick="simulateFileUpload()">
+          <div class="file-upload-zone" id="dropZone" onclick="openFilePicker()">
+            <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)">
             <div class="file-upload-icon">📂</div>
-            <div style="font-size:0.8rem; margin-bottom:0.3rem;">Drop bank statements or ID here</div>
-            <div style="font-size:0.6rem; color:var(--text-dim);">Supported: PDF, JPG, PNG (Max 5MB)</div>
+            <div id="dropZoneText" style="font-size:0.8rem; margin-bottom:0.3rem;">Drop bank statements or ID here</div>
+            <div style="font-size:0.6rem; color:var(--text-dim);">Click to browse or drag & drop files</div>
           </div>
           <div class="file-list" id="fileList">
             <!-- Files will appear here -->
@@ -1425,6 +1473,7 @@
     document.addEventListener('DOMContentLoaded', async () => {
       initParticles();
       buildLifecycleBar();
+      initDragAndDrop();
       await loadTasks();
       healthCheck();
     });
@@ -1478,28 +1527,77 @@
     }
 
     // ─── File Upload Simulation ──────────────────────────────
-    function simulateFileUpload() {
-      const fileNames = [
-        'ID_Card_Front.jpg', 'ID_Card_Back.jpg', 'Salary_Slip_March.pdf',
-        'Bank_Statement_6M.pdf', 'Collateral_Deed.pdf', 'Tax_Returns_2025.pdf'
-      ];
-      const randomFile = fileNames[Math.floor(Math.random() * fileNames.length)];
+    // ─── File Upload & Drag-and-Drop ─────────────────────────
+    function openFilePicker() {
+      document.getElementById('fileInput').click();
+    }
 
-      if (uploadedFiles.includes(randomFile)) {
-        showToast('File already uploaded', 'info');
-        return;
+    function handleFileSelect(event) {
+      const files = event.target.files;
+      if (files) {
+        addFiles(Array.from(files).map(f => f.name));
       }
+    }
 
-      uploadedFiles.push(randomFile);
+    function initDragAndDrop() {
+      const dropZone = document.getElementById('dropZone');
+
+      ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, e => {
+          e.preventDefault();
+          e.stopPropagation();
+        }, false);
+      });
+
+      ['dragenter', 'dragover'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+          dropZone.classList.add('dragover');
+          document.getElementById('dropZoneText').textContent = 'Ready to Receive';
+        }, false);
+      });
+
+      ['dragleave', 'drop'].forEach(eventName => {
+        dropZone.addEventListener(eventName, () => {
+          dropZone.classList.remove('dragover');
+          document.getElementById('dropZoneText').textContent = 'Drop bank statements or ID here';
+        }, false);
+      });
+
+      dropZone.addEventListener('drop', e => {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        if (files && files.length > 0) {
+          addFiles(Array.from(files).map(f => f.name));
+        }
+      }, false);
+    }
+
+    function addFiles(fileNames) {
       const fileList = document.getElementById('fileList');
-      const div = document.createElement('div');
-      div.className = 'file-item';
-      div.innerHTML = `
-        <span>📄 ${randomFile}</span>
-        <span class="remove-file" onclick="removeFile('${randomFile}', this)">✕</span>
-      `;
-      fileList.appendChild(div);
-      showToast(`Uploaded: ${randomFile}`, 'success');
+
+      fileNames.forEach(name => {
+        if (uploadedFiles.includes(name)) {
+          showToast(`File "${name}" already uploaded`, 'info');
+          return;
+        }
+
+        uploadedFiles.push(name);
+        const div = document.createElement('div');
+        div.className = 'file-item';
+        div.innerHTML = `
+          <span>📄 ${name}</span>
+          <span class="remove-file" onclick="removeFile('${name}', this)">✕</span>
+        `;
+        fileList.appendChild(div);
+        showToast(`Added: ${name}`, 'success');
+      });
+    }
+
+    function simulateFileUpload() {
+      // Fallback/Legacy simulation for testing
+      const mockNames = ['Salary_Slip.pdf', 'ID_Card.jpg', 'Bank_Statement.pdf'];
+      const randomName = mockNames[Math.floor(Math.random() * mockNames.length)];
+      addFiles([randomName]);
     }
 
     function removeFile(name, el) {
