@@ -1,4 +1,4 @@
-"""
+﻿"""
 OpenEnv-compliant server entry point for Loan Underwriting environment.
 
 This module provides the FastAPI app and a `main()` function entry point
@@ -617,8 +617,8 @@ async def evaluate_applicant(applicant: ApplicantInput):
         profile = f"""
         Applicant: {applicant.applicant_name} (Age: {getattr(applicant, 'age', 'N/A')})
         Employment: {applicant.employment_type} ({getattr(applicant, 'employment_years', 'N/A')} years)
-        Income: ₹{applicant.annual_income:,.0f} | Debt: ₹{applicant.existing_debt:,.0f}
-        Requested: ₹{applicant.loan_amount:,.0f} over {applicant.loan_tenure} months
+        Income: ${applicant.annual_income:,.0f} | Debt: ${applicant.existing_debt:,.0f}
+        Requested: ${applicant.loan_amount:,.0f} over {applicant.loan_tenure} months
         Credit Score: {applicant.credit_score} | Defaults: {getattr(applicant, 'previous_defaults', 0)}
         Collateral: {"Provided" if getattr(applicant, 'has_collateral', False) else "None"}
         """
