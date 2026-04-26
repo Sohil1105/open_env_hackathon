@@ -60,14 +60,14 @@ class ApplicantProfile(BaseModel):
     This is the raw data that gets transformed into an Observation.
     """
     applicant_name: str = Field(..., description="Full name of the loan applicant")
-    age: int = Field(..., ge=18, le=100, description="Age in years")
+    age: int = Field(..., ge=0, le=120, description="Age in years")
     annual_income: float = Field(..., gt=0, description="Annual income in USD")
-    credit_score: int = Field(..., ge=300, le=850, description="FICO credit score")
+    credit_score: int = Field(..., ge=0, le=1000, description="FICO credit score")
     existing_debt: float = Field(..., ge=0, description="Total existing debt in USD")
     employment_type: EmploymentType = Field(..., description="Employment classification")
     employment_years: float = Field(..., ge=0, description="Years in current employment")
     loan_amount_requested: float = Field(..., gt=0, description="Requested loan amount in USD")
-    repayment_tenure_months: int = Field(..., gt=0, le=360, description="Repayment period in months")
+    repayment_tenure_months: int = Field(..., gt=0, le=480, description="Repayment period in months")
     monthly_expenses: float = Field(..., ge=0, description="Average monthly expenses in USD")
     has_collateral: bool = Field(..., description="Whether applicant offers collateral")
     previous_defaults: int = Field(..., ge=0, description="Number of previous loan defaults")

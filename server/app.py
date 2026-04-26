@@ -1,4 +1,4 @@
-﻿"""
+"""
 OpenEnv-compliant server entry point for Loan Underwriting environment.
 
 This module provides the FastAPI app and a `main()` function entry point
@@ -99,7 +99,7 @@ def _get_api_client():
 
     # Use the reliable GLOBAL endpoint by default
     if not base_url or "api-inference.huggingface.co" in base_url:
-        base_url = "https://router.huggingface.co/hf-inference/v1"
+        base_url = "https://hk2xnlsbxcn57ef2.us-east4.gcp.endpoints.huggingface.cloud/v1"
 
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
     if not key:
@@ -210,7 +210,7 @@ class ApplicantInput(BaseModel):
     """Request body for the /evaluate endpoint — applicant details only."""
     applicant_name: str = Field(..., min_length=1)
     annual_income: float = Field(..., gt=0, description="Annual income must be greater than 0")
-    credit_score: int = Field(..., ge=300, le=850)
+    credit_score: int = Field(..., ge=0, le=1000) # Increased range for flexibility
     existing_debt: float
     loan_amount: float = Field(..., gt=0, description="Loan amount must be greater than 0")
     employment_type: str
@@ -218,7 +218,7 @@ class ApplicantInput(BaseModel):
     job_history_years: float = 0.0
     loan_tenure: int
     task_id: str
-    age: int = 30
+    age: int = Field(30, ge=0, le=120) # Increased range
     monthly_expenses: float = 0.0
     has_collateral: bool = False
     previous_defaults: int = 0
@@ -226,7 +226,7 @@ class ApplicantInput(BaseModel):
     loan_purpose: str = "general"
     public_records: int = Field(0, ge=0)
     credit_inquiries_6mo: int = Field(0, ge=0)
-    documents_submitted: Optional[List[str]] = None
+    documents_submitted: Optional[List[str]] = Field(default_factory=list)
     payment_history: Optional[List[str]] = None
 
     @field_validator("applicant_name")
@@ -700,7 +700,11 @@ async def evaluate_applicant(applicant: ApplicantInput):
         }
     except Exception as e:
         logger.exception(f"Evaluate failed: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        # Provide more specific detail for validation errors if possible
+        err_msg = str(e)
+        if "validation error" in err_msg.lower():
+            raise HTTPException(status_code=422, detail=f"Validation Error: {err_msg}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {err_msg}")
 
 
 
