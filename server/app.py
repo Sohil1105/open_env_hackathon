@@ -233,12 +233,8 @@ class ApplicantInput(BaseModel):
 
 @app.get("/")
 async def root():
-    """Root endpoint. Returns a basic health check for OpenEnv validation."""
-    return {
-        "status": "ok",
-        "message": "Loan Underwriting OpenEnv server is running.",
-        "version": "1.0.0"
-    }
+    """Root endpoint. Serves the blog as the landing page (200 OK for compliance)."""
+    return await serve_blog()
 
 
 @app.get("/health")
@@ -762,8 +758,13 @@ async def serve_blog_asset(filename: str):
 
 
 @app.get("/blog")
-async def serve_blog():
+async def serve_blog_route():
     """Serve the project blog post as a rendered HTML page."""
+    return await serve_blog()
+
+
+async def serve_blog():
+    """Helper to render the project blog post as a rendered HTML page."""
     import markdown
     blog_path = os.path.join(PROJECT_ROOT, "HF_BLOG.md")
     if not os.path.exists(blog_path):
