@@ -133,8 +133,13 @@ async def call_llm(prompt: str, max_tokens: int = 300) -> dict:
         logger.info(f"Chain Stage: Received response ({len(raw)} chars)")
         return parse_llm_response(raw)
     except Exception as e:
-        logger.error(f"Chain Stage Error: {str(e)}")
-        return {"error": str(e), "reasoning": f"Stage failed: {str(e)}"}
+        err_msg = str(e)
+        logger.error(f"Chain Stage Error: {err_msg}")
+        if "Not Found" in err_msg:
+            return {"error": err_msg, "reasoning": "Stage failed: Model not found. Check if MODEL_NAME secret is correct and public."}
+        elif "Unauthorized" in err_msg or "401" in err_msg:
+            return {"error": err_msg, "reasoning": "Stage failed: HF_TOKEN is missing or invalid. Check HF Secrets."}
+        return {"error": err_msg, "reasoning": f"Stage failed: {err_msg}"}
 
 
 

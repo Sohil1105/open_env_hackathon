@@ -37,7 +37,6 @@ test_*.py
 # Docker
 .dockerignore
 
-# Binary plots (fix for HF sync)
-*.png
-reward_plot.png
-training_loss.png
+# Binary plots (allow specific plots for README)
+!reward_plot.png
+!training_loss.png
