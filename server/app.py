@@ -33,7 +33,7 @@ from openai import OpenAI
 import uvicorn
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field, field_validator
 
@@ -233,13 +233,8 @@ class ApplicantInput(BaseModel):
 
 @app.get("/")
 async def root():
-    """Root endpoint. Returns HTTP 200 to confirm the service is running."""
-    return {
-        "status": "ok",
-        "environment": "loan-underwriting-risk-assessment",
-        "version": "1.0.0",
-        "message": "Loan Underwriting OpenEnv is running.",
-    }
+    """Root endpoint. Redirects to the blog for human visitors."""
+    return RedirectResponse(url="/blog")
 
 
 @app.get("/health")
@@ -753,6 +748,79 @@ async def serve_ui():
         status_code=404,
         detail="UI not found. Ensure static/index.html exists."
     )
+
+
+@app.get("/blog/assets/{filename:path}")
+async def serve_blog_asset(filename: str):
+    """Serve blog image assets from the project root."""
+    asset_path = os.path.join(PROJECT_ROOT, os.path.basename(filename))
+    if os.path.exists(asset_path):
+        return FileResponse(asset_path)
+    raise HTTPException(status_code=404, detail=f"Asset not found: {filename}")
+
+
+@app.get("/blog")
+async def serve_blog():
+    """Serve the project blog post as a rendered HTML page."""
+    import markdown
+    blog_path = os.path.join(PROJECT_ROOT, "HF_BLOG.md")
+    if not os.path.exists(blog_path):
+        raise HTTPException(status_code=404, detail="Blog not found.")
+
+    with open(blog_path, "r", encoding="utf-8") as f:
+        raw = f.read()
+
+    # Strip YAML frontmatter
+    if raw.startswith("---"):
+        parts = raw.split("---", 2)
+        if len(parts) >= 3:
+            raw = parts[2].strip()
+
+    # Fix HF blog CDN paths → local Space asset paths
+    raw = raw.replace("/blog/assets/nexus-loan-underwriting/", "/blog/assets/")
+
+    body_html = markdown.markdown(raw, extensions=["tables", "fenced_code"])
+
+    html = f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NEXUS Bank — Blog</title>
+  <style>
+    body {{ font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+           max-width: 860px; margin: 0 auto; padding: 2rem 1.5rem;
+           background: #0f0f1a; color: #e0e0e0; line-height: 1.7; }}
+    a {{ color: #7eb3ff; }}
+    h1, h2, h3 {{ color: #ffffff; border-bottom: 1px solid #2a2a4a; padding-bottom: 0.3em; }}
+    code {{ background: #1e1e3a; padding: 0.2em 0.4em; border-radius: 4px;
+            font-size: 0.9em; color: #f8c555; }}
+    pre {{ background: #1e1e3a; padding: 1.2em; border-radius: 8px; overflow-x: auto; }}
+    pre code {{ background: none; padding: 0; color: #e0e0e0; }}
+    table {{ border-collapse: collapse; width: 100%; margin: 1.5em 0; }}
+    th, td {{ border: 1px solid #2a2a4a; padding: 0.6em 1em; text-align: left; }}
+    th {{ background: #1e1e3a; color: #7eb3ff; }}
+    img {{ max-width: 100%; border-radius: 8px; margin: 1em 0; }}
+    blockquote {{ border-left: 3px solid #7eb3ff; margin: 0; padding-left: 1em; color: #aaa; }}
+    nav {{ margin-bottom: 2rem; padding: 0.8rem 1rem; background: #1e1e3a;
+           border-radius: 8px; display: flex; gap: 1.5rem; align-items: center; }}
+    nav a {{ color: #7eb3ff; text-decoration: none; font-weight: 600; }}
+    nav a:hover {{ color: #fff; }}
+  </style>
+</head>
+<body>
+  <nav>
+    <span style="color:#f8c555;font-weight:700;">🏦 NEXUS Bank</span>
+    <a href="/ui">⚡ Live Demo</a>
+    <a href="/blog">📝 Blog</a>
+    <a href="/health">🔧 Health</a>
+    <a href="/docs">📚 API Docs</a>
+  </nav>
+  {body_html}
+</body>
+</html>"""
+    from fastapi.responses import HTMLResponse
+    return HTMLResponse(content=html)
 
 
 # Mount static files directory (after all routes to avoid intercepting API paths)

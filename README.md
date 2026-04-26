@@ -167,9 +167,9 @@ loan-underwriting-openenv/
 
 ## 🏆 The Winning Strategy: Environment-Centric Intelligence
 
-This project implements the **"Winning Tip"** for OpenEnv hackathons: **Focus on Environment Quality over Model Size.**
+This project **Focus on Environment Quality over Model Size.**
 
-While others struggle with 70B models, NEXUS Bank uses a highly-optimized **Llama-3.1-8B** paired with a **"High-Fidelity Reward Signal"**:
+NEXUS Bank uses a highly-optimized **Llama-3.1-8B** paired with a **"High-Fidelity Reward Signal"**:
 
 1.  **Financial Integrity Guardrails:** The environment is programmed with strict banking logic. Contradictory decisions (e.g., High Risk + Low Interest Rate) trigger a severe **-20% Irrational Pricing Penalty**.
 2.  **Dense Reward Signals:** Instead of a binary pass/fail, the agent receives a professional **Reward Audit Log** on every step, breaking down its performance across 5 logical axes.

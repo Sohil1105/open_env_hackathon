@@ -25,3 +25,6 @@ openenv-core>=0.2.0
 # Training and Plotting dependencies
 matplotlib>=3.7.0
 datasets>=2.14.0
+
+# Blog rendering
+markdown>=3.5.0
