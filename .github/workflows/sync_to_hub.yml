@@ -42,7 +42,7 @@ jobs:
           git checkout --orphan hf-sync
           
           # 2. Remove binary files that HF rejects
-          rm -f *.png
+          find . -name "*.png" -delete
           git add .
           
           # 3. Create a single "clean" commit
