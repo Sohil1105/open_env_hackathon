@@ -274,7 +274,7 @@ Configure as **Secrets** in your HF Space settings (Settings → Variables and S
 - **Live UI:** [https://sourav0511-open-env-hackathon.hf.space/ui](https://sourav0511-open-env-hackathon.hf.space/ui)
 - **HF Space:** [https://huggingface.co/spaces/Sourav0511/open-env-hackathon](https://huggingface.co/spaces/Sourav0511/open-env-hackathon)
 - **GitHub:** [https://github.com/Sohil1105/open_env_hackathon](https://github.com/Sohil1105/open_env_hackathon)
-- **Colab Notebook:** [https://colab.research.google.com/drive/1xkyIGiQGWU057gZmiZfVrICBUVVUsXSc](https://colab.research.google.com/drive/1xkyIGiQGWU057gZmiZfVrICBUVVUsXSc)
+- **Colab Notebook:** [https://colab.research.google.com/drive/1xkyIGiQGWU057gZmiZfVrICBUVVUsXSc?usp=sharing](https://colab.research.google.com/drive/1xkyIGiQGWU057gZmiZfVrICBUVVUsXSc?usp=sharing)
 - **HF Dedicated Endpoint:** [https://hk2xnlsbxcn57ef2.us-east4.gcp.endpoints.huggingface.cloud](https://hk2xnlsbxcn57ef2.us-east4.gcp.endpoints.huggingface.cloud) (Model Inference Backbone)
 - **Demo Video / Blog:** [https://huggingface.co/spaces/Sourav0511/open-env-hackathon](https://huggingface.co/spaces/Sourav0511/open-env-hackathon) (Hosted documentation and live walkthrough)
 
