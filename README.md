@@ -157,14 +157,35 @@ loan-underwriting-openenv/
 ├── generate_charts.py    # Reward & Alignment charts
 ├── openenv.yaml          # OpenEnv Spec (max_steps: 8)
 ├── Dockerfile            # Container definition
-└── README.md
+├── README.md
+└── sprint_plan.md       # 1-Hour "Winning Tip" Implementation Plan
 ```
+
+---
+
+## 🏆 The Winning Strategy: Environment-Centric Intelligence
+
+This project implements the **"Winning Tip"** for OpenEnv hackathons: **Focus on Environment Quality over Model Size.**
+
+While others struggle with 70B models, NEXUS Bank uses a highly-optimized **Llama-3.1-8B** paired with a **"High-Fidelity Reward Signal"**:
+
+1.  **Financial Integrity Guardrails:** The environment is programmed with strict banking logic. Contradictory decisions (e.g., High Risk + Low Interest Rate) trigger a severe **-20% Irrational Pricing Penalty**.
+2.  **Dense Reward Signals:** Instead of a binary pass/fail, the agent receives a professional **Reward Audit Log** on every step, breaking down its performance across 5 logical axes.
+3.  **Prompt-Injected Training:** The environment's reward logic is "injected" into the model's system prompts, creating a zero-shot reinforcement loop where the model self-corrects based on the environment's strict grading criteria.
 
 ---
 
 ## 📊 Performance & Evaluation
 
-The following evidence demonstrates the model's significant improvement after fine-tuning and curriculum-based training.
+The model isn't just "smarter"; it's more **consistent**. It no longer approves a high-risk applicant with a 7% interest rate—it understands that risk and reward must be balanced.
+
+## 🏆 The Secret Sauce: Reward Signal Engineering
+
+A major breakthrough in this project was shifting focus from **Model Size** to **Environment Quality**. 
+
+Inspired by elite hackathon strategies, I implemented **Financial Integrity Guardrails** directly into the OpenEnv logic. If the model attempts an irrational pairing—such as assigning a "High Risk" label but offering a "Low Interest Rate"—the environment triggers a **severe -20% penalty**.
+
+By making the **Reward Signal "Dense"** (providing clear, multi-axis feedback instead of a single number), the 8B model effectively "learns" the rules of professional underwriting through its context window. This **Environment-Centric** approach allows us to achieve logic consistency scores that rival much larger models.
 
 ### Model Alignment Improvement
 | Metric | Baseline (Llama-3.1-8B) | Fine-Tuned (NEXUS-v2) | Improvement |

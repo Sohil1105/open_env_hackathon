@@ -71,6 +71,14 @@ The results were staggering. By shifting from a vanilla Llama-3.1-8B model to th
 
 The model isn't just "smarter"; it's more **consistent**. It no longer approves a high-risk applicant with a 7% interest rate—it understands that risk and reward must be balanced.
 
+## 🏆 The Secret Sauce: Reward Signal Engineering
+
+A major breakthrough in this project was shifting focus from **Model Size** to **Environment Quality**. 
+
+Inspired by elite hackathon strategies, I implemented **Financial Integrity Guardrails** directly into the OpenEnv logic. If the model attempts an irrational pairing—such as assigning a "High Risk" label but offering a "Low Interest Rate"—the environment triggers a **severe -20% penalty**.
+
+By making the **Reward Signal "Dense"** (providing clear, multi-axis feedback instead of a single number), the 8B model effectively "learns" the rules of professional underwriting through its context window. This **Environment-Centric** approach allows us to achieve logic consistency scores that rival much larger models.
+
 ## 🎨 The Command Center
 
 A bank desk needs a dashboard. I built a **Cyberpunk-themed Command Center** where users can:
