@@ -1491,13 +1491,15 @@
             return;
           }
           const cs = parseInt(document.getElementById('creditScore').value);
-          if (isNaN(cs) || cs < 300 || cs > 850) { showToast('FICO must be 300–850', 'error'); return; }
+          if (isNaN(cs) || cs < 0 || cs > 1000) { showToast('FICO must be 0–1000', 'error'); return; }
           if (parseFloat(document.getElementById('existingDebt').value) < 0) {
             showToast('Debt cannot be negative', 'error');
             return;
           }
         } else if (currentWizardStep === 3) {
           if (parseFloat(document.getElementById('loanAmount').value) <= 0) { showToast('Loan amount must be greater than 0', 'error'); return; }
+          const tenure = parseInt(document.getElementById('loanTenure').value);
+          if (isNaN(tenure) || tenure <= 0 || tenure > 480) { showToast('Tenure must be between 1 and 480 months', 'error'); return; }
         }
       }
 
@@ -1677,339 +1679,340 @@
         activeStageId = taskId;
         updateLifecycleBar();
       } catch (e) { }
-    // ─── Auto-Select Stage Based on Employment ──────────────
-    function onEmploymentChange() {
-      const emp = document.getElementById('employmentType').value;
-      const select = document.getElementById('stageSelect');
-      let targetTaskId = null;
-      if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
-      else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
-      else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
-      if (targetTaskId) select.value = targetTaskId;
     }
-
-    let tenureManuallySet = false;
-    function onTenureInput() {
-      tenureManuallySet = true;
-    }
-
-    function onAmountChange() {
-      if (tenureManuallySet) return;
-      
-      const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
-      const tenure = document.getElementById('loanTenure');
-      if (amt <= 0) {
-        tenure.value = '';
-        return;
+      // ─── Auto-Select Stage Based on Employment ──────────────
+      function onEmploymentChange() {
+        const emp = document.getElementById('employmentType').value;
+        const select = document.getElementById('stageSelect');
+        let targetTaskId = null;
+        if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
+        else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
+        else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
+        if (targetTaskId) select.value = targetTaskId;
       }
-      
-      let suggestedTenure = 12;
-      if (amt > 100000) suggestedTenure = 84;
-      else if (amt > 50000) suggestedTenure = 60;
-      else if (amt > 25000) suggestedTenure = 48;
-      else if (amt > 10000) suggestedTenure = 36;
-      else suggestedTenure = 24;
-      
-      tenure.value = suggestedTenure;
-    }
 
-    // ─── Execute Step ───────────────────────────────────────
-    async function executeStep() {
-      const btn = document.getElementById('executeBtn');
-      btn.disabled = true;
-      btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
-      console.log('[UI] Initiating underwriting analysis...');
+      let tenureManuallySet = false;
+      function onTenureInput() {
+        tenureManuallySet = true;
+      }
 
-      try {
-        const applicant = {
-          applicant_name: document.getElementById('applicantName').value,
-          age: parseInt(document.getElementById('applicantAge')?.value || 30),
-          annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
-          credit_score: parseInt(document.getElementById('creditScore').value) || 0,
-          existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
-          loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
-          employment_type: document.getElementById('employmentType').value,
-          employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
-          previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
-          loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
-          has_collateral: document.getElementById('hasCollateral').checked,
-          loan_purpose: document.getElementById('loanPurpose').value || "general",
-          public_records: parseInt(document.getElementById('publicRecords').value) || 0,
-          credit_inquiries_6mo: parseInt(document.getElementById('inquiries').value) || 0,
-          documents_submitted: uploadedFiles
-        };
+      function onAmountChange() {
+        if (tenureManuallySet) return;
 
-        console.log('[UI] Applicant data prepared:', applicant);
-
-        let riskStage = 'easy_salaried_high_credit';
-        if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
-        else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
-        applicant.task_id = riskStage;
-
-        const stages = [
-          "📂 SCANNING DOCUMENTS...",
-          "🔍 CHECKING CREDIT BUREAU...",
-          "⚖️ WEIGHING COLLATERAL...",
-          "📊 CALCULATING REPAYMENT...",
-          "🏦 FINALIZING VERDICT..."
-        ];
-
-        for (const msg of stages) {
-          btn.innerHTML = `<span class="spinner"></span>${msg}`;
-          showToast(msg, 'info');
-          console.log(`[UI] Processing: ${msg}`);
-          await new Promise(r => setTimeout(r, 700));
-        }
-
-        console.log('[UI] Calling /evaluate endpoint...');
-        const response = await fetch('/evaluate', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(applicant)
-        });
-
-        console.log(`[UI] /evaluate Status: ${response.status}`);
-        if (!response.ok) {
-          const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
-          console.error('[UI] /evaluate failed:', err);
-          showToast(err.detail || 'Server error', 'error');
+        const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
+        const tenure = document.getElementById('loanTenure');
+        if (amt <= 0) {
+          tenure.value = '';
           return;
         }
 
-        const result = await response.json();
-        console.log('[UI] /evaluate Result:', result);
+        let suggestedTenure = 12;
+        if (amt > 100000) suggestedTenure = 84;
+        else if (amt > 50000) suggestedTenure = 60;
+        else if (amt > 25000) suggestedTenure = 48;
+        else if (amt > 10000) suggestedTenure = 36;
+        else suggestedTenure = 24;
 
-        const stageResults = result.stage_results || [];
-        for (let i = 0; i < stageResults.length; i++) {
-          const stage = stageResults[i];
-          btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
-          showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
-          console.log(`[UI] Displaying stage ${stage.stage}: ${stage.name}`);
-          activeStageId = STAGE_META[i].id;
-          completedStages.add(activeStageId);
-          updateLifecycleBar();
-          await new Promise(r => setTimeout(r, 1000));
-        }
-
-        displayResult(result);
-        showToast('✨ Final Underwriting Decision Rendered', 'success');
-
-      } catch (e) {
-        console.error('[UI] executeStep error:', e);
-        showToast(e.message, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.innerHTML = '▶ START UNDERWRITING';
+        tenure.value = suggestedTenure;
       }
-    }
 
-    // ─── Display Result ─────────────────────────────────────
-    function displayResult(result) {
-      document.getElementById('waitingState').style.display = 'none';
-      document.getElementById('resultContent').style.display = 'block';
+      // ─── Execute Step ───────────────────────────────────────
+      async function executeStep() {
+        const btn = document.getElementById('executeBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
+        console.log('[UI] Initiating underwriting analysis...');
 
-      const sourceEl = document.getElementById('sourceIndicator');
-      sourceEl.style.display = 'block';
-      sourceEl.style.background = 'rgba(0,255,136,0.1)';
-      sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
-      sourceEl.style.color = '#00ff88';
-      sourceEl.textContent = '✅ REAL-TIME MULTI-STAGE ANALYSIS COMPLETE';
+        try {
+          const applicant = {
+            applicant_name: document.getElementById('applicantName').value,
+            age: parseInt(document.getElementById('applicantAge')?.value || 30),
+            annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
+            credit_score: parseInt(document.getElementById('creditScore').value) || 0,
+            existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
+            loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
+            employment_type: document.getElementById('employmentType').value,
+            employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
+            previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
+            loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
+            has_collateral: document.getElementById('hasCollateral').checked,
+            loan_purpose: document.getElementById('loanPurpose').value || "general",
+            public_records: parseInt(document.getElementById('publicRecords').value) || 0,
+            credit_inquiries_6mo: parseInt(document.getElementById('inquiries').value) || 0,
+            documents_submitted: uploadedFiles
+          };
 
-      const decision = result.agent_decision || {};
-      const grading = result.grading || {};
-      const gt = result.ground_truth || {};
+          console.log('[UI] Applicant data prepared:', applicant);
 
-      document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
-      document.getElementById('resDecision').textContent = decision.loan_decision || '—';
-      document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
+          let riskStage = 'easy_salaried_high_credit';
+          if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
+          else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
+          applicant.task_id = riskStage;
 
-      const decisionEl = document.getElementById('resDecision');
-      if (decision.loan_decision === 'Approve') decisionEl.style.color = '#00ff88';
-      else if (decision.loan_decision === 'Conditional Approve') decisionEl.style.color = '#ffcc00';
-      else decisionEl.style.color = '#ff3366';
+          const stages = [
+            "📂 SCANNING DOCUMENTS...",
+            "🔍 CHECKING CREDIT BUREAU...",
+            "⚖️ WEIGHING COLLATERAL...",
+            "📊 CALCULATING REPAYMENT...",
+            "🏦 FINALIZING VERDICT..."
+          ];
 
-      const score = result.score || 0;
-      document.getElementById('resScoreNum').textContent = score.toFixed(3);
-      document.getElementById('resScoreBar').style.width = `${score * 100}%`;
+          for (const msg of stages) {
+            btn.innerHTML = `<span class="spinner"></span>${msg}`;
+            showToast(msg, 'info');
+            console.log(`[UI] Processing: ${msg}`);
+            await new Promise(r => setTimeout(r, 700));
+          }
 
-      typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
+          console.log('[UI] Calling /evaluate endpoint...');
+          const response = await fetch('/evaluate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(applicant)
+          });
 
-      document.getElementById('resTaskName').textContent = 'Full Lifecycle';
-      document.getElementById('resDifficulty').textContent = 'COMPLEX';
-      document.getElementById('resDifficulty').className = 'result-value warning';
+          console.log(`[UI] /evaluate Status: ${response.status}`);
+          if (!response.ok) {
+            const err = await response.json().catch(() => ({ detail: 'Unknown error' }));
+            console.error('[UI] /evaluate failed:', err);
+            showToast(err.detail || 'Server error', 'error');
+            return;
+          }
 
-      setScoreValue('resRiskScore', grading.risk_level_score);
-      setScoreValue('resDecisionScore', grading.loan_decision_score);
-      setScoreValue('resRateScore', grading.interest_rate_score);
+          const result = await response.json();
+          console.log('[UI] /evaluate Result:', result);
 
-      const cons = grading.consistency_bonus || 0;
-      const consEl = document.getElementById('resConsistency');
-      consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
-      consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
+          const stageResults = result.stage_results || [];
+          for (let i = 0; i < stageResults.length; i++) {
+            const stage = stageResults[i];
+            btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
+            showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
+            console.log(`[UI] Displaying stage ${stage.stage}: ${stage.name}`);
+            activeStageId = STAGE_META[i].id;
+            completedStages.add(activeStageId);
+            updateLifecycleBar();
+            await new Promise(r => setTimeout(r, 1000));
+          }
 
-      document.getElementById('gtRisk').textContent = gt.risk_level || '—';
-      document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
-      document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
-      document.getElementById('gtExplanation').textContent = gt.explanation || '—';
-    }
+          displayResult(result);
+          showToast('✨ Final Underwriting Decision Rendered', 'success');
 
-    function setScoreValue(elId, score) {
-      const el = document.getElementById(elId);
-      if (score === undefined || score === null) { el.textContent = '—'; return; }
-      el.textContent = score.toFixed(2);
-      el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
-    }
-
-    function typewriterEffect(el, text, speed = 12) {
-      el.textContent = '';
-      el.classList.add('typewriter');
-      let i = 0;
-      const interval = setInterval(() => {
-        if (i < text.length) {
-          el.textContent += text.charAt(i);
-          i++;
-        } else {
-          clearInterval(interval);
-          el.classList.remove('typewriter');
+        } catch (e) {
+          console.error('[UI] executeStep error:', e);
+          showToast(e.message, 'error');
+        } finally {
+          btn.disabled = false;
+          btn.innerHTML = '▶ START UNDERWRITING';
         }
-      }, speed);
-    }
+      }
 
-    function buildLifecycleBar() {
-      const container = document.getElementById('lifecycleStages');
-      container.innerHTML = '';
-      STAGE_META.forEach((stage, idx) => {
-        if (idx > 0) {
-          const connector = document.createElement('div');
-          connector.className = 'stage-connector';
-          connector.id = `conn-${idx}`;
-          container.appendChild(connector);
-        }
-        const stageEl = document.createElement('div');
-        stageEl.className = 'lifecycle-stage';
-        stageEl.innerHTML = `
+      // ─── Display Result ─────────────────────────────────────
+      function displayResult(result) {
+        document.getElementById('waitingState').style.display = 'none';
+        document.getElementById('resultContent').style.display = 'block';
+
+        const sourceEl = document.getElementById('sourceIndicator');
+        sourceEl.style.display = 'block';
+        sourceEl.style.background = 'rgba(0,255,136,0.1)';
+        sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
+        sourceEl.style.color = '#00ff88';
+        sourceEl.textContent = '✅ REAL-TIME MULTI-STAGE ANALYSIS COMPLETE';
+
+        const decision = result.agent_decision || {};
+        const grading = result.grading || {};
+        const gt = result.ground_truth || {};
+
+        document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
+        document.getElementById('resDecision').textContent = decision.loan_decision || '—';
+        document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
+
+        const decisionEl = document.getElementById('resDecision');
+        if (decision.loan_decision === 'Approve') decisionEl.style.color = '#00ff88';
+        else if (decision.loan_decision === 'Conditional Approve') decisionEl.style.color = '#ffcc00';
+        else decisionEl.style.color = '#ff3366';
+
+        const score = result.score || 0;
+        document.getElementById('resScoreNum').textContent = score.toFixed(3);
+        document.getElementById('resScoreBar').style.width = `${score * 100}%`;
+
+        typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
+
+        document.getElementById('resTaskName').textContent = 'Full Lifecycle';
+        document.getElementById('resDifficulty').textContent = 'COMPLEX';
+        document.getElementById('resDifficulty').className = 'result-value warning';
+
+        setScoreValue('resRiskScore', grading.risk_level_score);
+        setScoreValue('resDecisionScore', grading.loan_decision_score);
+        setScoreValue('resRateScore', grading.interest_rate_score);
+
+        const cons = grading.consistency_bonus || 0;
+        const consEl = document.getElementById('resConsistency');
+        consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
+        consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
+
+        document.getElementById('gtRisk').textContent = gt.risk_level || '—';
+        document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
+        document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
+        document.getElementById('gtExplanation').textContent = gt.explanation || '—';
+      }
+
+      function setScoreValue(elId, score) {
+        const el = document.getElementById(elId);
+        if (score === undefined || score === null) { el.textContent = '—'; return; }
+        el.textContent = score.toFixed(2);
+        el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
+      }
+
+      function typewriterEffect(el, text, speed = 12) {
+        el.textContent = '';
+        el.classList.add('typewriter');
+        let i = 0;
+        const interval = setInterval(() => {
+          if (i < text.length) {
+            el.textContent += text.charAt(i);
+            i++;
+          } else {
+            clearInterval(interval);
+            el.classList.remove('typewriter');
+          }
+        }, speed);
+      }
+
+      function buildLifecycleBar() {
+        const container = document.getElementById('lifecycleStages');
+        container.innerHTML = '';
+        STAGE_META.forEach((stage, idx) => {
+          if (idx > 0) {
+            const connector = document.createElement('div');
+            connector.className = 'stage-connector';
+            connector.id = `conn-${idx}`;
+            container.appendChild(connector);
+          }
+          const stageEl = document.createElement('div');
+          stageEl.className = 'lifecycle-stage';
+          stageEl.innerHTML = `
           <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
           <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
         `;
-        container.appendChild(stageEl);
-      });
-    }
-
-    function updateLifecycleBar() {
-      STAGE_META.forEach((stage, idx) => {
-        const numEl = document.getElementById(`sn-${stage.id}`);
-        const labelEl = document.getElementById(`sl-${stage.id}`);
-        if (!numEl || !labelEl) return;
-        numEl.classList.remove('completed', 'active');
-        labelEl.classList.remove('completed', 'active');
-        if (completedStages.has(stage.id)) {
-          numEl.classList.add('completed');
-          numEl.textContent = '✓';
-          labelEl.classList.add('completed');
-        } else if (stage.id === activeStageId) {
-          numEl.classList.add('active');
-          labelEl.classList.add('active');
-        } else {
-          numEl.textContent = idx + 1;
-        }
-        if (idx > 0) {
-          const conn = document.getElementById(`conn-${idx}`);
-          if (conn) conn.classList.toggle('completed', completedStages.has(STAGE_META[idx - 1].id));
-        }
-      });
-    }
-
-    async function globalReset() {
-      try {
-        await apiFetch('/reset', { method: 'POST', body: '{}' });
-        completedStages.clear();
-        activeStageId = null;
-        resetForm();
-        document.getElementById('waitingState').style.display = '';
-        document.getElementById('resultContent').style.display = 'none';
-        document.getElementById('resScoreBar').style.width = '0%';
-        currentWizardStep = 1;
-        document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
-        document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
-        document.getElementById('wizardStep-1').classList.add('active');
-        document.getElementById('stepInd-1').classList.add('active');
-        document.getElementById('prevBtn').disabled = true;
-        document.getElementById('nextBtn').style.display = 'block';
-        document.getElementById('executeBtn').style.display = 'none';
-        updateLifecycleBar();
-        showToast('Session Reset', 'success');
-      } catch (e) { }
-    }
-
-    function resetForm() {
-      console.log('[UI] Resetting form fields...');
-      tenureManuallySet = false;
-      document.getElementById('applicantName').value = '';
-      document.getElementById('applicantAge').value = '30';
-      document.getElementById('annualIncome').value = '';
-      document.getElementById('creditScore').value = '';
-      document.getElementById('existingDebt').value = '';
-      document.getElementById('loanAmount').value = '';
-      document.getElementById('employmentType').value = 'salaried';
-      document.getElementById('employmentYears').value = '2';
-      document.getElementById('prevDefaults').value = '0';
-      document.getElementById('loanTenure').value = '36';
-      document.getElementById('hasCollateral').checked = false;
-      document.getElementById('loanPurpose').value = '';
-      document.getElementById('publicRecords').value = '0';
-      document.getElementById('inquiries').value = '0';
-      uploadedFiles = [];
-      document.getElementById('fileList').innerHTML = '';
-    }
-
-    function showToast(message, type = 'info') {
-      const toast = document.getElementById('toast');
-      toast.textContent = message;
-      toast.className = `toast ${type} show`;
-      setTimeout(() => { toast.classList.remove('show'); }, 3000);
-    }
-
-    function initParticles() {
-      const canvas = document.getElementById('particleCanvas');
-      const ctx = canvas.getContext('2d');
-      let particles = [];
-      const PARTICLE_COUNT = 40;
-
-      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-      resize();
-      window.addEventListener('resize', resize);
-
-      class Particle {
-        constructor() {
-          this.x = Math.random() * canvas.width;
-          this.y = Math.random() * canvas.height;
-          this.vx = (Math.random() - 0.5) * 0.3;
-          this.vy = (Math.random() - 0.5) * 0.3;
-          this.size = Math.random() * 1.5;
-        }
-        update() {
-          this.x += this.vx;
-          this.y += this.vy;
-          if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
-          if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
-        }
-        draw() {
-          ctx.beginPath();
-          ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0,255,136,0.3)';
-          ctx.fill();
-        }
+          container.appendChild(stageEl);
+        });
       }
 
-      for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
-
-      function animate() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        particles.forEach(p => { p.update(); p.draw(); });
-        requestAnimationFrame(animate);
+      function updateLifecycleBar() {
+        STAGE_META.forEach((stage, idx) => {
+          const numEl = document.getElementById(`sn-${stage.id}`);
+          const labelEl = document.getElementById(`sl-${stage.id}`);
+          if (!numEl || !labelEl) return;
+          numEl.classList.remove('completed', 'active');
+          labelEl.classList.remove('completed', 'active');
+          if (completedStages.has(stage.id)) {
+            numEl.classList.add('completed');
+            numEl.textContent = '✓';
+            labelEl.classList.add('completed');
+          } else if (stage.id === activeStageId) {
+            numEl.classList.add('active');
+            labelEl.classList.add('active');
+          } else {
+            numEl.textContent = idx + 1;
+          }
+          if (idx > 0) {
+            const conn = document.getElementById(`conn-${idx}`);
+            if (conn) conn.classList.toggle('completed', completedStages.has(STAGE_META[idx - 1].id));
+          }
+        });
       }
-      animate();
-    }
+
+      async function globalReset() {
+        try {
+          await apiFetch('/reset', { method: 'POST', body: '{}' });
+          completedStages.clear();
+          activeStageId = null;
+          resetForm();
+          document.getElementById('waitingState').style.display = '';
+          document.getElementById('resultContent').style.display = 'none';
+          document.getElementById('resScoreBar').style.width = '0%';
+          currentWizardStep = 1;
+          document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
+          document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
+          document.getElementById('wizardStep-1').classList.add('active');
+          document.getElementById('stepInd-1').classList.add('active');
+          document.getElementById('prevBtn').disabled = true;
+          document.getElementById('nextBtn').style.display = 'block';
+          document.getElementById('executeBtn').style.display = 'none';
+          updateLifecycleBar();
+          showToast('Session Reset', 'success');
+        } catch (e) { }
+      }
+
+      function resetForm() {
+        console.log('[UI] Resetting form fields...');
+        tenureManuallySet = false;
+        document.getElementById('applicantName').value = '';
+        document.getElementById('applicantAge').value = '30';
+        document.getElementById('annualIncome').value = '';
+        document.getElementById('creditScore').value = '';
+        document.getElementById('existingDebt').value = '';
+        document.getElementById('loanAmount').value = '';
+        document.getElementById('employmentType').value = 'salaried';
+        document.getElementById('employmentYears').value = '2';
+        document.getElementById('prevDefaults').value = '0';
+        document.getElementById('loanTenure').value = '36';
+        document.getElementById('hasCollateral').checked = false;
+        document.getElementById('loanPurpose').value = '';
+        document.getElementById('publicRecords').value = '0';
+        document.getElementById('inquiries').value = '0';
+        uploadedFiles = [];
+        document.getElementById('fileList').innerHTML = '';
+      }
+
+      function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.className = `toast ${type} show`;
+        setTimeout(() => { toast.classList.remove('show'); }, 3000);
+      }
+
+      function initParticles() {
+        const canvas = document.getElementById('particleCanvas');
+        const ctx = canvas.getContext('2d');
+        let particles = [];
+        const PARTICLE_COUNT = 40;
+
+        function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        resize();
+        window.addEventListener('resize', resize);
+
+        class Particle {
+          constructor() {
+            this.x = Math.random() * canvas.width;
+            this.y = Math.random() * canvas.height;
+            this.vx = (Math.random() - 0.5) * 0.3;
+            this.vy = (Math.random() - 0.5) * 0.3;
+            this.size = Math.random() * 1.5;
+          }
+          update() {
+            this.x += this.vx;
+            this.y += this.vy;
+            if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+            if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+          }
+          draw() {
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+            ctx.fillStyle = 'rgba(0,255,136,0.3)';
+            ctx.fill();
+          }
+        }
+
+        for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+
+        function animate() {
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
+          particles.forEach(p => { p.update(); p.draw(); });
+          requestAnimationFrame(animate);
+        }
+        animate();
+      }
   </script>
 </body>
 
