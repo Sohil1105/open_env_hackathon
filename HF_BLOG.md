@@ -1,6 +1,6 @@
 ---
 title: "NEXUS: Transforming Loan Underwriting with Llama-3.1 & OpenEnv"
-thumbnail: /blog/assets/loan_underwriting_nexus/thumbnail.png
+thumbnail: nexus_ui_demo.png
 authors:
 - user: Sourav0511
 ---
@@ -86,7 +86,7 @@ A bank desk needs a dashboard. I built a **Cyberpunk-themed Command Center** whe
 - **Manual Control**: Step through the environment and see the AI's reasoning.
 - **Visual Analytics**: Real-time reward tracking and state visualization.
 
-(Insert UI Demo Screenshot Here)
+![NEXUS Command Center Demo](nexus_ui_demo.png)
 
 ## 🚀 Get Started
 
