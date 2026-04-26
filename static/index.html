@@ -1,1668 +1,1835 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="NEXUS BANK — Long-Horizon Loan Lifecycle OpenEnv Command Center. AI-powered loan underwriting and risk assessment environment.">
-<title>NEXUS BANK // Loan Lifecycle Command Center</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
-<style>
-/* ─── CSS Reset & Variables ─────────────────────────────── */
-*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-
-:root {
-  --bg: #0a0a0f;
-  --primary: #00ff88;
-  --secondary: #7b2fff;
-  --accent: #ff6b35;
-  --surface: #0f1923;
-  --surface-alt: #141e2b;
-  --text: #e0e0ff;
-  --text-dim: #6a7a8a;
-  --danger: #ff3366;
-  --gold: #ffcc00;
-  --border: #1a2a3a;
-  --glow-primary: 0 0 10px rgba(0,255,136,0.3), 0 0 40px rgba(0,255,136,0.1);
-  --glow-secondary: 0 0 10px rgba(123,47,255,0.3), 0 0 40px rgba(123,47,255,0.1);
-  --glow-accent: 0 0 10px rgba(255,107,53,0.3), 0 0 40px rgba(255,107,53,0.1);
-  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
-  --font-display: 'Orbitron', sans-serif;
-}
-
-html { font-size: 14px; }
-body {
-  background: var(--bg);
-  color: var(--text);
-  font-family: var(--font-mono);
-  min-height: 100vh;
-  overflow-x: hidden;
-  position: relative;
-}
-
-/* ─── Particle Canvas ───────────────────────────────────── */
-#particleCanvas {
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  z-index: 0;
-  pointer-events: none;
-}
-
-/* ─── Scanline Overlay ──────────────────────────────────── */
-body::after {
-  content: '';
-  position: fixed;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-  background: repeating-linear-gradient(
-    0deg,
-    transparent,
-    transparent 2px,
-    rgba(0,0,0,0.03) 2px,
-    rgba(0,0,0,0.03) 4px
-  );
-  pointer-events: none;
-  z-index: 1000;
-}
-
-/* ─── Top Bar ───────────────────────────────────────────── */
-.top-bar {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.7rem 1.5rem;
-  background: linear-gradient(180deg, rgba(15,25,35,0.95) 0%, rgba(10,10,15,0.9) 100%);
-  border-bottom: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-}
-
-.system-status {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 2px;
-}
-
-.status-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--primary);
-  box-shadow: 0 0 8px var(--primary), 0 0 16px var(--primary);
-  animation: pulse-dot 2s ease-in-out infinite;
-}
-
-@keyframes pulse-dot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.5; transform: scale(0.8); }
-}
-
-.env-label {
-  font-family: var(--font-display);
-  font-size: 0.75rem;
-  color: var(--text-dim);
-  letter-spacing: 3px;
-  padding: 0.3rem 1rem;
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  background: rgba(123,47,255,0.05);
-}
-
-.top-bar .btn-reset-global {
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
-  padding: 0.35rem 1rem;
-  background: transparent;
-  color: var(--danger);
-  border: 1px solid rgba(255,51,102,0.3);
-  border-radius: 4px;
-  cursor: pointer;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-  transition: all 0.3s;
-}
-
-.top-bar .btn-reset-global:hover {
-  background: rgba(255,51,102,0.1);
-  border-color: var(--danger);
-  box-shadow: var(--glow-accent);
-}
-
-/* ─── Title ─────────────────────────────────────────────── */
-.title-section {
-  position: relative;
-  z-index: 10;
-  text-align: center;
-  padding: 1.2rem 0 0.6rem;
-}
-
-.glitch-title {
-  font-family: var(--font-display);
-  font-size: 2rem;
-  font-weight: 900;
-  color: var(--primary);
-  text-transform: uppercase;
-  letter-spacing: 8px;
-  position: relative;
-  display: inline-block;
-  text-shadow: 0 0 20px rgba(0,255,136,0.5), 0 0 60px rgba(0,255,136,0.2);
-  animation: glitch-skew 4s infinite linear alternate-reverse;
-}
-
-.glitch-title::before,
-.glitch-title::after {
-  content: attr(data-text);
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 100%;
-}
-
-.glitch-title::before {
-  color: var(--secondary);
-  animation: glitch-before 3s infinite linear alternate-reverse;
-  clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
-  z-index: -1;
-}
-
-.glitch-title::after {
-  color: var(--accent);
-  animation: glitch-after 2s infinite linear alternate-reverse;
-  clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
-  z-index: -1;
-}
-
-@keyframes glitch-before {
-  0% { transform: translate(0); }
-  20% { transform: translate(-3px, 2px); }
-  40% { transform: translate(3px, -1px); }
-  60% { transform: translate(-1px, 1px); }
-  80% { transform: translate(2px, -2px); }
-  100% { transform: translate(0); }
-}
-
-@keyframes glitch-after {
-  0% { transform: translate(0); }
-  25% { transform: translate(2px, -2px); }
-  50% { transform: translate(-2px, 1px); }
-  75% { transform: translate(1px, 2px); }
-  100% { transform: translate(0); }
-}
-
-@keyframes glitch-skew {
-  0% { transform: skew(0deg); }
-  2% { transform: skew(0.5deg); }
-  4% { transform: skew(0deg); }
-  50% { transform: skew(0deg); }
-  52% { transform: skew(-0.3deg); }
-  54% { transform: skew(0deg); }
-}
-
-.subtitle {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  letter-spacing: 6px;
-  text-transform: uppercase;
-  margin-top: 0.3rem;
-}
-
-/* ─── Main Layout ───────────────────────────────────────── */
-.main-container {
-  position: relative;
-  z-index: 10;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-/* ─── Panel Base ────────────────────────────────────────── */
-.panel {
-  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  overflow: hidden;
-  position: relative;
-}
-
-.panel::before {
-  content: '';
-  position: absolute;
-  top: 0; left: 0;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--primary), transparent);
-  animation: neon-flicker 3s ease-in-out infinite;
-}
-
-@keyframes neon-flicker {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
-  92% { opacity: 1; }
-  93% { opacity: 0.2; }
-  94% { opacity: 1; }
-}
-
-.panel-header {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid var(--border);
-  background: rgba(0,0,0,0.3);
-}
-
-.panel-header-icon {
-  font-size: 1rem;
-}
-
-.panel-header-title {
-  font-family: var(--font-display);
-  font-size: 0.7rem;
-  font-weight: 700;
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  color: var(--primary);
-}
-
-.panel-body {
-  padding: 1rem;
-}
-
-/* ─── Input Group ───────────────────────────────────────── */
-.input-row {
-  display: flex;
-  align-items: center;
-  margin-bottom: 0.65rem;
-  gap: 0.5rem;
-}
-
-.input-label {
-  font-size: 0.72rem;
-  color: var(--text-dim);
-  min-width: 130px;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  display: flex;
-  align-items: center;
-  gap: 0.3rem;
-}
-
-.input-label .prompt-char {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.input-field, .select-field {
-  flex: 1;
-  background: rgba(0,0,0,0.4);
-  border: 1px solid var(--border);
-  border-radius: 4px;
-  color: var(--text);
-  font-family: var(--font-mono);
-  font-size: 0.8rem;
-  padding: 0.45rem 0.7rem;
-  outline: none;
-  transition: all 0.3s;
-}
-
-.input-field:focus, .select-field:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 8px rgba(0,255,136,0.15);
-}
-
-.select-field {
-  cursor: pointer;
-  -webkit-appearance: none;
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff88' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 0.5rem center;
-  padding-right: 1.5rem;
-}
-
-.select-field option {
-  background: var(--surface);
-  color: var(--text);
-}
-
-.separator {
-  border: none;
-  border-top: 1px dashed var(--border);
-  margin: 0.8rem 0;
-}
-
-.section-label {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  color: var(--secondary);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 0.6rem;
-  padding-left: 0.2rem;
-}
-
-/* ─── Wizard Styles ─────────────────────────────────────── */
-.wizard-steps {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 1.5rem;
-  position: relative;
-}
-
-.wizard-steps::before {
-  content: '';
-  position: absolute;
-  top: 15px; left: 0;
-  width: 100%; height: 2px;
-  background: var(--border);
-  z-index: 0;
-}
-
-.wizard-step-indicator {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  background: var(--surface);
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 700;
-  color: var(--text-dim);
-  z-index: 1;
-  transition: all 0.3s;
-}
-
-.wizard-step-indicator.active {
-  border-color: var(--primary);
-  color: var(--primary);
-  box-shadow: 0 0 10px rgba(0,255,136,0.3);
-}
-
-.wizard-step-indicator.completed {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--bg);
-}
-
-.wizard-content-step {
-  display: none;
-  animation: fadeIn 0.4s ease-out;
-}
-
-.wizard-content-step.active {
-  display: block;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* ─── File Upload Simulation ────────────────────────────── */
-.file-upload-zone {
-  border: 1px dashed var(--border);
-  border-radius: 8px;
-  padding: 1.5rem;
-  text-align: center;
-  margin-bottom: 1rem;
-  transition: all 0.3s;
-  cursor: pointer;
-  background: rgba(255,255,255,0.02);
-}
-
-.file-upload-zone:hover {
-  border-color: var(--secondary);
-  background: rgba(123,47,255,0.05);
-}
-
-.file-upload-icon {
-  font-size: 2rem;
-  color: var(--text-dim);
-  margin-bottom: 0.5rem;
-}
-
-.file-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.file-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(0,0,0,0.3);
-  padding: 0.5rem 0.8rem;
-  border-radius: 4px;
-  border-left: 3px solid var(--primary);
-  font-size: 0.75rem;
-}
-
-.file-item .remove-file {
-  color: var(--danger);
-  cursor: pointer;
-}
-
-/* ─── Wizard Nav ────────────────────────────────────────── */
-.wizard-nav {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1.5rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
-}
-
-/* ─── Right Panel — Result ──────────────────────────────── */
-.result-box {
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 1rem;
-  background: rgba(0,0,0,0.3);
-  margin-bottom: 0.8rem;
-  position: relative;
-}
-
-.result-box.active {
-  border-color: var(--primary);
-  animation: border-pulse 2s ease-in-out infinite;
-}
-
-@keyframes border-pulse {
-  0%, 100% { border-color: var(--primary); box-shadow: 0 0 5px rgba(0,255,136,0.1); }
-  50% { border-color: var(--secondary); box-shadow: 0 0 15px rgba(123,47,255,0.15); }
-}
-
-.result-header {
-  font-family: var(--font-display);
-  font-size: 0.65rem;
-  color: var(--gold);
-  letter-spacing: 3px;
-  text-transform: uppercase;
-  margin-bottom: 0.8rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255,204,0,0.15);
-}
-
-.result-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-  font-size: 0.8rem;
-}
-
-.result-label {
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-size: 0.7rem;
-}
-
-.result-value {
-  color: var(--primary);
-  font-weight: 700;
-}
-
-.result-value.danger { color: var(--danger); }
-.result-value.warning { color: var(--accent); }
-.result-value.success { color: var(--primary); }
-.result-value.gold { color: var(--gold); }
-
-/* Score Bar */
-.score-bar-container {
-  margin: 1rem 0;
-}
-
-.score-bar-label {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.4rem;
-  font-size: 0.7rem;
-}
-
-.score-bar-track {
-  width: 100%;
-  height: 12px;
-  background: rgba(0,0,0,0.5);
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid var(--border);
-}
-
-.score-bar-fill {
-  height: 100%;
-  border-radius: 6px;
-  transition: width 1.5s cubic-bezier(0.22, 0.61, 0.36, 1);
-  position: relative;
-}
-
-.score-bar-fill::after {
-  content: '';
-  position: absolute;
-  top: 0; right: 0;
-  width: 4px; height: 100%;
-  background: white;
-  opacity: 0.6;
-  border-radius: 0 6px 6px 0;
-  animation: score-shimmer 2s ease-in-out infinite;
-}
-
-@keyframes score-shimmer {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 0.2; }
-}
-
-.feedback-box {
-  background: rgba(0,0,0,0.4);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.8rem;
-  margin-top: 0.8rem;
-  font-size: 0.75rem;
-  line-height: 1.6;
-  white-space: pre-wrap;
-  max-height: 180px;
-  overflow-y: auto;
-  color: var(--text);
-}
-
-.feedback-box::-webkit-scrollbar {
-  width: 4px;
-}
-
-.feedback-box::-webkit-scrollbar-thumb {
-  background: var(--border);
-  border-radius: 2px;
-}
-
-/* Ground Truth Section */
-.ground-truth-box {
-  border: 1px solid rgba(123,47,255,0.2);
-  border-radius: 6px;
-  padding: 0.8rem;
-  background: rgba(123,47,255,0.03);
-  margin-top: 0.8rem;
-}
-
-.ground-truth-box .result-header {
-  color: var(--secondary);
-  border-bottom-color: rgba(123,47,255,0.15);
-}
-
-/* Waiting state */
-.waiting-state {
-  text-align: center;
-  padding: 3rem 1rem;
-  color: var(--text-dim);
-}
-
-.waiting-icon {
-  font-size: 2.5rem;
-  margin-bottom: 1rem;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
-}
-
-.waiting-text {
-  font-size: 0.75rem;
-  letter-spacing: 2px;
-  text-transform: uppercase;
-}
-
-/* ─── Lifecycle Progress Bar ────────────────────────────── */
-.lifecycle-bar {
-  position: relative;
-  z-index: 10;
-  padding: 1rem 1.5rem 1.5rem;
-  max-width: 1400px;
-  margin: 0 auto;
-}
-
-.lifecycle-container {
-  background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 1rem 1.5rem;
-  position: relative;
-  overflow: hidden;
-}
-
-.lifecycle-container::before {
-  content: '';
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 100%; height: 2px;
-  background: linear-gradient(90deg, transparent, var(--secondary), transparent);
-  animation: neon-flicker 4s ease-in-out infinite;
-}
-
-.lifecycle-title {
-  font-family: var(--font-display);
-  font-size: 0.6rem;
-  color: var(--text-dim);
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  margin-bottom: 1rem;
-  text-align: center;
-}
-
-.lifecycle-stages {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-}
-
-.lifecycle-stage {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  transition: all 0.3s;
-  padding: 0.3rem 0.5rem;
-  border-radius: 6px;
-  min-width: 80px;
-}
-
-.lifecycle-stage:hover {
-  background: rgba(255,255,255,0.03);
-}
-
-.stage-number {
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.7rem;
-  font-weight: 700;
-  border: 2px solid var(--border);
-  background: rgba(0,0,0,0.5);
-  color: var(--text-dim);
-  transition: all 0.5s;
-  position: relative;
-}
-
-.stage-number.completed {
-  border-color: var(--primary);
-  background: rgba(0,255,136,0.1);
-  color: var(--primary);
-  box-shadow: 0 0 10px rgba(0,255,136,0.2);
-}
-
-.stage-number.active {
-  border-color: var(--gold);
-  background: rgba(255,204,0,0.1);
-  color: var(--gold);
-  box-shadow: 0 0 10px rgba(255,204,0,0.3);
-  animation: stage-pulse 1.5s ease-in-out infinite;
-}
-
-@keyframes stage-pulse {
-  0%, 100% { box-shadow: 0 0 10px rgba(255,204,0,0.3); }
-  50% { box-shadow: 0 0 20px rgba(255,204,0,0.5); }
-}
-
-.stage-name {
-  font-size: 0.55rem;
-  color: var(--text-dim);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  text-align: center;
-  white-space: nowrap;
-}
-
-.stage-name.active {
-  color: var(--gold);
-}
-
-.stage-name.completed {
-  color: var(--primary);
-}
-
-.stage-connector {
-  width: 30px;
-  height: 2px;
-  background: var(--border);
-  margin-top: -1.2rem;
-  transition: background 0.5s;
-}
-
-.stage-connector.completed {
-  background: linear-gradient(90deg, var(--primary), var(--primary));
-  box-shadow: 0 0 4px rgba(0,255,136,0.3);
-}
-
-/* ─── Loading Spinner ───────────────────────────────────── */
-.spinner {
-  display: inline-block;
-  width: 16px; height: 16px;
-  border: 2px solid rgba(0,255,136,0.2);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-  margin-right: 0.5rem;
-  vertical-align: middle;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-/* ─── Typewriter ────────────────────────────────────────── */
-.typewriter {
-  overflow: hidden;
-  white-space: nowrap;
-  border-right: 2px solid var(--primary);
-  animation: blink-caret 0.8s step-end infinite;
-}
-
-@keyframes blink-caret {
-  0%, 100% { border-color: var(--primary); }
-  50% { border-color: transparent; }
-}
-
-/* ─── Toast / Notification ──────────────────────────────── */
-.toast {
-  position: fixed;
-  top: 80px;
-  right: 20px;
-  padding: 0.8rem 1.2rem;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-family: var(--font-mono);
-  z-index: 9999;
-  transform: translateX(120%);
-  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-  max-width: 350px;
-}
-
-.toast.show {
-  transform: translateX(0);
-}
-
-.toast.success {
-  background: rgba(0,255,136,0.1);
-  border: 1px solid var(--primary);
-  color: var(--primary);
-}
-
-.toast.error {
-  background: rgba(255,51,102,0.1);
-  border: 1px solid var(--danger);
-  color: var(--danger);
-}
-
-.toast.info {
-  background: rgba(123,47,255,0.1);
-  border: 1px solid var(--secondary);
-  color: var(--secondary);
-}
-
-/* ─── Responsive ────────────────────────────────────────── */
-@media (max-width: 900px) {
-  .main-container { grid-template-columns: 1fr; }
-  .glitch-title { font-size: 1.3rem; letter-spacing: 4px; }
-  .lifecycle-stages { flex-wrap: wrap; gap: 0.3rem; }
-  .stage-connector { display: none; }
-}
-
-/* ─── Footer Styles ───────────────────────────────────────── */
-.system-footer {
-  position: relative;
-  z-index: 10;
-  margin-top: 1rem;
-  padding: 1.5rem 1.5rem;
-  background: linear-gradient(0deg, rgba(10,10,15,0.95) 0%, rgba(15,25,35,0.8) 100%);
-  border-top: 1px solid var(--border);
-  backdrop-filter: blur(10px);
-}
-
-.footer-content {
-  max-width: 1400px;
-  margin: 0 auto;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.footer-left {
-  display: flex;
-  align-items: center;
-  gap: 1.5rem;
-}
-
-.copyright {
-  font-size: 0.65rem;
-  color: var(--text-dim);
-  letter-spacing: 2px;
-}
-
-.version-tag {
-  font-size: 0.6rem;
-  color: var(--secondary);
-  border: 1px solid rgba(123,47,255,0.3);
-  padding: 0.1rem 0.5rem;
-  border-radius: 3px;
-  letter-spacing: 1px;
-}
-
-.footer-links {
-  display: flex;
-  gap: 2rem;
-}
-
-.footer-link {
-  font-size: 0.7rem;
-  color: var(--text-dim);
-  text-decoration: none;
-  letter-spacing: 2px;
-  transition: all 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.footer-link:hover {
-  color: var(--primary);
-  text-shadow: 0 0 8px var(--primary);
-}
-
-@media (max-width: 600px) {
-  .footer-content {
-    flex-direction: column;
-    gap: 1rem;
-    text-align: center;
-  }
-  .footer-left {
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="NEXUS BANK — Long-Horizon Loan Lifecycle OpenEnv Command Center. AI-powered loan underwriting and risk assessment environment.">
+  <title>NEXUS BANK // Loan Lifecycle Command Center</title>
+  <link
+    href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Orbitron:wght@400;700;900&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ─── CSS Reset & Variables ─────────────────────────────── */
+    *,
+    *::before,
+    *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #0a0a0f;
+      --primary: #00ff88;
+      --secondary: #7b2fff;
+      --accent: #ff6b35;
+      --surface: #0f1923;
+      --surface-alt: #141e2b;
+      --text: #e0e0ff;
+      --text-dim: #6a7a8a;
+      --danger: #ff3366;
+      --gold: #ffcc00;
+      --border: #1a2a3a;
+      --glow-primary: 0 0 10px rgba(0, 255, 136, 0.3), 0 0 40px rgba(0, 255, 136, 0.1);
+      --glow-secondary: 0 0 10px rgba(123, 47, 255, 0.3), 0 0 40px rgba(123, 47, 255, 0.1);
+      --glow-accent: 0 0 10px rgba(255, 107, 53, 0.3), 0 0 40px rgba(255, 107, 53, 0.1);
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+      --font-display: 'Orbitron', sans-serif;
+    }
+
+    html {
+      font-size: 14px;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ─── Particle Canvas ───────────────────────────────────── */
+    #particleCanvas {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ─── Scanline Overlay ──────────────────────────────────── */
+    body::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: repeating-linear-gradient(0deg,
+          transparent,
+          transparent 2px,
+          rgba(0, 0, 0, 0.03) 2px,
+          rgba(0, 0, 0, 0.03) 4px);
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    /* ─── Top Bar ───────────────────────────────────────────── */
+    .top-bar {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0.7rem 1.5rem;
+      background: linear-gradient(180deg, rgba(15, 25, 35, 0.95) 0%, rgba(10, 10, 15, 0.9) 100%);
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(10px);
+    }
+
+    .system-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--primary);
+      box-shadow: 0 0 8px var(--primary), 0 0 16px var(--primary);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+
+      0%,
+      100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: 0.5;
+        transform: scale(0.8);
+      }
+    }
+
+    .env-label {
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      padding: 0.3rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      background: rgba(123, 47, 255, 0.05);
+    }
+
+    .top-bar .btn-reset-global {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      padding: 0.35rem 1rem;
+      background: transparent;
+      color: var(--danger);
+      border: 1px solid rgba(255, 51, 102, 0.3);
+      border-radius: 4px;
+      cursor: pointer;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      transition: all 0.3s;
+    }
+
+    .top-bar .btn-reset-global:hover {
+      background: rgba(255, 51, 102, 0.1);
+      border-color: var(--danger);
+      box-shadow: var(--glow-accent);
+    }
+
+    /* ─── Title ─────────────────────────────────────────────── */
+    .title-section {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 1.2rem 0 0.6rem;
+    }
+
+    .glitch-title {
+      font-family: var(--font-display);
+      font-size: 2rem;
+      font-weight: 900;
+      color: var(--primary);
+      text-transform: uppercase;
+      letter-spacing: 8px;
+      position: relative;
+      display: inline-block;
+      text-shadow: 0 0 20px rgba(0, 255, 136, 0.5), 0 0 60px rgba(0, 255, 136, 0.2);
+      animation: glitch-skew 4s infinite linear alternate-reverse;
+    }
+
+    .glitch-title::before,
+    .glitch-title::after {
+      content: attr(data-text);
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+    }
+
+    .glitch-title::before {
+      color: var(--secondary);
+      animation: glitch-before 3s infinite linear alternate-reverse;
+      clip-path: polygon(0 0, 100% 0, 100% 45%, 0 45%);
+      z-index: -1;
+    }
+
+    .glitch-title::after {
+      color: var(--accent);
+      animation: glitch-after 2s infinite linear alternate-reverse;
+      clip-path: polygon(0 55%, 100% 55%, 100% 100%, 0 100%);
+      z-index: -1;
+    }
+
+    @keyframes glitch-before {
+      0% {
+        transform: translate(0);
+      }
+
+      20% {
+        transform: translate(-3px, 2px);
+      }
+
+      40% {
+        transform: translate(3px, -1px);
+      }
+
+      60% {
+        transform: translate(-1px, 1px);
+      }
+
+      80% {
+        transform: translate(2px, -2px);
+      }
+
+      100% {
+        transform: translate(0);
+      }
+    }
+
+    @keyframes glitch-after {
+      0% {
+        transform: translate(0);
+      }
+
+      25% {
+        transform: translate(2px, -2px);
+      }
+
+      50% {
+        transform: translate(-2px, 1px);
+      }
+
+      75% {
+        transform: translate(1px, 2px);
+      }
+
+      100% {
+        transform: translate(0);
+      }
+    }
+
+    @keyframes glitch-skew {
+      0% {
+        transform: skew(0deg);
+      }
+
+      2% {
+        transform: skew(0.5deg);
+      }
+
+      4% {
+        transform: skew(0deg);
+      }
+
+      50% {
+        transform: skew(0deg);
+      }
+
+      52% {
+        transform: skew(-0.3deg);
+      }
+
+      54% {
+        transform: skew(0deg);
+      }
+    }
+
+    .subtitle {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      letter-spacing: 6px;
+      text-transform: uppercase;
+      margin-top: 0.3rem;
+    }
+
+    /* ─── Main Layout ───────────────────────────────────────── */
+    .main-container {
+      position: relative;
+      z-index: 10;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    /* ─── Panel Base ────────────────────────────────────────── */
+    .panel {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .panel::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--primary), transparent);
+      animation: neon-flicker 3s ease-in-out infinite;
+    }
+
+    @keyframes neon-flicker {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+
+      92% {
+        opacity: 1;
+      }
+
+      93% {
+        opacity: 0.2;
+      }
+
+      94% {
+        opacity: 1;
+      }
+    }
+
+    .panel-header {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      padding: 0.8rem 1rem;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0, 0, 0, 0.3);
+    }
+
+    .panel-header-icon {
+      font-size: 1rem;
+    }
+
+    .panel-header-title {
+      font-family: var(--font-display);
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--primary);
+    }
+
+    .panel-body {
+      padding: 1rem;
+    }
+
+    /* ─── Input Group ───────────────────────────────────────── */
+    .input-row {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.65rem;
+      gap: 0.5rem;
+    }
+
+    .input-label {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      min-width: 130px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      display: flex;
+      align-items: center;
+      gap: 0.3rem;
+    }
+
+    .input-label .prompt-char {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .input-field,
+    .select-field {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      padding: 0.45rem 0.7rem;
+      outline: none;
+      transition: all 0.3s;
+    }
+
+    .input-field:focus,
+    .select-field:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 8px rgba(0, 255, 136, 0.15);
+    }
+
+    .select-field {
+      cursor: pointer;
+      -webkit-appearance: none;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%2300ff88' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.5rem center;
+      padding-right: 1.5rem;
+    }
+
+    .select-field option {
+      background: var(--surface);
+      color: var(--text);
+    }
+
+    .separator {
+      border: none;
+      border-top: 1px dashed var(--border);
+      margin: 0.8rem 0;
+    }
+
+    .section-label {
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      color: var(--secondary);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+      padding-left: 0.2rem;
+    }
+
+    /* ─── Wizard Styles ─────────────────────────────────────── */
+    .wizard-steps {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      position: relative;
+    }
+
+    .wizard-steps::before {
+      content: '';
+      position: absolute;
+      top: 15px;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: var(--border);
+      z-index: 0;
+    }
+
+    .wizard-step-indicator {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: var(--surface);
+      border: 2px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-dim);
+      z-index: 1;
+      transition: all 0.3s;
+    }
+
+    .wizard-step-indicator.active {
+      border-color: var(--primary);
+      color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.3);
+    }
+
+    .wizard-step-indicator.completed {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: var(--bg);
+    }
+
+    .wizard-content-step {
+      display: none;
+      animation: fadeIn 0.4s ease-out;
+    }
+
+    .wizard-content-step.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* ─── File Upload Simulation ────────────────────────────── */
+    .file-upload-zone {
+      border: 1px dashed var(--border);
+      border-radius: 8px;
+      padding: 1.5rem;
+      text-align: center;
+      margin-bottom: 1rem;
+      transition: all 0.3s;
+      cursor: pointer;
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .file-upload-zone:hover {
+      border-color: var(--secondary);
+      background: rgba(123, 47, 255, 0.05);
+    }
+
+    .file-upload-icon {
+      font-size: 2rem;
+      color: var(--text-dim);
+      margin-bottom: 0.5rem;
+    }
+
+    .file-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      margin-top: 1rem;
+    }
+
+    .file-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: rgba(0, 0, 0, 0.3);
+      padding: 0.5rem 0.8rem;
+      border-radius: 4px;
+      border-left: 3px solid var(--primary);
+      font-size: 0.75rem;
+    }
+
+    .file-item .remove-file {
+      color: var(--danger);
+      cursor: pointer;
+    }
+
+    /* ─── Wizard Nav ────────────────────────────────────────── */
+    .wizard-nav {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 1.5rem;
+      padding-top: 1rem;
+      border-top: 1px solid var(--border);
+    }
+
+    /* ─── Right Panel — Result ──────────────────────────────── */
+    .result-box {
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 1rem;
+      background: rgba(0, 0, 0, 0.3);
+      margin-bottom: 0.8rem;
+      position: relative;
+    }
+
+    .result-box.active {
+      border-color: var(--primary);
+      animation: border-pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes border-pulse {
+
+      0%,
+      100% {
+        border-color: var(--primary);
+        box-shadow: 0 0 5px rgba(0, 255, 136, 0.1);
+      }
+
+      50% {
+        border-color: var(--secondary);
+        box-shadow: 0 0 15px rgba(123, 47, 255, 0.15);
+      }
+    }
+
+    .result-header {
+      font-family: var(--font-display);
+      font-size: 0.65rem;
+      color: var(--gold);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      margin-bottom: 0.8rem;
+      padding-bottom: 0.5rem;
+      border-bottom: 1px solid rgba(255, 204, 0, 0.15);
+    }
+
+    .result-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+      font-size: 0.8rem;
+    }
+
+    .result-label {
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-size: 0.7rem;
+    }
+
+    .result-value {
+      color: var(--primary);
+      font-weight: 700;
+    }
+
+    .result-value.danger {
+      color: var(--danger);
+    }
+
+    .result-value.warning {
+      color: var(--accent);
+    }
+
+    .result-value.success {
+      color: var(--primary);
+    }
+
+    .result-value.gold {
+      color: var(--gold);
+    }
+
+    /* Score Bar */
+    .score-bar-container {
+      margin: 1rem 0;
+    }
+
+    .score-bar-label {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 0.4rem;
+      font-size: 0.7rem;
+    }
+
+    .score-bar-track {
+      width: 100%;
+      height: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    .score-bar-fill {
+      height: 100%;
+      border-radius: 6px;
+      transition: width 1.5s cubic-bezier(0.22, 0.61, 0.36, 1);
+      position: relative;
+    }
+
+    .score-bar-fill::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 4px;
+      height: 100%;
+      background: white;
+      opacity: 0.6;
+      border-radius: 0 6px 6px 0;
+      animation: score-shimmer 2s ease-in-out infinite;
+    }
+
+    @keyframes score-shimmer {
+
+      0%,
+      100% {
+        opacity: 0.6;
+      }
+
+      50% {
+        opacity: 0.2;
+      }
+    }
+
+    .feedback-box {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 0.8rem;
+      margin-top: 0.8rem;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 180px;
+      overflow-y: auto;
+      color: var(--text);
+    }
+
+    .feedback-box::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .feedback-box::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    /* Ground Truth Section */
+    .ground-truth-box {
+      border: 1px solid rgba(123, 47, 255, 0.2);
+      border-radius: 6px;
+      padding: 0.8rem;
+      background: rgba(123, 47, 255, 0.03);
+      margin-top: 0.8rem;
+    }
+
+    .ground-truth-box .result-header {
+      color: var(--secondary);
+      border-bottom-color: rgba(123, 47, 255, 0.15);
+    }
+
+    /* Waiting state */
+    .waiting-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-dim);
+    }
+
+    .waiting-icon {
+      font-size: 2.5rem;
+      margin-bottom: 1rem;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    @keyframes float {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(-10px);
+      }
+    }
+
+    .waiting-text {
+      font-size: 0.75rem;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ─── Lifecycle Progress Bar ────────────────────────────── */
+    .lifecycle-bar {
+      position: relative;
+      z-index: 10;
+      padding: 1rem 1.5rem 1.5rem;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    .lifecycle-container {
+      background: linear-gradient(135deg, var(--surface) 0%, var(--surface-alt) 100%);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 1rem 1.5rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .lifecycle-container::before {
+      content: '';
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, var(--secondary), transparent);
+      animation: neon-flicker 4s ease-in-out infinite;
+    }
+
+    .lifecycle-title {
+      font-family: var(--font-display);
+      font-size: 0.6rem;
+      color: var(--text-dim);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+
+    .lifecycle-stages {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+    }
+
+    .lifecycle-stage {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.4rem;
+      cursor: pointer;
+      transition: all 0.3s;
+      padding: 0.3rem 0.5rem;
+      border-radius: 6px;
+      min-width: 80px;
+    }
+
+    .lifecycle-stage:hover {
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .stage-number {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.7rem;
+      font-weight: 700;
+      border: 2px solid var(--border);
+      background: rgba(0, 0, 0, 0.5);
+      color: var(--text-dim);
+      transition: all 0.5s;
+      position: relative;
+    }
+
+    .stage-number.completed {
+      border-color: var(--primary);
+      background: rgba(0, 255, 136, 0.1);
+      color: var(--primary);
+      box-shadow: 0 0 10px rgba(0, 255, 136, 0.2);
+    }
+
+    .stage-number.active {
+      border-color: var(--gold);
+      background: rgba(255, 204, 0, 0.1);
+      color: var(--gold);
+      box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+      animation: stage-pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes stage-pulse {
+
+      0%,
+      100% {
+        box-shadow: 0 0 10px rgba(255, 204, 0, 0.3);
+      }
+
+      50% {
+        box-shadow: 0 0 20px rgba(255, 204, 0, 0.5);
+      }
+    }
+
+    .stage-name {
+      font-size: 0.55rem;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      text-align: center;
+      white-space: nowrap;
+    }
+
+    .stage-name.active {
+      color: var(--gold);
+    }
+
+    .stage-name.completed {
+      color: var(--primary);
+    }
+
+    .stage-connector {
+      width: 30px;
+      height: 2px;
+      background: var(--border);
+      margin-top: -1.2rem;
+      transition: background 0.5s;
+    }
+
+    .stage-connector.completed {
+      background: linear-gradient(90deg, var(--primary), var(--primary));
+      box-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
+    }
+
+    /* ─── Loading Spinner ───────────────────────────────────── */
+    .spinner {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(0, 255, 136, 0.2);
+      border-top-color: var(--primary);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+    }
+
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
+    /* ─── Typewriter ────────────────────────────────────────── */
+    .typewriter {
+      overflow: hidden;
+      white-space: nowrap;
+      border-right: 2px solid var(--primary);
+      animation: blink-caret 0.8s step-end infinite;
+    }
+
+    @keyframes blink-caret {
+
+      0%,
+      100% {
+        border-color: var(--primary);
+      }
+
+      50% {
+        border-color: transparent;
+      }
+    }
+
+    /* ─── Toast / Notification ──────────────────────────────── */
+    .toast {
+      position: fixed;
+      top: 80px;
+      right: 20px;
+      padding: 0.8rem 1.2rem;
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      z-index: 9999;
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+      max-width: 350px;
+    }
+
+    .toast.show {
+      transform: translateX(0);
+    }
+
+    .toast.success {
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid var(--primary);
+      color: var(--primary);
+    }
+
+    .toast.error {
+      background: rgba(255, 51, 102, 0.1);
+      border: 1px solid var(--danger);
+      color: var(--danger);
+    }
+
+    .toast.info {
+      background: rgba(123, 47, 255, 0.1);
+      border: 1px solid var(--secondary);
+      color: var(--secondary);
+    }
+
+    /* ─── Responsive ────────────────────────────────────────── */
+    @media (max-width: 900px) {
+      .main-container {
+        grid-template-columns: 1fr;
+      }
+
+      .glitch-title {
+        font-size: 1.3rem;
+        letter-spacing: 4px;
+      }
+
+      .lifecycle-stages {
+        flex-wrap: wrap;
+        gap: 0.3rem;
+      }
+      .stage-connector {
+        display: none;
+      }
+    }
+
+    /* ─── Footer Styles ───────────────────────────────────────── */
+    .system-footer {
+        position: relative;
+        z-index: 10;
+        margin-top: 1rem;
+        padding: 1.5rem 1.5rem;
+        background: linear-gradient(0deg, rgba(10, 10, 15, 0.95) 0%, rgba(15, 25, 35, 0.8) 100%);
+        border-top: 1px solid var(--border);
+        backdrop-filter: blur(10px);
+      }
+
+      .footer-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .footer-left {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+
+      .copyright {
+        font-size: 0.65rem;
+        color: var(--text-dim);
+        letter-spacing: 2px;
+      }
+
+      .version-tag {
+        font-size: 0.6rem;
+        color: var(--secondary);
+        border: 1px solid rgba(123, 47, 255, 0.3);
+        padding: 0.1rem 0.5rem;
+        border-radius: 3px;
+        letter-spacing: 1px;
+      }
+
+      .footer-links {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .footer-link {
+        font-size: 0.7rem;
+        color: var(--text-dim);
+        text-decoration: none;
+        letter-spacing: 2px;
+        transition: all 0.3s;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+
+      .footer-link:hover {
+        color: var(--primary);
+        text-shadow: 0 0 8px var(--primary);
+      }
+  </style>
 </head>
 
 <body>
-<canvas id="particleCanvas"></canvas>
+  <canvas id="particleCanvas"></canvas>
 
-<!-- ─── Toast Container ─────────────────────────────────── -->
-<div id="toast" class="toast"></div>
+  <!-- ─── Toast Container ─────────────────────────────────── -->
+  <div id="toast" class="toast"></div>
 
-<!-- ─── Top Bar ──────────────────────────────────────────── -->
-<header class="top-bar">
-  <div class="system-status">
-    <div class="status-dot"></div>
-    <span>SYSTEM ONLINE</span>
-  </div>
-  <div class="env-label">ENV: loan-lifecycle-v2.0</div>
-  <button id="globalResetBtn" class="btn-reset-global" onclick="globalReset()">⟲ RESET</button>
-</header>
-
-<!-- ─── Title ────────────────────────────────────────────── -->
-<section class="title-section">
-  <h1 class="glitch-title" data-text="NEXUS BANK">NEXUS BANK</h1>
-  <p class="subtitle">Long-Horizon Loan Lifecycle Command Center</p>
-</section>
-
-<!-- ─── Main Content ─────────────────────────────────────── -->
-<main class="main-container">
-
-  <!-- ─── Left Panel: Terminal Input ──────────────────── -->
-  <div class="panel" id="inputPanel">
-    <div class="panel-header">
-      <span class="panel-header-icon">⌨</span>
-      <span class="panel-header-title">Terminal Input</span>
+  <!-- ─── Top Bar ──────────────────────────────────────────── -->
+  <header class="top-bar">
+    <div class="system-status">
+      <div class="status-dot"></div>
+      <span>SYSTEM ONLINE</span>
     </div>
-    <div class="panel-body">
-      <!-- Wizard Progress Indicators -->
-      <div class="wizard-steps">
-        <div class="wizard-step-indicator active" id="stepInd-1">1</div>
-        <div class="wizard-step-indicator" id="stepInd-2">2</div>
-        <div class="wizard-step-indicator" id="stepInd-3">3</div>
-        <div class="wizard-step-indicator" id="stepInd-4">4</div>
-      </div>
+    <div class="env-label">ENV: loan-lifecycle-v2.0</div>
+    <button id="globalResetBtn" class="btn-reset-global" onclick="globalReset()">⟲ RESET</button>
+  </header>
 
-      <div class="input-row" style="display:none;">
-        <select id="stageSelect" class="select-field"></select>
-      </div>
+  <!-- ─── Title ────────────────────────────────────────────── -->
+  <section class="title-section">
+    <h1 class="glitch-title" data-text="NEXUS BANK">NEXUS BANK</h1>
+    <p class="subtitle">Long-Horizon Loan Lifecycle Command Center</p>
+  </section>
 
-      <!-- Step 1: Basic Profile -->
-      <div class="wizard-content-step active" id="wizardStep-1">
-        <div class="section-label">Step 1: Identity & Profile</div>
-        <div class="input-row">
-          <label class="input-label" for="applicantName">
-            <span class="prompt-char">›</span> Applicant Name
-          </label>
-          <input id="applicantName" class="input-field" type="text" placeholder="Enter Full Name">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="applicantAge">
-            <span class="prompt-char">›</span> Age
-          </label>
-          <input id="applicantAge" class="input-field" type="number" value="30">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="employmentType">
-            <span class="prompt-char">›</span> Employment
-          </label>
-          <select id="employmentType" class="select-field" onchange="onEmploymentChange()">
-            <option value="salaried">Salaried</option>
-            <option value="self_employed">Self Employed</option>
-            <option value="freelancer">Freelancer</option>
-            <option value="contract">Contract</option>
-            <option value="unemployed">Unemployed</option>
-          </select>
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="employmentYears">
-            <span class="prompt-char">›</span> Job History (Yrs)
-          </label>
-          <input id="employmentYears" class="input-field" type="number" value="2">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="loanPurpose">
-            <span class="prompt-char">›</span> Loan Purpose
-          </label>
-          <input id="loanPurpose" class="input-field" placeholder="Purpose (e.g. home improvement)" />
-        </div>
-      </div>
+  <!-- ─── Main Content ─────────────────────────────────────── -->
+  <main class="main-container">
 
-      <!-- Step 2: Financial Details -->
-      <div class="wizard-content-step" id="wizardStep-2">
-        <div class="section-label">Step 2: Financial Health</div>
-        <div class="input-row">
-          <label class="input-label" for="annualIncome">
-            <span class="prompt-char">›</span> Annual Income
-          </label>
-          <input id="annualIncome" class="input-field" type="number" placeholder="₹0.00">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="creditScore">
-            <span class="prompt-char">›</span> Credit Score
-          </label>
-          <input id="creditScore" class="input-field" type="number" min="300" max="850" placeholder="300-850">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="existingDebt">
-            <span class="prompt-char">›</span> Existing Debt
-          </label>
-          <input id="existingDebt" class="input-field" type="number" placeholder="₹0.00">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="prevDefaults">
-            <span class="prompt-char">›</span> Past Defaults
-          </label>
-          <input id="prevDefaults" class="input-field" type="number" value="0">
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="publicRecords">
-            <span class="prompt-char">›</span> Public Records
-          </label>
-          <input id="publicRecords" class="input-field" type="number" min="0" placeholder="Public Records" />
-        </div>
-        <div class="input-row">
-          <label class="input-label" for="inquiries">
-            <span class="prompt-char">›</span> Inquiries (6mo)
-          </label>
-          <input id="inquiries" class="input-field" type="number" min="0" placeholder="Credit Inquiries (6mo)" />
-        </div>
+    <!-- ─── Left Panel: Terminal Input ──────────────────── -->
+    <div class="panel" id="inputPanel">
+      <div class="panel-header">
+        <span class="panel-header-icon">⌨</span>
+        <span class="panel-header-title">Terminal Input</span>
       </div>
+      <div class="panel-body">
+        <!-- Wizard Progress Indicators -->
+        <div class="wizard-steps">
+          <div class="wizard-step-indicator active" id="stepInd-1">1</div>
+          <div class="wizard-step-indicator" id="stepInd-2">2</div>
+          <div class="wizard-step-indicator" id="stepInd-3">3</div>
+          <div class="wizard-step-indicator" id="stepInd-4">4</div>
+        </div>
 
-      <!-- Step 3: Loan Request -->
-      <div class="wizard-content-step" id="wizardStep-3">
-        <div class="section-label">Step 3: Loan Configuration</div>
-        <div class="input-row">
-          <label class="input-label" for="loanAmount">
-            <span class="prompt-char">›</span> Requested Amount
-          </label>
-          <input id="loanAmount" class="input-field" type="number" placeholder="₹0.00" oninput="onAmountChange()">
+        <div class="input-row" style="display:none;">
+          <select id="stageSelect" class="select-field"></select>
         </div>
-        <div class="input-row">
-          <label class="input-label" for="loanTenure">
-            <span class="prompt-char">›</span> Tenure (Months)
-          </label>
-          <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" value="36">
-        </div>
-        <div class="input-row">
-          <label class="input-label">
-            <span class="prompt-char">›</span> Collateral
-          </label>
-          <div style="flex:1; display:flex; gap:1rem; align-items:center;">
-             <input type="checkbox" id="hasCollateral" style="width:20px; height:20px; accent-color:var(--primary);">
-             <span style="font-size:0.8rem; color:var(--text-dim);">Provide Collateral Guarantee</span>
+
+        <!-- Step 1: Basic Profile -->
+        <div class="wizard-content-step active" id="wizardStep-1">
+          <div class="section-label">Step 1: Identity & Profile</div>
+          <div class="input-row">
+            <label class="input-label" for="applicantName">
+              <span class="prompt-char">›</span> Applicant Name
+            </label>
+            <input id="applicantName" class="input-field" type="text" placeholder="Enter Full Name">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="applicantAge">
+              <span class="prompt-char">›</span> Age
+            </label>
+            <input id="applicantAge" class="input-field" type="number" value="30">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="employmentType">
+              <span class="prompt-char">›</span> Employment
+            </label>
+            <select id="employmentType" class="select-field" onchange="onEmploymentChange()">
+              <option value="salaried">Salaried</option>
+              <option value="self_employed">Self Employed</option>
+              <option value="freelancer">Freelancer</option>
+              <option value="contract">Contract</option>
+              <option value="unemployed">Unemployed</option>
+            </select>
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="employmentYears">
+              <span class="prompt-char">›</span> Job History (Yrs)
+            </label>
+            <input id="employmentYears" class="input-field" type="number" value="2">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="loanPurpose">
+              <span class="prompt-char">›</span> Loan Purpose
+            </label>
+            <input id="loanPurpose" class="input-field" placeholder="Purpose (e.g. home improvement)" />
           </div>
         </div>
-      </div>
 
-      <!-- Step 4: Documents -->
-      <div class="wizard-content-step" id="wizardStep-4">
-        <div class="section-label">Step 4: Document Upload</div>
-        <div class="file-upload-zone" onclick="simulateFileUpload()">
-          <div class="file-upload-icon">📂</div>
-          <div style="font-size:0.8rem; margin-bottom:0.3rem;">Drop bank statements or ID here</div>
-          <div style="font-size:0.6rem; color:var(--text-dim);">Supported: PDF, JPG, PNG (Max 5MB)</div>
+        <!-- Step 2: Financial Details -->
+        <div class="wizard-content-step" id="wizardStep-2">
+          <div class="section-label">Step 2: Financial Health</div>
+          <div class="input-row">
+            <label class="input-label" for="annualIncome">
+              <span class="prompt-char">›</span> Annual Income
+            </label>
+            <input id="annualIncome" class="input-field" type="number" placeholder="₹0.00">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="creditScore">
+              <span class="prompt-char">›</span> Credit Score
+            </label>
+            <input id="creditScore" class="input-field" type="number" min="300" max="850" placeholder="300-850">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="existingDebt">
+              <span class="prompt-char">›</span> Existing Debt
+            </label>
+            <input id="existingDebt" class="input-field" type="number" placeholder="₹0.00">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="prevDefaults">
+              <span class="prompt-char">›</span> Past Defaults
+            </label>
+            <input id="prevDefaults" class="input-field" type="number" value="0">
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="publicRecords">
+              <span class="prompt-char">›</span> Public Records
+            </label>
+            <input id="publicRecords" class="input-field" type="number" min="0" placeholder="Public Records" />
+          </div>
+          <div class="input-row">
+            <label class="input-label" for="inquiries">
+              <span class="prompt-char">›</span> Inquiries (6mo)
+            </label>
+            <input id="inquiries" class="input-field" type="number" min="0" placeholder="Credit Inquiries (6mo)" />
+          </div>
         </div>
-        <div class="file-list" id="fileList">
-          <!-- Files will appear here -->
-        </div>
-      </div>
 
-      <!-- Navigation -->
-      <div class="wizard-nav">
-        <button id="prevBtn" class="btn btn-reset" onclick="changeWizardStep(-1)" disabled>BACK</button>
-        <button id="nextBtn" class="btn btn-execute" onclick="changeWizardStep(1)">NEXT</button>
-        <button id="executeBtn" class="btn btn-execute" onclick="executeStep()" style="display:none;">▶ START UNDERWRITING</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ─── Right Panel: Decision Display ──────────────── -->
-  <div class="panel" id="resultPanel">
-    <div class="panel-header">
-      <span class="panel-header-icon">◈</span>
-      <span class="panel-header-title">Decision Display</span>
-    </div>
-    <div class="panel-body" id="resultBody">
-      <div class="waiting-state" id="waitingState">
-        <div class="waiting-icon">◇</div>
-        <div class="waiting-text">Select a stage and execute to view results</div>
-      </div>
-
-      <div id="resultContent" style="display:none;">
-        <div id="sourceIndicator" style="display:none; padding:0.6rem 1rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;"></div>
-        <div class="result-box active" id="stageResultBox">
-          <div class="result-header">╔═══ AI AGENT DECISION ═══╗</div>
-          <div class="result-row">
-            <span class="result-label">Risk Level</span>
-            <span class="result-value" id="resRiskLevel">—</span>
+        <!-- Step 3: Loan Request -->
+        <div class="wizard-content-step" id="wizardStep-3">
+          <div class="section-label">Step 3: Loan Configuration</div>
+          <div class="input-row">
+            <label class="input-label" for="loanAmount">
+              <span class="prompt-char">›</span> Requested Amount
+            </label>
+            <input id="loanAmount" class="input-field" type="number" placeholder="₹0.00" oninput="onAmountChange()">
           </div>
-          <div class="result-row">
-            <span class="result-label">Decision</span>
-            <span class="result-value" id="resDecision">—</span>
+          <div class="input-row">
+            <label class="input-label" for="loanTenure">
+              <span class="prompt-char">›</span> Tenure (Months)
+            </label>
+            <input id="loanTenure" class="input-field" type="number" placeholder="e.g. 36" value="36">
           </div>
-          <div class="result-row">
-            <span class="result-label">Interest Rate</span>
-            <span class="result-value" id="resInterestRate">—</span>
-          </div>
-
-          <div class="score-bar-container">
-            <div class="score-bar-label">
-              <span class="result-label">Agent Score</span>
-              <span class="result-value gold" id="resScoreNum">0.00</span>
-            </div>
-            <div class="score-bar-track">
-              <div class="score-bar-fill" id="resScoreBar" style="width:0%;background:linear-gradient(90deg,var(--danger),var(--accent),var(--primary));"></div>
+          <div class="input-row">
+            <label class="input-label">
+              <span class="prompt-char">›</span> Collateral
+            </label>
+            <div style="flex:1; display:flex; gap:1rem; align-items:center;">
+              <input type="checkbox" id="hasCollateral" style="width:20px; height:20px; accent-color:var(--primary);">
+              <span style="font-size:0.8rem; color:var(--text-dim);">Provide Collateral Guarantee</span>
             </div>
           </div>
+        </div>
 
-          <div class="result-row">
-            <span class="result-label">Reasoning</span>
+        <!-- Step 4: Documents -->
+        <div class="wizard-content-step" id="wizardStep-4">
+          <div class="section-label">Step 4: Document Upload</div>
+          <div class="file-upload-zone" onclick="simulateFileUpload()">
+            <div class="file-upload-icon">📂</div>
+            <div style="font-size:0.8rem; margin-bottom:0.3rem;">Drop bank statements or ID here</div>
+            <div style="font-size:0.6rem; color:var(--text-dim);">Supported: PDF, JPG, PNG (Max 5MB)</div>
           </div>
-          <div class="feedback-box" id="resReasoning" style="margin-top:0.5rem; margin-bottom: 1rem;">Awaiting decision...</div>
-
-          <div class="result-row">
-            <span class="result-label">Task</span>
-            <span class="result-value" id="resTaskName">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Difficulty</span>
-            <span class="result-value" id="resDifficulty">—</span>
-          </div>
-          <hr class="separator">
-          <div class="result-row">
-            <span class="result-label">Risk Score</span>
-            <span class="result-value" id="resRiskScore">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Decision Score</span>
-            <span class="result-value" id="resDecisionScore">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Rate Score</span>
-            <span class="result-value" id="resRateScore">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Consistency</span>
-            <span class="result-value" id="resConsistency">—</span>
+          <div class="file-list" id="fileList">
+            <!-- Files will appear here -->
           </div>
         </div>
 
-
-
-        <div class="ground-truth-box" id="groundTruthBox">
-          <div class="result-header">╔═══ GROUND TRUTH ═══╗</div>
-          <div class="result-row">
-            <span class="result-label">Expected Risk</span>
-            <span class="result-value" id="gtRisk">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Expected Decision</span>
-            <span class="result-value" id="gtDecision">—</span>
-          </div>
-          <div class="result-row">
-            <span class="result-label">Expected Rate</span>
-            <span class="result-value" id="gtRate">—</span>
-          </div>
-          <div class="feedback-box" id="gtExplanation" style="margin-top:0.5rem;max-height:100px;">—</div>
+        <!-- Navigation -->
+        <div class="wizard-nav">
+          <button id="prevBtn" class="btn btn-reset" onclick="changeWizardStep(-1)" disabled>BACK</button>
+          <button id="nextBtn" class="btn btn-execute" onclick="changeWizardStep(1)">NEXT</button>
+          <button id="executeBtn" class="btn btn-execute" onclick="executeStep()" style="display:none;">▶ START
+            UNDERWRITING</button>
         </div>
       </div>
     </div>
-  </div>
 
-</main>
+    <!-- ─── Right Panel: Decision Display ──────────────── -->
+    <div class="panel" id="resultPanel">
+      <div class="panel-header">
+        <span class="panel-header-icon">◈</span>
+        <span class="panel-header-title">Decision Display</span>
+      </div>
+      <div class="panel-body" id="resultBody">
+        <div class="waiting-state" id="waitingState">
+          <div class="waiting-icon">◇</div>
+          <div class="waiting-text">Select a stage and execute to view results</div>
+        </div>
 
-<!-- ─── Lifecycle Progress Bar ───────────────────────────── -->
-<section class="lifecycle-bar">
-  <div class="lifecycle-container">
-    <div class="lifecycle-title">Loan Lifecycle Pipeline</div>
-    <div class="lifecycle-stages" id="lifecycleStages">
-      <!-- Populated by JS -->
+        <div id="resultContent" style="display:none;">
+          <div id="sourceIndicator"
+            style="display:none; padding:0.6rem 1rem; border-radius:6px; margin-bottom:0.8rem; font-size:0.75rem; font-weight:700; letter-spacing:1px; text-transform:uppercase;">
+          </div>
+          <div class="result-box active" id="stageResultBox">
+            <div class="result-header">╔═══ AI AGENT DECISION ═══╗</div>
+            <div class="result-row">
+              <span class="result-label">Risk Level</span>
+              <span class="result-value" id="resRiskLevel">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Decision</span>
+              <span class="result-value" id="resDecision">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Interest Rate</span>
+              <span class="result-value" id="resInterestRate">—</span>
+            </div>
+
+            <div class="score-bar-container">
+              <div class="score-bar-label">
+                <span class="result-label">Agent Score</span>
+                <span class="result-value gold" id="resScoreNum">0.00</span>
+              </div>
+              <div class="score-bar-track">
+                <div class="score-bar-fill" id="resScoreBar"
+                  style="width:0%;background:linear-gradient(90deg,var(--danger),var(--accent),var(--primary));"></div>
+              </div>
+            </div>
+
+            <div class="result-row">
+              <span class="result-label">Reasoning</span>
+            </div>
+            <div class="feedback-box" id="resReasoning" style="margin-top:0.5rem; margin-bottom: 1rem;">Awaiting
+              decision...</div>
+
+            <div class="result-row">
+              <span class="result-label">Task</span>
+              <span class="result-value" id="resTaskName">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Difficulty</span>
+              <span class="result-value" id="resDifficulty">—</span>
+            </div>
+            <hr class="separator">
+            <div class="result-row">
+              <span class="result-label">Risk Score</span>
+              <span class="result-value" id="resRiskScore">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Decision Score</span>
+              <span class="result-value" id="resDecisionScore">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Rate Score</span>
+              <span class="result-value" id="resRateScore">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Consistency</span>
+              <span class="result-value" id="resConsistency">—</span>
+            </div>
+          </div>
+
+
+
+          <div class="ground-truth-box" id="groundTruthBox">
+            <div class="result-header">╔═══ GROUND TRUTH ═══╗</div>
+            <div class="result-row">
+              <span class="result-label">Expected Risk</span>
+              <span class="result-value" id="gtRisk">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Expected Decision</span>
+              <span class="result-value" id="gtDecision">—</span>
+            </div>
+            <div class="result-row">
+              <span class="result-label">Expected Rate</span>
+              <span class="result-value" id="gtRate">—</span>
+            </div>
+            <div class="feedback-box" id="gtExplanation" style="margin-top:0.5rem;max-height:100px;">—</div>
+          </div>
+        </div>
+      </div>
     </div>
-  </div>
-</section>
 
-<footer class="system-footer">
-  <div class="footer-content">
-    <div class="footer-left">
-      <span class="copyright">© 2026 NEXUS BANK PROTOCOL // SOX-2 COMPLIANT</span>
-      <span class="version-tag">v1.0.0-STABLE</span>
+  </main>
+
+  <!-- ─── Lifecycle Progress Bar ───────────────────────────── -->
+  <section class="lifecycle-bar">
+    <div class="lifecycle-container">
+      <div class="lifecycle-title">Loan Lifecycle Pipeline</div>
+      <div class="lifecycle-stages" id="lifecycleStages">
+        <!-- Populated by JS -->
+      </div>
     </div>
-    <div class="footer-links">
-      <a href="https://github.com/Sohil1105/open_env_hackathon" target="_blank" class="footer-link">
-        GITHUB
-      </a>
-      <a href="https://huggingface.co/spaces/Sourav0511/open-env-hackathon" target="_blank" class="footer-link">
-        HF SPACE
-      </a>
-      <a href="/openenv.yaml" target="_blank" class="footer-link">
-        OPENENV SPEC
-      </a>
+  </section>
+
+  <footer class="system-footer">
+    <div class="footer-content">
+      <div class="footer-left">
+        <span class="copyright">© 2026 NEXUS BANK PROTOCOL // SOX-2 COMPLIANT</span>
+        <span class="version-tag">v1.0.0-STABLE</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/Sohil1105/open_env_hackathon" target="_blank" class="footer-link">
+          GITHUB
+        </a>
+        <a href="https://huggingface.co/spaces/Sourav0511/open-env-hackathon" target="_blank" class="footer-link">
+          HF SPACE
+        </a>
+        <a href="/openenv.yaml" target="_blank" class="footer-link">
+          OPENENV SPEC
+        </a>
+      </div>
     </div>
-  </div>
-</footer>
+  </footer>
 
-<!-- ─── JavaScript ───────────────────────────────────────── -->
-<script>
-// ─── Constants ──────────────────────────────────────────
-const BASE_URL = window.location.origin;
-const STAGE_META = [
-  { id: 'lead_qualification_sales', label: 'Sales', icon: '✅' },
-  { id: 'document_verification_hr', label: 'Docs', icon: '✅' },
-  { id: 'easy_salaried_high_credit', label: 'Risk I', icon: '✅' },
-  { id: 'medium_self_employed_moderate', label: 'Risk II', icon: '✅' },
-  { id: 'hard_freelancer_complex', label: 'Risk III', icon: '✅' },
-  { id: 'customer_onboarding_pm', label: 'Onboard', icon: '✅' },
-  { id: 'bankruptcy_recovery_edge1', label: 'Monitor', icon: '✅' },
-  { id: 'joint_applicants_edge2', label: 'Close', icon: '✅' },
-];
+  <!-- ─── JavaScript ───────────────────────────────────────── -->
+  <script>
+    // ─── Constants ──────────────────────────────────────────
+    const BASE_URL = window.location.origin;
+    const STAGE_META = [
+      { id: 'lead_qualification_sales', label: 'Sales', icon: '✅' },
+      { id: 'document_verification_hr', label: 'Docs', icon: '✅' },
+      { id: 'easy_salaried_high_credit', label: 'Risk I', icon: '✅' },
+      { id: 'medium_self_employed_moderate', label: 'Risk II', icon: '✅' },
+      { id: 'hard_freelancer_complex', label: 'Risk III', icon: '✅' },
+      { id: 'customer_onboarding_pm', label: 'Onboard', icon: '✅' },
+      { id: 'bankruptcy_recovery_edge1', label: 'Monitor', icon: '✅' },
+      { id: 'joint_applicants_edge2', label: 'Close', icon: '✅' },
+    ];
 
-let completedStages = new Set();
-let activeStageId = null;
-let taskList = [];
-let currentWizardStep = 1;
-let uploadedFiles = [];
+    let completedStages = new Set();
+    let activeStageId = null;
+    let taskList = [];
+    let currentWizardStep = 1;
+    let uploadedFiles = [];
 
-// ─── Init ───────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', async () => {
-  initParticles();
-  buildLifecycleBar();
-  await loadTasks();
-  healthCheck();
-});
+    // ─── Init ───────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', async () => {
+      initParticles();
+      buildLifecycleBar();
+      await loadTasks();
+      healthCheck();
+    });
 
-// ─── Wizard Navigation ──────────────────────────────────
-function changeWizardStep(delta) {
-  const nextStep = currentWizardStep + delta;
-  if (nextStep < 1 || nextStep > 4) return;
+    // ─── Wizard Navigation ──────────────────────────────────
+    function changeWizardStep(delta) {
+      const nextStep = currentWizardStep + delta;
+      if (nextStep < 1 || nextStep > 4) return;
 
-  // Validation before moving forward
-  if (delta > 0) {
-    if (currentWizardStep === 1) {
-      if (!document.getElementById('applicantName').value) {
-        showToast('Please enter Applicant Name', 'error');
-        return;
+      // Validation before moving forward
+      if (delta > 0) {
+        if (currentWizardStep === 1) {
+          if (!document.getElementById('applicantName').value) {
+            showToast('Please enter Applicant Name', 'error');
+            return;
+          }
+        } else if (currentWizardStep === 2) {
+          if (!document.getElementById('annualIncome').value) {
+            showToast('Please enter Annual Income', 'error');
+            return;
+          }
+          const cs = parseInt(document.getElementById('creditScore').value);
+          if (isNaN(cs) || cs < 300 || cs > 850) { showToast('FICO must be 300–850', 'error'); return; }
+          if (parseFloat(document.getElementById('existingDebt').value) < 0) {
+            showToast('Debt cannot be negative', 'error');
+            return;
+          }
+        } else if (currentWizardStep === 3) {
+          if (parseFloat(document.getElementById('loanAmount').value) <= 0) { showToast('Loan amount must be greater than 0', 'error'); return; }
+        }
       }
-    } else if (currentWizardStep === 2) {
-      if (!document.getElementById('annualIncome').value) {
-        showToast('Please enter Annual Income', 'error');
-        return;
+
+      // Hide current
+      document.getElementById(`wizardStep-${currentWizardStep}`).classList.remove('active');
+      document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('active');
+      if (currentWizardStep < nextStep) document.getElementById(`stepInd-${currentWizardStep}`).classList.add('completed');
+
+      // Show next
+      currentWizardStep = nextStep;
+      document.getElementById(`wizardStep-${currentWizardStep}`).classList.add('active');
+      document.getElementById(`stepInd-${currentWizardStep}`).classList.add('active');
+      document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('completed');
+
+      // Update buttons
+      document.getElementById('prevBtn').disabled = currentWizardStep === 1;
+      if (currentWizardStep === 4) {
+        document.getElementById('nextBtn').style.display = 'none';
+        document.getElementById('executeBtn').style.display = 'block';
+      } else {
+        document.getElementById('nextBtn').style.display = 'block';
+        document.getElementById('executeBtn').style.display = 'none';
       }
-      const cs = parseInt(document.getElementById('creditScore').value);
-      if (isNaN(cs) || cs < 300 || cs > 850) { showToast('FICO must be 300–850', 'error'); return; }
-      if (parseFloat(document.getElementById('existingDebt').value) < 0) {
-        showToast('Debt cannot be negative', 'error');
-        return;
-      }
-    } else if (currentWizardStep === 3) {
-      if (parseFloat(document.getElementById('loanAmount').value) <= 0) { showToast('Loan amount must be greater than 0', 'error'); return; }
+
+      showToast(`Switched to Step ${currentWizardStep}`, 'info');
     }
-  }
 
-  // Hide current
-  document.getElementById(`wizardStep-${currentWizardStep}`).classList.remove('active');
-  document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('active');
-  if (currentWizardStep < nextStep) document.getElementById(`stepInd-${currentWizardStep}`).classList.add('completed');
+    // ─── File Upload Simulation ──────────────────────────────
+    function simulateFileUpload() {
+      const fileNames = [
+        'ID_Card_Front.jpg', 'ID_Card_Back.jpg', 'Salary_Slip_March.pdf',
+        'Bank_Statement_6M.pdf', 'Collateral_Deed.pdf', 'Tax_Returns_2025.pdf'
+      ];
+      const randomFile = fileNames[Math.floor(Math.random() * fileNames.length)];
 
-  // Show next
-  currentWizardStep = nextStep;
-  document.getElementById(`wizardStep-${currentWizardStep}`).classList.add('active');
-  document.getElementById(`stepInd-${currentWizardStep}`).classList.add('active');
-  document.getElementById(`stepInd-${currentWizardStep}`).classList.remove('completed');
+      if (uploadedFiles.includes(randomFile)) {
+        showToast('File already uploaded', 'info');
+        return;
+      }
 
-  // Update buttons
-  document.getElementById('prevBtn').disabled = currentWizardStep === 1;
-  if (currentWizardStep === 4) {
-    document.getElementById('nextBtn').style.display = 'none';
-    document.getElementById('executeBtn').style.display = 'block';
-  } else {
-    document.getElementById('nextBtn').style.display = 'block';
-    document.getElementById('executeBtn').style.display = 'none';
-  }
-
-  showToast(`Switched to Step ${currentWizardStep}`, 'info');
-}
-
-// ─── File Upload Simulation ──────────────────────────────
-function simulateFileUpload() {
-  const fileNames = [
-    'ID_Card_Front.jpg', 'ID_Card_Back.jpg', 'Salary_Slip_March.pdf', 
-    'Bank_Statement_6M.pdf', 'Collateral_Deed.pdf', 'Tax_Returns_2025.pdf'
-  ];
-  const randomFile = fileNames[Math.floor(Math.random() * fileNames.length)];
-  
-  if (uploadedFiles.includes(randomFile)) {
-    showToast('File already uploaded', 'info');
-    return;
-  }
-
-  uploadedFiles.push(randomFile);
-  const fileList = document.getElementById('fileList');
-  const div = document.createElement('div');
-  div.className = 'file-item';
-  div.innerHTML = `
+      uploadedFiles.push(randomFile);
+      const fileList = document.getElementById('fileList');
+      const div = document.createElement('div');
+      div.className = 'file-item';
+      div.innerHTML = `
     <span>📄 ${randomFile}</span>
     <span class="remove-file" onclick="removeFile('${randomFile}', this)">✕</span>
   `;
-  fileList.appendChild(div);
-  showToast(`Uploaded: ${randomFile}`, 'success');
-}
-
-function removeFile(name, el) {
-  uploadedFiles = uploadedFiles.filter(f => f !== name);
-  el.parentElement.remove();
-}
-
-// ─── API Helpers ────────────────────────────────────────
-async function apiFetch(path, options = {}) {
-  try {
-    const resp = await fetch(`${BASE_URL}${path}`, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options,
-    });
-    if (!resp.ok) {
-      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
-      throw new Error(err.detail || `HTTP ${resp.status}`);
-    }
-    return await resp.json();
-  } catch (e) {
-    showToast(e.message, 'error');
-    throw e;
-  }
-}
-
-// ─── Load Tasks ─────────────────────────────────────────
-async function loadTasks() {
-  try {
-    const data = await apiFetch('/tasks');
-    taskList = data.tasks || [];
-    const select = document.getElementById('stageSelect');
-    taskList.forEach((t, i) => {
-      const opt = document.createElement('option');
-      opt.value = t.task_id;
-      opt.textContent = `S${i+1}: ${t.name}`;
-      select.appendChild(opt);
-    });
-  } catch (e) {
-    console.error('Failed to load tasks:', e);
-  }
-}
-
-// ─── Health Check ───────────────────────────────────────
-async function healthCheck() {
-  try {
-    const data = await apiFetch('/health');
-    showToast(`NEXUS Bank Server Online`, 'success');
-  } catch (e) {
-    showToast('Backend not reachable', 'error');
-  }
-}
-
-// ─── Stage Select Handler (Internal) ────────────────────
-async function onStageSelect() {
-  const taskId = document.getElementById('stageSelect').value;
-  if (!taskId) return;
-  try {
-    const data = await apiFetch('/reset', {
-      method: 'POST',
-      body: JSON.stringify({ task_id: taskId }),
-    });
-    const obs = data.state?.observation;
-    if (obs) {
-      document.getElementById('applicantName').value = obs.applicant_name || '';
-      document.getElementById('applicantAge').value = obs.age || 30;
-      document.getElementById('annualIncome').value = obs.annual_income || '';
-      document.getElementById('creditScore').value = obs.credit_score || '';
-      document.getElementById('existingDebt').value = obs.existing_debt || '';
-      document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
-      document.getElementById('employmentType').value = obs.employment_type || 'salaried';
-      document.getElementById('employmentYears').value = obs.employment_years || 2;
-      document.getElementById('prevDefaults').value = obs.previous_defaults || 0;
-      document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
-    }
-    activeStageId = taskId;
-    updateLifecycleBar();
-  } catch (e) {}
-}
-
-// ─── Auto-Select Stage Based on Employment ──────────────
-function onEmploymentChange() {
-  const emp = document.getElementById('employmentType').value;
-  const select = document.getElementById('stageSelect');
-  let targetTaskId = null;
-  if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
-  else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
-  else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
-  if (targetTaskId) select.value = targetTaskId;
-}
-
-function onAmountChange() {
-  const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
-  const tenure = document.getElementById('loanTenure');
-  if (amt <= 0) return;
-  let suggestedTenure = 12;
-  if (amt > 100000) suggestedTenure = 84;
-  else if (amt > 50000) suggestedTenure = 60;
-  else if (amt > 25000) suggestedTenure = 48;
-  else suggestedTenure = 36;
-  tenure.value = suggestedTenure;
-}
-
-// ─── Execute Step ───────────────────────────────────────
-async function executeStep() {
-  const btn = document.getElementById('executeBtn');
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
-
-  try {
-    const applicant = {
-      applicant_name: document.getElementById('applicantName').value,
-      age: parseInt(document.getElementById('applicantAge')?.value || 30),
-      annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
-      credit_score: parseInt(document.getElementById('creditScore').value) || 0,
-      existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
-      loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
-      employment_type: document.getElementById('employmentType').value,
-      employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
-      previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
-      loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
-      has_collateral: document.getElementById('hasCollateral').checked,
-      loan_purpose: document.getElementById('loanPurpose').value || "general",
-      public_records: parseInt(document.getElementById('publicRecords').value) || 0,
-      credit_inquiries_6mo: parseInt(document.getElementById('inquiries').value) || 0,
-      documents_submitted: uploadedFiles
-    };
-
-    let riskStage = 'easy_salaried_high_credit';
-    if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
-    else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
-    applicant.task_id = riskStage;
-
-    const stages = [
-        "📂 SCANNING DOCUMENTS...",
-        "🔍 CHECKING CREDIT BUREAU...",
-        "⚖️ WEIGHING COLLATERAL...",
-        "📊 CALCULATING REPAYMENT...",
-        "🏦 FINALIZING VERDICT..."
-    ];
-
-    for (const msg of stages) {
-        btn.innerHTML = `<span class="spinner"></span>${msg}`;
-        showToast(msg, 'info');
-        await new Promise(r => setTimeout(r, 700));
+      fileList.appendChild(div);
+      showToast(`Uploaded: ${randomFile}`, 'success');
     }
 
-    const response = await fetch('/evaluate', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify(applicant)
-    });
-
-    if (!response.ok) {
-      const err = await response.json();
-      showToast(err.detail || 'Server error', 'error');
-      return;
+    function removeFile(name, el) {
+      uploadedFiles = uploadedFiles.filter(f => f !== name);
+      el.parentElement.remove();
     }
 
-    const result = await response.json();
-    
-    // START SEQUENTIAL UI UPDATE
-    const stageResults = result.stage_results || [];
-    for (let i = 0; i < stageResults.length; i++) {
-        const stage = stageResults[i];
-        btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
-        showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
-        
-        // Update the lifecycle bar for each stage
-        activeStageId = STAGE_META[i].id; // Map stage index to STAGE_META
-        completedStages.add(activeStageId);
+    // ─── API Helpers ────────────────────────────────────────
+    async function apiFetch(path, options = {}) {
+      try {
+        const resp = await fetch(`${BASE_URL}${path}`, {
+          headers: { 'Content-Type': 'application/json' },
+          ...options,
+        });
+        if (!resp.ok) {
+          const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+          throw new Error(err.detail || `HTTP ${resp.status}`);
+        }
+        return await resp.json();
+      } catch (e) {
+        showToast(e.message, 'error');
+        throw e;
+      }
+    }
+
+    // ─── Load Tasks ─────────────────────────────────────────
+    async function loadTasks() {
+      try {
+        const data = await apiFetch('/tasks');
+        taskList = data.tasks || [];
+        const select = document.getElementById('stageSelect');
+        taskList.forEach((t, i) => {
+          const opt = document.createElement('option');
+          opt.value = t.task_id;
+          opt.textContent = `S${i + 1}: ${t.name}`;
+          select.appendChild(opt);
+        });
+      } catch (e) {
+        console.error('Failed to load tasks:', e);
+      }
+    }
+
+    // ─── Health Check ───────────────────────────────────────
+    async function healthCheck() {
+      try {
+        const data = await apiFetch('/health');
+        showToast(`NEXUS Bank Server Online`, 'success');
+      } catch (e) {
+        showToast('Backend not reachable', 'error');
+      }
+    }
+
+    // ─── Stage Select Handler (Internal) ────────────────────
+    async function onStageSelect() {
+      const taskId = document.getElementById('stageSelect').value;
+      if (!taskId) return;
+      try {
+        const data = await apiFetch('/reset', {
+          method: 'POST',
+          body: JSON.stringify({ task_id: taskId }),
+        });
+        const obs = data.state?.observation;
+        if (obs) {
+          document.getElementById('applicantName').value = obs.applicant_name || '';
+          document.getElementById('applicantAge').value = obs.age || 30;
+          document.getElementById('annualIncome').value = obs.annual_income || '';
+          document.getElementById('creditScore').value = obs.credit_score || '';
+          document.getElementById('existingDebt').value = obs.existing_debt || '';
+          document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
+          document.getElementById('employmentType').value = obs.employment_type || 'salaried';
+          document.getElementById('employmentYears').value = obs.employment_years || 2;
+          document.getElementById('prevDefaults').value = obs.previous_defaults || 0;
+          document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
+        }
+        activeStageId = taskId;
         updateLifecycleBar();
-        
-        await new Promise(r => setTimeout(r, 1000)); // 1s delay per real stage
+      } catch (e) { }
     }
 
-    displayResult(result);
-    showToast('✨ Final Underwriting Decision Rendered', 'success');
-
-  } catch (e) {
-    showToast(e.message, 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = '▶ START UNDERWRITING';
-  }
-}
-
-// ─── Display Result ─────────────────────────────────────
-function displayResult(result) {
-  document.getElementById('waitingState').style.display = 'none';
-  document.getElementById('resultContent').style.display = 'block';
-
-  const sourceEl = document.getElementById('sourceIndicator');
-  sourceEl.style.display = 'block';
-  sourceEl.style.background = 'rgba(0,255,136,0.1)';
-  sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
-  sourceEl.style.color = '#00ff88';
-  sourceEl.textContent = '✅ REAL-TIME MULTI-STAGE ANALYSIS COMPLETE';
-
-  const decision = result.agent_decision || {};
-  const grading = result.grading || {};
-  const gt = result.ground_truth || {};
-
-  document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
-  document.getElementById('resDecision').textContent = decision.loan_decision || '—';
-  document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
-
-  const decisionEl = document.getElementById('resDecision');
-  if (decision.loan_decision === 'Approve') decisionEl.style.color = '#00ff88';
-  else if (decision.loan_decision === 'Conditional Approve') decisionEl.style.color = '#ffcc00';
-  else decisionEl.style.color = '#ff3366';
-
-  const score = result.score || 0;
-  document.getElementById('resScoreNum').textContent = score.toFixed(3);
-  document.getElementById('resScoreBar').style.width = `${score * 100}%`;
-
-  typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
-
-  document.getElementById('resTaskName').textContent = 'Full Lifecycle';
-  document.getElementById('resDifficulty').textContent = 'COMPLEX';
-  document.getElementById('resDifficulty').className = 'result-value warning';
-
-  setScoreValue('resRiskScore', grading.risk_level_score);
-  setScoreValue('resDecisionScore', grading.loan_decision_score);
-  setScoreValue('resRateScore', grading.interest_rate_score);
-
-  const cons = grading.consistency_bonus || 0;
-  const consEl = document.getElementById('resConsistency');
-  consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
-  consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
-
-  document.getElementById('gtRisk').textContent = gt.risk_level || '—';
-  document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
-  document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
-  document.getElementById('gtExplanation').textContent = gt.explanation || '—';
-}
-
-function setScoreValue(elId, score) {
-  const el = document.getElementById(elId);
-  if (score === undefined || score === null) { el.textContent = '—'; return; }
-  el.textContent = score.toFixed(2);
-  el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
-}
-
-function typewriterEffect(el, text, speed = 12) {
-  el.textContent = '';
-  el.classList.add('typewriter');
-  let i = 0;
-  const interval = setInterval(() => {
-    if (i < text.length) {
-      el.textContent += text.charAt(i);
-      i++;
-    } else {
-      clearInterval(interval);
-      el.classList.remove('typewriter');
+    // ─── Auto-Select Stage Based on Employment ──────────────
+    function onEmploymentChange() {
+      const emp = document.getElementById('employmentType').value;
+      const select = document.getElementById('stageSelect');
+      let targetTaskId = null;
+      if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
+      else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
+      else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
+      if (targetTaskId) select.value = targetTaskId;
     }
-  }, speed);
-}
 
-function buildLifecycleBar() {
-  const container = document.getElementById('lifecycleStages');
-  container.innerHTML = '';
-  STAGE_META.forEach((stage, idx) => {
-    if (idx > 0) {
-      const connector = document.createElement('div');
-      connector.className = 'stage-connector';
-      connector.id = `conn-${idx}`;
-      container.appendChild(connector);
+    function onAmountChange() {
+      const amt = parseFloat(document.getElementById('loanAmount').value) || 0;
+      const tenure = document.getElementById('loanTenure');
+      if (amt <= 0) return;
+      let suggestedTenure = 12;
+      if (amt > 100000) suggestedTenure = 84;
+      else if (amt > 50000) suggestedTenure = 60;
+      else if (amt > 25000) suggestedTenure = 48;
+      else suggestedTenure = 36;
+      tenure.value = suggestedTenure;
     }
-    const stageEl = document.createElement('div');
-    stageEl.className = 'lifecycle-stage';
-    stageEl.innerHTML = `
+
+    // ─── Execute Step ───────────────────────────────────────
+    async function executeStep() {
+      const btn = document.getElementById('executeBtn');
+      btn.disabled = true;
+      btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
+
+      try {
+        const applicant = {
+          applicant_name: document.getElementById('applicantName').value,
+          age: parseInt(document.getElementById('applicantAge')?.value || 30),
+          annual_income: parseFloat(document.getElementById('annualIncome').value) || 0,
+          credit_score: parseInt(document.getElementById('creditScore').value) || 0,
+          existing_debt: parseFloat(document.getElementById('existingDebt').value) || 0,
+          loan_amount: parseFloat(document.getElementById('loanAmount').value) || 0,
+          employment_type: document.getElementById('employmentType').value,
+          employment_years: parseFloat(document.getElementById('employmentYears')?.value || 2),
+          previous_defaults: parseInt(document.getElementById('prevDefaults')?.value || 0),
+          loan_tenure: parseInt(document.getElementById('loanTenure').value) || 36,
+          has_collateral: document.getElementById('hasCollateral').checked,
+          loan_purpose: document.getElementById('loanPurpose').value || "general",
+          public_records: parseInt(document.getElementById('publicRecords').value) || 0,
+          credit_inquiries_6mo: parseInt(document.getElementById('inquiries').value) || 0,
+          documents_submitted: uploadedFiles
+        };
+
+        let riskStage = 'easy_salaried_high_credit';
+        if (applicant.employment_type === 'self_employed' || applicant.employment_type === 'contract') riskStage = 'medium_self_employed_moderate';
+        else if (applicant.employment_type === 'freelancer' || applicant.employment_type === 'unemployed') riskStage = 'hard_freelancer_complex';
+        applicant.task_id = riskStage;
+
+        const stages = [
+          "📂 SCANNING DOCUMENTS...",
+          "🔍 CHECKING CREDIT BUREAU...",
+          "⚖️ WEIGHING COLLATERAL...",
+          "📊 CALCULATING REPAYMENT...",
+          "🏦 FINALIZING VERDICT..."
+        ];
+
+        for (const msg of stages) {
+          btn.innerHTML = `<span class="spinner"></span>${msg}`;
+          showToast(msg, 'info');
+          await new Promise(r => setTimeout(r, 700));
+        }
+
+        const response = await fetch('/evaluate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(applicant)
+        });
+
+        if (!response.ok) {
+          const err = await response.json();
+          showToast(err.detail || 'Server error', 'error');
+          return;
+        }
+
+        const result = await response.json();
+
+        // START SEQUENTIAL UI UPDATE
+        const stageResults = result.stage_results || [];
+        for (let i = 0; i < stageResults.length; i++) {
+          const stage = stageResults[i];
+          btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
+          showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
+
+          // Update the lifecycle bar for each stage
+          activeStageId = STAGE_META[i].id; // Map stage index to STAGE_META
+          completedStages.add(activeStageId);
+          updateLifecycleBar();
+
+          await new Promise(r => setTimeout(r, 1000)); // 1s delay per real stage
+        }
+
+        displayResult(result);
+        showToast('✨ Final Underwriting Decision Rendered', 'success');
+
+      } catch (e) {
+        showToast(e.message, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '▶ START UNDERWRITING';
+      }
+    }
+
+    // ─── Display Result ─────────────────────────────────────
+    function displayResult(result) {
+      document.getElementById('waitingState').style.display = 'none';
+      document.getElementById('resultContent').style.display = 'block';
+
+      const sourceEl = document.getElementById('sourceIndicator');
+      sourceEl.style.display = 'block';
+      sourceEl.style.background = 'rgba(0,255,136,0.1)';
+      sourceEl.style.border = '1px solid rgba(0,255,136,0.4)';
+      sourceEl.style.color = '#00ff88';
+      sourceEl.textContent = '✅ REAL-TIME MULTI-STAGE ANALYSIS COMPLETE';
+
+      const decision = result.agent_decision || {};
+      const grading = result.grading || {};
+      const gt = result.ground_truth || {};
+
+      document.getElementById('resRiskLevel').textContent = decision.risk_level || '—';
+      document.getElementById('resDecision').textContent = decision.loan_decision || '—';
+      document.getElementById('resInterestRate').textContent = decision.interest_rate_tier || '—';
+
+      const decisionEl = document.getElementById('resDecision');
+      if (decision.loan_decision === 'Approve') decisionEl.style.color = '#00ff88';
+      else if (decision.loan_decision === 'Conditional Approve') decisionEl.style.color = '#ffcc00';
+      else decisionEl.style.color = '#ff3366';
+
+      const score = result.score || 0;
+      document.getElementById('resScoreNum').textContent = score.toFixed(3);
+      document.getElementById('resScoreBar').style.width = `${score * 100}%`;
+
+      typewriterEffect(document.getElementById('resReasoning'), decision.reasoning || result.reasoning || 'No report.');
+
+      document.getElementById('resTaskName').textContent = 'Full Lifecycle';
+      document.getElementById('resDifficulty').textContent = 'COMPLEX';
+      document.getElementById('resDifficulty').className = 'result-value warning';
+
+      setScoreValue('resRiskScore', grading.risk_level_score);
+      setScoreValue('resDecisionScore', grading.loan_decision_score);
+      setScoreValue('resRateScore', grading.interest_rate_score);
+
+      const cons = grading.consistency_bonus || 0;
+      const consEl = document.getElementById('resConsistency');
+      consEl.textContent = (cons >= 0 ? '+' : '') + cons.toFixed(2);
+      consEl.className = 'result-value ' + (cons > 0 ? 'success' : cons < 0 ? 'danger' : '');
+
+      document.getElementById('gtRisk').textContent = gt.risk_level || '—';
+      document.getElementById('gtDecision').textContent = gt.loan_decision || '—';
+      document.getElementById('gtRate').textContent = gt.interest_rate_tier || '—';
+      document.getElementById('gtExplanation').textContent = gt.explanation || '—';
+    }
+
+    function setScoreValue(elId, score) {
+      const el = document.getElementById(elId);
+      if (score === undefined || score === null) { el.textContent = '—'; return; }
+      el.textContent = score.toFixed(2);
+      el.className = 'result-value ' + (score >= 0.9 ? 'success' : score >= 0.3 ? 'warning' : 'danger');
+    }
+
+    function typewriterEffect(el, text, speed = 12) {
+      el.textContent = '';
+      el.classList.add('typewriter');
+      let i = 0;
+      const interval = setInterval(() => {
+        if (i < text.length) {
+          el.textContent += text.charAt(i);
+          i++;
+        } else {
+          clearInterval(interval);
+          el.classList.remove('typewriter');
+        }
+      }, speed);
+    }
+
+    function buildLifecycleBar() {
+      const container = document.getElementById('lifecycleStages');
+      container.innerHTML = '';
+      STAGE_META.forEach((stage, idx) => {
+        if (idx > 0) {
+          const connector = document.createElement('div');
+          connector.className = 'stage-connector';
+          connector.id = `conn-${idx}`;
+          container.appendChild(connector);
+        }
+        const stageEl = document.createElement('div');
+        stageEl.className = 'lifecycle-stage';
+        stageEl.innerHTML = `
       <div class="stage-number" id="sn-${stage.id}">${idx + 1}</div>
       <div class="stage-name" id="sl-${stage.id}">${stage.label}</div>
     `;
-    container.appendChild(stageEl);
-  });
-}
-
-function updateLifecycleBar() {
-  STAGE_META.forEach((stage, idx) => {
-    const numEl = document.getElementById(`sn-${stage.id}`);
-    const labelEl = document.getElementById(`sl-${stage.id}`);
-    if (!numEl || !labelEl) return;
-    numEl.classList.remove('completed', 'active');
-    labelEl.classList.remove('completed', 'active');
-    if (completedStages.has(stage.id)) {
-      numEl.classList.add('completed');
-      numEl.textContent = '✓';
-      labelEl.classList.add('completed');
-    } else if (stage.id === activeStageId) {
-      numEl.classList.add('active');
-      labelEl.classList.add('active');
-    } else {
-      numEl.textContent = idx + 1;
+        container.appendChild(stageEl);
+      });
     }
-    if (idx > 0) {
-      const conn = document.getElementById(`conn-${idx}`);
-      if (conn) conn.classList.toggle('completed', completedStages.has(STAGE_META[idx - 1].id));
+
+    function updateLifecycleBar() {
+      STAGE_META.forEach((stage, idx) => {
+        const numEl = document.getElementById(`sn-${stage.id}`);
+        const labelEl = document.getElementById(`sl-${stage.id}`);
+        if (!numEl || !labelEl) return;
+        numEl.classList.remove('completed', 'active');
+        labelEl.classList.remove('completed', 'active');
+        if (completedStages.has(stage.id)) {
+          numEl.classList.add('completed');
+          numEl.textContent = '✓';
+          labelEl.classList.add('completed');
+        } else if (stage.id === activeStageId) {
+          numEl.classList.add('active');
+          labelEl.classList.add('active');
+        } else {
+          numEl.textContent = idx + 1;
+        }
+        if (idx > 0) {
+          const conn = document.getElementById(`conn-${idx}`);
+          if (conn) conn.classList.toggle('completed', completedStages.has(STAGE_META[idx - 1].id));
+        }
+      });
     }
-  });
-}
 
-async function globalReset() {
-  try {
-    await apiFetch('/reset', { method: 'POST', body: '{}' });
-    completedStages.clear();
-    activeStageId = null;
-    resetForm();
-    document.getElementById('waitingState').style.display = '';
-    document.getElementById('resultContent').style.display = 'none';
-    document.getElementById('resScoreBar').style.width = '0%';
-    currentWizardStep = 1;
-    document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
-    document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
-    document.getElementById('wizardStep-1').classList.add('active');
-    document.getElementById('stepInd-1').classList.add('active');
-    document.getElementById('prevBtn').disabled = true;
-    document.getElementById('nextBtn').style.display = 'block';
-    document.getElementById('executeBtn').style.display = 'none';
-    updateLifecycleBar();
-    showToast('Session Reset', 'success');
-  } catch (e) {}
-}
+    async function globalReset() {
+      try {
+        await apiFetch('/reset', { method: 'POST', body: '{}' });
+        completedStages.clear();
+        activeStageId = null;
+        resetForm();
+        document.getElementById('waitingState').style.display = '';
+        document.getElementById('resultContent').style.display = 'none';
+        document.getElementById('resScoreBar').style.width = '0%';
+        currentWizardStep = 1;
+        document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
+        document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
+        document.getElementById('wizardStep-1').classList.add('active');
+        document.getElementById('stepInd-1').classList.add('active');
+        document.getElementById('prevBtn').disabled = true;
+        document.getElementById('nextBtn').style.display = 'block';
+        document.getElementById('executeBtn').style.display = 'none';
+        updateLifecycleBar();
+        showToast('Session Reset', 'success');
+      } catch (e) { }
+    }
 
-function resetForm() {
-  document.getElementById('applicantName').value = '';
-  document.getElementById('annualIncome').value = '';
-  document.getElementById('creditScore').value = '';
-  document.getElementById('existingDebt').value = '';
-  document.getElementById('loanAmount').value = '';
-  document.getElementById('employmentType').value = 'salaried';
-  document.getElementById('loanTenure').value = '36';
-  document.getElementById('hasCollateral').checked = false;
-  uploadedFiles = [];
-  document.getElementById('fileList').innerHTML = '';
-}
+    function resetForm() {
+      document.getElementById('applicantName').value = '';
+      document.getElementById('annualIncome').value = '';
+      document.getElementById('creditScore').value = '';
+      document.getElementById('existingDebt').value = '';
+      document.getElementById('loanAmount').value = '';
+      document.getElementById('employmentType').value = 'salaried';
+      document.getElementById('loanTenure').value = '36';
+      document.getElementById('hasCollateral').checked = false;
+      uploadedFiles = [];
+      document.getElementById('fileList').innerHTML = '';
+    }
 
-function showToast(message, type = 'info') {
-  const toast = document.getElementById('toast');
-  toast.textContent = message;
-  toast.className = `toast ${type} show`;
-  setTimeout(() => { toast.classList.remove('show'); }, 3000);
-}
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `toast ${type} show`;
+      setTimeout(() => { toast.classList.remove('show'); }, 3000);
+    }
 
-function initParticles() {
-  const canvas = document.getElementById('particleCanvas');
-  const ctx = canvas.getContext('2d');
-  let particles = [];
-  const PARTICLE_COUNT = 40;
-  function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
-  resize();
-  window.addEventListener('resize', resize);
-  class Particle {
-    constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3; this.size = Math.random() * 1.5; }
-    update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvas.width) this.vx *= -1; if (this.y < 0 || this.y > canvas.height) this.vy *= -1; }
-    draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,255,136,0.3)'; ctx.fill(); }
-  }
-  for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
-  function animate() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    particles.forEach(p => { p.update(); p.draw(); });
-    requestAnimationFrame(animate);
-  }
-  animate();
-}
-</script>
+    function initParticles() {
+      const canvas = document.getElementById('particleCanvas');
+      const ctx = canvas.getContext('2d');
+      let particles = [];
+      const PARTICLE_COUNT = 40;
+      function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+      resize();
+      window.addEventListener('resize', resize);
+      class Particle {
+        constructor() { this.x = Math.random() * canvas.width; this.y = Math.random() * canvas.height; this.vx = (Math.random() - 0.5) * 0.3; this.vy = (Math.random() - 0.5) * 0.3; this.size = Math.random() * 1.5; }
+        update() { this.x += this.vx; this.y += this.vy; if (this.x < 0 || this.x > canvas.width) this.vx *= -1; if (this.y < 0 || this.y > canvas.height) this.vy *= -1; }
+        draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2); ctx.fillStyle = 'rgba(0,255,136,0.3)'; ctx.fill(); }
+      }
+      for (let i = 0; i < PARTICLE_COUNT; i++) particles.push(new Particle());
+      function animate() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        particles.forEach(p => { p.update(); p.draw(); });
+        requestAnimationFrame(animate);
+      }
+      animate();
+    }
+  </script>
 </body>
+
 </html>
