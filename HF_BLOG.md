@@ -118,11 +118,12 @@ A bank desk needs a dashboard. I built a **Cyberpunk-themed Command Center** whe
 - **Manual Control**: Step through the environment and inspect the AI's reasoning at each stage.
 - **Visual Analytics**: Real-time reward tracking and state visualization.
 
-![NEXUS Command Center Demo](/blog/assets/nexus-loan-underwriting/nexus_ui_demo.png)
 
 ---
 
 ## 🚀 Try It Yourself
+> [!TIP]
+> If clicking the links below results in a "Connection Error," please **Right-Click and "Open in New Tab"**. This bypasses security restrictions some browsers apply to Hugging Face Space iframes.
 
 The project is fully open-source:
 

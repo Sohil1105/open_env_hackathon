@@ -272,6 +272,8 @@ Configure as **Secrets** in your HF Space settings (Settings → Variables and S
 ---
 
 ## Links
+> [!TIP]
+> If you encounter a connection error when clicking the links below, please **Right-Click and "Open in New Tab"**. Some browsers block navigation within the Hugging Face Space iframe.
 
 - **Live UI:** [https://sourav0511-open-env-hackathon.hf.space/ui](https://sourav0511-open-env-hackathon.hf.space/ui)
 - **HF Space:** [https://huggingface.co/spaces/Sourav0511/open-env-hackathon](https://huggingface.co/spaces/Sourav0511/open-env-hackathon)
