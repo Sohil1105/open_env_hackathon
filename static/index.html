@@ -791,18 +791,26 @@
       font-size: 0.75rem;
       line-height: 1.6;
       white-space: pre-wrap;
-      max-height: 180px;
+      max-height: 250px;
       overflow-y: auto;
       color: var(--text);
+      scrollbar-width: thin;
+      scrollbar-color: var(--primary) rgba(0, 0, 0, 0.2);
     }
 
     .feedback-box::-webkit-scrollbar {
-      width: 4px;
+      width: 6px;
+    }
+
+    .feedback-box::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 3px;
     }
 
     .feedback-box::-webkit-scrollbar-thumb {
-      background: var(--border);
-      border-radius: 2px;
+      background: var(--primary);
+      border-radius: 3px;
+      box-shadow: 0 0 5px var(--primary);
     }
 
     /* Ground Truth Section */
@@ -1007,7 +1015,6 @@
     /* ─── Typewriter ────────────────────────────────────────── */
     .typewriter {
       overflow: hidden;
-      white-space: nowrap;
       border-right: 2px solid var(--primary);
       animation: blink-caret 0.8s step-end infinite;
     }
@@ -1413,7 +1420,7 @@
               <span class="result-label">Expected Rate</span>
               <span class="result-value" id="gtRate">—</span>
             </div>
-            <div class="feedback-box" id="gtExplanation" style="margin-top:0.5rem;max-height:100px;">—</div>
+            <div class="feedback-box" id="gtExplanation" style="margin-top:0.5rem; max-height: 150px;">—</div>
           </div>
         </div>
       </div>
@@ -1461,6 +1468,8 @@
     let taskList = [];
     let currentWizardStep = 1;
     let uploadedFiles = [];
+    let typewriterInterval = null;
+    let isEvaluating = false;
 
     document.addEventListener('DOMContentLoaded', async () => {
       initParticles();
@@ -1662,6 +1671,8 @@
 
       // ─── Execute Step ───────────────────────────────────────
       async function executeStep() {
+        if (isEvaluating) return;
+        isEvaluating = true;
         const btn = document.getElementById('executeBtn');
         btn.disabled = true;
         btn.innerHTML = '<span class="spinner"></span>AGENT ANALYZING...';
@@ -1702,6 +1713,7 @@
           ];
 
           for (const msg of stages) {
+            if (!isEvaluating) return;
             btn.innerHTML = `<span class="spinner"></span>${msg}`;
             showToast(msg, 'info');
             console.log(`[UI] Processing: ${msg}`);
@@ -1732,19 +1744,24 @@
             btn.innerHTML = `<span class="spinner"></span>PROCESSING: ${stage.name.toUpperCase()}...`;
             showToast(`Stage ${stage.stage}: ${stage.name} Complete`, 'info');
             console.log(`[UI] Displaying stage ${stage.stage}: ${stage.name}`);
+            if (!isEvaluating) return;
             activeStageId = STAGE_META[i].id;
             completedStages.add(activeStageId);
             updateLifecycleBar();
             await new Promise(r => setTimeout(r, 1000));
           }
 
+          if (!isEvaluating) return;
           displayResult(result);
           showToast('✨ Final Underwriting Decision Rendered', 'success');
 
         } catch (e) {
-          console.error('[UI] executeStep error:', e);
-          showToast(e.message, 'error');
+          if (isEvaluating) {
+            console.error('[UI] executeStep error:', e);
+            showToast(e.message, 'error');
+          }
         } finally {
+          isEvaluating = false;
           btn.disabled = false;
           btn.innerHTML = '▶ START UNDERWRITING';
         }
@@ -1808,15 +1825,18 @@
       }
 
       function typewriterEffect(el, text, speed = 12) {
+        if (typewriterInterval) clearInterval(typewriterInterval);
         el.textContent = '';
+        el.classList.remove('typewriter');
         el.classList.add('typewriter');
         let i = 0;
-        const interval = setInterval(() => {
+        typewriterInterval = setInterval(() => {
           if (i < text.length) {
             el.textContent += text.charAt(i);
             i++;
           } else {
-            clearInterval(interval);
+            clearInterval(typewriterInterval);
+            typewriterInterval = null;
             el.classList.remove('typewriter');
           }
         }, speed);
@@ -1868,13 +1888,44 @@
 
       async function globalReset() {
         try {
+          isEvaluating = false;
+          if (typewriterInterval) clearInterval(typewriterInterval);
+          typewriterInterval = null;
+
           await apiFetch('/reset', { method: 'POST', body: '{}' });
           completedStages.clear();
           activeStageId = null;
           resetForm();
+          
+          // Reset Result Content
           document.getElementById('waitingState').style.display = '';
           document.getElementById('resultContent').style.display = 'none';
           document.getElementById('resScoreBar').style.width = '0%';
+          document.getElementById('resScoreNum').textContent = '0.00';
+          
+          // Clear all result spans
+          ['resRiskLevel', 'resDecision', 'resInterestRate', 'resTaskName', 'resDifficulty', 
+           'resRiskScore', 'resDecisionScore', 'resRateScore', 'resConsistency', 
+           'gtRisk', 'gtDecision', 'gtRate'].forEach(id => {
+             const el = document.getElementById(id);
+             if (el) {
+               el.textContent = '—';
+               el.className = 'result-value';
+             }
+           });
+          
+          const reasoning = document.getElementById('resReasoning');
+          if (reasoning) {
+            reasoning.textContent = 'Awaiting decision...';
+            reasoning.classList.remove('typewriter');
+          }
+          
+          const gtExp = document.getElementById('gtExplanation');
+          if (gtExp) gtExp.textContent = '—';
+
+          const sourceEl = document.getElementById('sourceIndicator');
+          if (sourceEl) sourceEl.style.display = 'none';
+
           currentWizardStep = 1;
           document.querySelectorAll('.wizard-content-step').forEach(s => s.classList.remove('active'));
           document.querySelectorAll('.wizard-step-indicator').forEach(i => i.classList.remove('active', 'completed'));
@@ -1883,9 +1934,12 @@
           document.getElementById('prevBtn').disabled = true;
           document.getElementById('nextBtn').style.display = 'block';
           document.getElementById('executeBtn').style.display = 'none';
+          
           updateLifecycleBar();
           showToast('Session Reset', 'success');
-        } catch (e) { }
+        } catch (e) {
+          console.error('[UI] Reset failed:', e);
+        }
       }
 
       function resetForm() {
@@ -1907,6 +1961,11 @@
         document.getElementById('inquiries').value = '0';
         uploadedFiles = [];
         document.getElementById('fileList').innerHTML = '';
+        document.getElementById('fileInput').value = '';
+        
+        // Reset scroll positions
+        document.getElementById('inputPanel').scrollTop = 0;
+        document.getElementById('resultPanel').scrollTop = 0;
       }
 
       function showToast(message, type = 'info') {

@@ -15,7 +15,6 @@ tags:
 
 # 🏦 NEXUS Bank: Fine-Tuning Llama-3.1 for Multi-Stage Loan Underwriting with OpenEnv
 
-![NEXUS Bank Command Center](/blog/assets/nexus-loan-underwriting/nexus_banner.png)
 
 In the world of fintech, the "holy grail" is an AI that doesn't just calculate numbers, but *understands* the nuance of credit risk across a multi-stage lifecycle. Most AI models are trained on single-step classification — but real-world banking is a long-horizon game.
 
