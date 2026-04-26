@@ -229,8 +229,8 @@ class GradingResult(BaseModel):
     loan_decision_score: float = Field(..., ge=0.0, le=1.0, description="Score for loan decision")
     interest_rate_score: float = Field(..., ge=0.0, le=1.0, description="Score for interest rate tier")
     consistency_bonus: float = Field(
-        default=0.0, ge=-0.1, le=0.1,
-        description="Bonus/penalty for logical consistency"
+        default=0.0, ge=-0.2, le=0.2,
+        description="Bonus/penalty for logical consistency (upgraded for High Quality Envs)"
     )
     total_score: float = Field(..., ge=0.0, le=1.0, description="Final weighted score")
     feedback: str = Field(..., description="Human-readable feedback on the decision")
