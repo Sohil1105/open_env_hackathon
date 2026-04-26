@@ -1191,9 +1191,6 @@
           <div class="wizard-step-indicator" id="stepInd-4">4</div>
         </div>
 
-        <div class="input-row" style="display:none;">
-          <select id="stageSelect" class="select-field"></select>
-        </div>
 
         <!-- Step 1: Basic Profile -->
         <div class="wizard-content-step active" id="wizardStep-1">
@@ -1465,12 +1462,10 @@
     let currentWizardStep = 1;
     let uploadedFiles = [];
 
-    // ─── Init ───────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', async () => {
       initParticles();
       buildLifecycleBar();
       initDragAndDrop();
-      await loadTasks();
       healthCheck();
     });
 
@@ -1591,12 +1586,6 @@
       });
     }
 
-    function simulateFileUpload() {
-      // Fallback/Legacy simulation for testing
-      const mockNames = ['Salary_Slip.pdf', 'ID_Card.jpg', 'Bank_Statement.pdf'];
-      const randomName = mockNames[Math.floor(Math.random() * mockNames.length)];
-      addFiles([randomName]);
-    }
 
     function removeFile(name, el) {
       uploadedFiles = uploadedFiles.filter(f => f !== name);
@@ -1624,26 +1613,8 @@
         console.error('[API] Fetch failed:', e);
         showToast(e.message, 'error');
         throw e;
-      }
     }
-
-    // ─── Load Tasks ─────────────────────────────────────────
-    async function loadTasks() {
-      try {
-        const data = await apiFetch('/tasks');
-        taskList = data.tasks || [];
-        const select = document.getElementById('stageSelect');
-        taskList.forEach((t, i) => {
-          const opt = document.createElement('option');
-          opt.value = t.task_id;
-          opt.textContent = `S${i + 1}: ${t.name}`;
-          select.appendChild(opt);
-        });
-      } catch (e) {
-        console.error('Failed to load tasks:', e);
-      }
-    }
-
+    
     // ─── Health Check ───────────────────────────────────────
     async function healthCheck() {
       try {
@@ -1654,42 +1625,14 @@
       }
     }
 
-    // ─── Stage Select Handler ────────────────────────────────
-    async function onStageSelect() {
-      const taskId = document.getElementById('stageSelect').value;
-      if (!taskId) return;
-      try {
-        const data = await apiFetch('/reset', {
-          method: 'POST',
-          body: JSON.stringify({ task_id: taskId }),
-        });
-        const obs = data.state?.observation;
-        if (obs) {
-          document.getElementById('applicantName').value = obs.applicant_name || '';
-          document.getElementById('applicantAge').value = obs.age || 30;
-          document.getElementById('annualIncome').value = obs.annual_income || '';
-          document.getElementById('creditScore').value = obs.credit_score || '';
-          document.getElementById('existingDebt').value = obs.existing_debt || '';
-          document.getElementById('loanAmount').value = obs.loan_amount_requested || '';
-          document.getElementById('employmentType').value = obs.employment_type || 'salaried';
-          document.getElementById('employmentYears').value = obs.employment_years || 2;
-          document.getElementById('prevDefaults').value = obs.previous_defaults || 0;
-          document.getElementById('loanTenure').value = obs.repayment_tenure_months || '36';
-        }
-        activeStageId = taskId;
-        updateLifecycleBar();
-      } catch (e) { }
-    }
       // ─── Auto-Select Stage Based on Employment ──────────────
-      function onEmploymentChange() {
-        const emp = document.getElementById('employmentType').value;
-        const select = document.getElementById('stageSelect');
-        let targetTaskId = null;
-        if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
-        else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
-        else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
-        if (targetTaskId) select.value = targetTaskId;
-      }
+    function onEmploymentChange() {
+      const emp = document.getElementById('employmentType').value;
+      let targetTaskId = null;
+      if (emp === 'salaried') targetTaskId = 'easy_salaried_high_credit';
+      else if (emp === 'self_employed' || emp === 'contract') targetTaskId = 'medium_self_employed_moderate';
+      else if (emp === 'freelancer' || emp === 'unemployed') targetTaskId = 'hard_freelancer_complex';
+    }
 
       let tenureManuallySet = false;
       function onTenureInput() {
