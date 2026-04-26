@@ -99,7 +99,7 @@ def _get_api_client():
 
     # Default to public router if not provided
     if not base_url:
-        base_url = "https://api-inference.huggingface.co/v1"
+        base_url = "https://router.huggingface.co/hf-inference/v1"
 
     logger.info(f"Final API Configuration: Model={model}, Endpoint={base_url}")
     if not key:
