@@ -748,13 +748,9 @@ async def serve_ui():
     )
 
 
-@app.get("/blog/assets/{filename:path}")
-async def serve_blog_asset(filename: str):
-    """Serve blog image assets from the project root."""
-    asset_path = os.path.join(PROJECT_ROOT, os.path.basename(filename))
-    if os.path.exists(asset_path):
-        return FileResponse(asset_path)
-    raise HTTPException(status_code=404, detail=f"Asset not found: {filename}")
+# Serve blog assets from the project root
+if os.path.isdir(PROJECT_ROOT):
+    app.mount("/blog/assets", StaticFiles(directory=PROJECT_ROOT), name="blog_assets")
 
 
 @app.get("/blog")
